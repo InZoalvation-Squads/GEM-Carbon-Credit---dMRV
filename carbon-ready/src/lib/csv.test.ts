@@ -89,4 +89,11 @@ describe('parseAndValidateCsv', () => {
     expect(r.accepted).toHaveLength(0);
     expect(r.rejected).toHaveLength(0);
   });
+
+  it('rejects calendar-invalid dates (e.g. 2026-02-30, 2025-02-29)', () => {
+    const csv = header + '2026-02-30,100\n2025-02-29,100\n';
+    const r = parseAndValidateCsv(csv, []);
+    expect(r.accepted).toHaveLength(0);
+    expect(r.rejected.map((x) => x.code)).toEqual(['INVALID_DATE', 'INVALID_DATE']);
+  });
 });

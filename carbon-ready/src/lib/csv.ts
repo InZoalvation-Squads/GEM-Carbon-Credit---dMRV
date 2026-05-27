@@ -3,6 +3,13 @@ import type { CsvRowError, CsvValidationResult } from '../types';
 
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
+function isValidIsoDate(s: string): boolean {
+  if (!ISO_DATE.test(s)) return false;
+  const d = new Date(s + 'T00:00:00Z');
+  if (Number.isNaN(d.getTime())) return false;
+  return d.toISOString().slice(0, 10) === s;
+}
+
 export function parseAndValidateCsv(
   csvText: string,
   existingDates: string[]
@@ -26,7 +33,7 @@ export function parseAndValidateCsv(
     const valRaw  = (row[1] ?? '').trim();
 
     if (!dateRaw) { rejected.push({ row: rowNum, code: 'MISSING_DATE' }); continue; }
-    if (!ISO_DATE.test(dateRaw) || Number.isNaN(Date.parse(dateRaw))) {
+    if (!isValidIsoDate(dateRaw)) {
       rejected.push({ row: rowNum, code: 'INVALID_DATE', date: dateRaw }); continue;
     }
     const val = Number(valRaw);

@@ -77,7 +77,6 @@ export const useStore = create<AppState>()(
           id: uid('mon'), project_id, source: 'csv_upload', uploaded_at, ...r,
         }));
         set((s) => ({ records: [...s.records, ...recs] }));
-        get().audit_write('CSV_UPLOADED', 'monitoring', project_id, { accepted: rows.length });
         return recs.length;
       },
 

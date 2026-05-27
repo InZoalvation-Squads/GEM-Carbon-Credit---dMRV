@@ -26,14 +26,12 @@ export function calculateCarbon(
   range?: { from?: string; to?: string }
 ): CalculationOutput {
   const daily: CalculationOutput['daily'] = [];
-  let lastEfId: string | null = null;
 
   for (const r of records) {
     if (range?.from && r.record_date < range.from) continue;
     if (range?.to   && r.record_date > range.to)   continue;
     const factor = pickFactorForDate(factors, r.record_date);
     if (!factor) continue;
-    lastEfId = factor.id;
     daily.push({
       date: r.record_date,
       generation_kwh: r.generation_kwh,
@@ -43,6 +41,8 @@ export function calculateCarbon(
   }
 
   daily.sort((a, b) => a.date.localeCompare(b.date));
+
+  const emission_factor_id = daily.length > 0 ? daily[daily.length - 1].emission_factor_id : null;
 
   const monthlyMap = new Map<string, { generation_kwh: number; reduction_kgco2e: number }>();
   for (const d of daily) {
@@ -60,7 +60,7 @@ export function calculateCarbon(
   const totalRed = daily.reduce((s, d) => s + d.reduction_kgco2e, 0);
 
   return {
-    emission_factor_id: lastEfId,
+    emission_factor_id,
     totals: {
       generation_kwh: round3(totalGen),
       reduction_kgco2e: round3(totalRed),

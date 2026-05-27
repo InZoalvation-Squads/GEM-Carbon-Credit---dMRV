@@ -1,6 +1,7 @@
 import { useStore } from '../store';
 import { parseAndValidateCsv } from './csv';
 import { calculateCarbon } from './calc';
+import { locationToCountryCode } from './geo';
 import type { Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID } from '../types';
 
 const tick = <T>(value: T, ms = 120): Promise<T> =>
@@ -27,6 +28,10 @@ export const api = {
     if (result.accepted.length > 0) {
       state.addMonitoringRecords(project_id, result.accepted);
     }
+    state.audit_write('CSV_UPLOADED', 'monitoring', project_id, {
+      accepted: result.accepted.length,
+      rejected: result.rejected.length,
+    });
     return tick({ ...result, uploaded_at: new Date().toISOString() });
   },
 
@@ -42,12 +47,11 @@ export const api = {
     const factors = state.factors.filter((f) => f.country === country);
     const records = state.records.filter((r) => r.project_id === project_id);
     const result = calculateCarbon(records, factors, range);
-    if (result.emission_factor_id) {
-      state.recordCalculation(project_id, result.emission_factor_id, {
-        generation_kwh: result.totals.generation_kwh,
-        reduction_kgco2e: result.totals.reduction_kgco2e,
-      });
-    }
+    state.audit_write('CALCULATION_EXECUTED', 'calculation', project_id, {
+      emission_factor_id: result.emission_factor_id,
+      generation_kwh: result.totals.generation_kwh,
+      reduction_kgco2e: result.totals.reduction_kgco2e,
+    });
     return tick(result);
   },
 
@@ -58,8 +62,3 @@ export const api = {
     return tick(useStore.getState().addEmissionFactor(input));
   },
 };
-
-function locationToCountryCode(s: string): string {
-  const map: Record<string, string> = { India: 'IN', Thailand: 'TH', Vietnam: 'VN' };
-  return map[s] ?? s;
-}

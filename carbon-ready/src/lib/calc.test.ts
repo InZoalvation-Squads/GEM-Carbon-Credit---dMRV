@@ -105,4 +105,15 @@ describe('calculateCarbon', () => {
     const r = calculateCarbon([mr('2026-01-01', 100)], [factor]);
     expect(r.emission_factor_id).toBe(factor.id);
   });
+
+  it('returns the EF id from the chronologically last record, not input order (regression)', () => {
+    const oldEf = ef({ id: 'old', version: 1, effective_date: '2024-01-01', factor_kgco2e_per_kwh: 0.90 });
+    const newEf = ef({ id: 'new', version: 2, effective_date: '2026-01-01', factor_kgco2e_per_kwh: 0.82 });
+    // Pass records in REVERSE chronological order — the bug would return 'old' here.
+    const r = calculateCarbon(
+      [mr('2026-06-01', 100), mr('2025-06-01', 100)],
+      [oldEf, newEf]
+    );
+    expect(r.emission_factor_id).toBe('new');
+  });
 });

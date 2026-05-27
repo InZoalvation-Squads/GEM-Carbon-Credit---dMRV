@@ -1,5 +1,6 @@
 import { useStore } from './index';
 import { calculateCarbon } from '../lib/calc';
+import { locationToCountryCode } from '../lib/geo';
 
 export function useDashboardSummary() {
   const projects = useStore((s) => s.projects);
@@ -52,9 +53,4 @@ export function useDashboardSummary() {
     daily_generation,
     monthly_reduction,
   };
-}
-
-function locationToCountryCode(s: string): string {
-  const map: Record<string, string> = { India: 'IN', Thailand: 'TH', Vietnam: 'VN' };
-  return map[s] ?? s;
 }
