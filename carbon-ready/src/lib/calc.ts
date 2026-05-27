@@ -1,0 +1,77 @@
+import type { EmissionFactor, MonitoringRecord } from '../types';
+
+export interface CalculationOutput {
+  emission_factor_id: string | null;
+  totals: { generation_kwh: number; reduction_kgco2e: number; reduction_tco2e: number };
+  daily: Array<{ date: string; generation_kwh: number; reduction_kgco2e: number; emission_factor_id: string }>;
+  monthly: Array<{ period: string; generation_kwh: number; reduction_kgco2e: number }>;
+}
+
+export function pickFactorForDate(
+  factors: EmissionFactor[],
+  isoDate: string
+): EmissionFactor | undefined {
+  return factors
+    .filter((f) => f.effective_date <= isoDate)
+    .sort((a, b) =>
+      a.effective_date === b.effective_date
+        ? b.version - a.version
+        : b.effective_date.localeCompare(a.effective_date)
+    )[0];
+}
+
+export function calculateCarbon(
+  records: MonitoringRecord[],
+  factors: EmissionFactor[],
+  range?: { from?: string; to?: string }
+): CalculationOutput {
+  const daily: CalculationOutput['daily'] = [];
+  let lastEfId: string | null = null;
+
+  for (const r of records) {
+    if (range?.from && r.record_date < range.from) continue;
+    if (range?.to   && r.record_date > range.to)   continue;
+    const factor = pickFactorForDate(factors, r.record_date);
+    if (!factor) continue;
+    lastEfId = factor.id;
+    daily.push({
+      date: r.record_date,
+      generation_kwh: r.generation_kwh,
+      reduction_kgco2e: round3(r.generation_kwh * factor.factor_kgco2e_per_kwh),
+      emission_factor_id: factor.id,
+    });
+  }
+
+  daily.sort((a, b) => a.date.localeCompare(b.date));
+
+  const monthlyMap = new Map<string, { generation_kwh: number; reduction_kgco2e: number }>();
+  for (const d of daily) {
+    const key = d.date.slice(0, 7);
+    const cur = monthlyMap.get(key) ?? { generation_kwh: 0, reduction_kgco2e: 0 };
+    cur.generation_kwh += d.generation_kwh;
+    cur.reduction_kgco2e += d.reduction_kgco2e;
+    monthlyMap.set(key, cur);
+  }
+  const monthly = [...monthlyMap.entries()]
+    .map(([period, v]) => ({ period, ...round3Obj(v) }))
+    .sort((a, b) => a.period.localeCompare(b.period));
+
+  const totalGen = daily.reduce((s, d) => s + d.generation_kwh, 0);
+  const totalRed = daily.reduce((s, d) => s + d.reduction_kgco2e, 0);
+
+  return {
+    emission_factor_id: lastEfId,
+    totals: {
+      generation_kwh: round3(totalGen),
+      reduction_kgco2e: round3(totalRed),
+      reduction_tco2e: round3(totalRed / 1000),
+    },
+    daily,
+    monthly,
+  };
+}
+
+function round3(n: number) { return Math.round(n * 1000) / 1000; }
+function round3Obj(o: { generation_kwh: number; reduction_kgco2e: number }) {
+  return { generation_kwh: round3(o.generation_kwh), reduction_kgco2e: round3(o.reduction_kgco2e) };
+}
