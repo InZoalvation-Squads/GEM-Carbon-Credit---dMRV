@@ -10,7 +10,7 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
         <button onClick={onOpenSidebar} className="md:hidden text-ink-700" aria-label="Open menu"><Menu /></button>
         <div className="hidden sm:flex items-center gap-2 text-sm text-ink-500">
           <Search size={16} />
-          <input className="bg-transparent outline-none placeholder:text-ink-400 text-ink-900" placeholder="Search projects, factors..." />
+          <input aria-label="Search" className="bg-transparent outline-none placeholder:text-ink-400 text-ink-900" placeholder="Search projects, factors..." />
         </div>
       </div>
       <div className="flex items-center gap-4">
