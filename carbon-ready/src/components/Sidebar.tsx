@@ -1,5 +1,5 @@
 import { NavLink } from 'react-router-dom';
-import { LayoutDashboard, FolderKanban, Upload, Calculator, Gauge, ScrollText, Leaf } from 'lucide-react';
+import { LayoutDashboard, FolderKanban, Upload, Calculator, Gauge, ScrollText, Leaf, ClipboardCheck } from 'lucide-react';
 import clsx from 'clsx';
 
 const links = [
@@ -8,6 +8,7 @@ const links = [
   { to: '/upload',             label: 'Upload',            icon: Upload },
   { to: '/calculations',       label: 'Calculations',      icon: Calculator },
   { to: '/emission-factors',   label: 'Emission Factors',  icon: Gauge },
+  { to: '/verifications',      label: 'Verifications',     icon: ClipboardCheck },
   { to: '/audit-log',          label: 'Audit Log',         icon: ScrollText },
 ];
 
@@ -40,7 +41,7 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
           ))}
         </nav>
         <div className="px-5 py-4 border-t border-white/10 text-xs text-ink-400">
-          v0.1.0 • Sprint 1 MVP
+          v0.2.0 • Sprint 2 · Evidence & Verification
         </div>
       </aside>
     </>

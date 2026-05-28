@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../store';
 import { Card, CardBody, CardHeader } from '../components/Card';
@@ -5,9 +6,13 @@ import { Badge } from '../components/Badge';
 import { Table, THead, TR, TH, TD } from '../components/Table';
 import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/Button';
+import { ProjectEvidenceTab } from '../components/ProjectEvidenceTab';
 import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
 import { ChevronLeft, Upload as UploadIcon } from 'lucide-react';
+import clsx from 'clsx';
+
+type Tab = 'overview' | 'evidence';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -15,6 +20,8 @@ export function ProjectDetail() {
   const records = useStore((s) =>
     s.records.filter((r) => r.project_id === id).sort((a, b) => b.record_date.localeCompare(a.record_date))
   );
+  const evidenceCount = useStore((s) => s.evidence.filter((e) => e.project_id === id && e.status === 'active').length);
+  const [tab, setTab] = useState<Tab>('overview');
 
   if (!project) return <div className="text-sm text-ink-500">Project not found. <Link to="/projects" className="text-brand-700 underline">Back to list</Link></div>;
 
@@ -31,7 +38,7 @@ export function ProjectDetail() {
         action={<Link to="/upload"><Button><UploadIcon size={16} /> Upload Data</Button></Link>}
       />
 
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <Card className="p-5">
           <div className="text-xs uppercase tracking-wide text-ink-500">Status</div>
           <div className="mt-2"><Badge tone={project.status === 'active' ? 'green' : 'gray'}>{project.status}</Badge></div>
@@ -42,31 +49,59 @@ export function ProjectDetail() {
         </Card>
         <Card className="p-5">
           <div className="text-xs uppercase tracking-wide text-ink-500">Total Generation</div>
-          <div className="mt-2 text-2xl font-semibold">{formatNumber(totalKwh, 1)} kWh</div>
+          <div className="mt-2 text-2xl font-semibold">{formatNumber(totalKwh, 1)} <span className="text-sm text-ink-400">kWh</span></div>
+        </Card>
+        <Card className="p-5">
+          <div className="text-xs uppercase tracking-wide text-ink-500">Evidence</div>
+          <div className="mt-2 text-2xl font-semibold">{evidenceCount}</div>
         </Card>
       </div>
 
-      <Card>
-        <CardHeader title="Monitoring Records" />
-        <CardBody className="p-0">
-          {records.length === 0 ? (
-            <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
-          ) : (
-            <Table>
-              <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
-              <tbody>
-                {records.slice(0, 50).map((r) => (
-                  <TR key={r.id}>
-                    <TD>{fmtDate(r.record_date)}</TD>
-                    <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
-                    <TD className="text-ink-500">{r.source}</TD>
-                  </TR>
-                ))}
-              </tbody>
-            </Table>
-          )}
-        </CardBody>
-      </Card>
+      {/* Tabs */}
+      <div className="mb-4 flex items-center gap-1 border-b border-ink-200">
+        {([['overview', 'Monitoring'], ['evidence', 'Evidence']] as [Tab, string][]).map(([key, label]) => (
+          <button
+            key={key}
+            onClick={() => setTab(key)}
+            className={clsx(
+              'relative px-4 py-2.5 text-sm font-medium transition-colors',
+              tab === key ? 'text-brand-700' : 'text-ink-500 hover:text-ink-900'
+            )}
+          >
+            {label}
+            {key === 'evidence' && evidenceCount > 0 && (
+              <span className="ml-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[11px] text-ink-600">{evidenceCount}</span>
+            )}
+            {tab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-600" />}
+          </button>
+        ))}
+      </div>
+
+      {tab === 'overview' ? (
+        <Card>
+          <CardHeader title="Monitoring Records" />
+          <CardBody className="p-0">
+            {records.length === 0 ? (
+              <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
+            ) : (
+              <Table>
+                <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
+                <tbody>
+                  {records.slice(0, 50).map((r) => (
+                    <TR key={r.id}>
+                      <TD>{fmtDate(r.record_date)}</TD>
+                      <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
+                      <TD className="text-ink-500">{r.source}</TD>
+                    </TR>
+                  ))}
+                </tbody>
+              </Table>
+            )}
+          </CardBody>
+        </Card>
+      ) : (
+        <ProjectEvidenceTab projectId={project.id} />
+      )}
     </div>
   );
 }

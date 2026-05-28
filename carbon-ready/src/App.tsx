@@ -7,6 +7,8 @@ import { UploadPage } from './pages/Upload';
 import { Calculations } from './pages/Calculations';
 import { EmissionFactors } from './pages/EmissionFactors';
 import { AuditLogPage } from './pages/AuditLog';
+import { Verifications } from './pages/Verifications';
+import { ReviewDetail } from './pages/ReviewDetail';
 
 export default function App() {
   return (
@@ -20,6 +22,8 @@ export default function App() {
           <Route path="/upload" element={<UploadPage />} />
           <Route path="/calculations" element={<Calculations />} />
           <Route path="/emission-factors" element={<EmissionFactors />} />
+          <Route path="/verifications" element={<Verifications />} />
+          <Route path="/verifications/:id" element={<ReviewDetail />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
         </Route>

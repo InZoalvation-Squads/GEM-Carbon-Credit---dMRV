@@ -9,3 +9,8 @@ export function formatKwh(n: number): string {
 export function formatTco2e(kg: number): string {
   return formatNumber(kg / 1000, 2) + ' tCO₂e';
 }
+export function formatBytes(bytes: number): string {
+  if (bytes < 1024) return `${bytes} B`;
+  if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, 0)} KB`;
+  return `${formatNumber(bytes / (1024 * 1024), 1)} MB`;
+}

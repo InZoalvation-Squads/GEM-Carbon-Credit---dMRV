@@ -1,13 +1,14 @@
 import { ReactNode } from 'react';
 import clsx from 'clsx';
 
-type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue';
+type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet';
 const tones: Record<Tone, string> = {
-  green: 'bg-brand-50 text-brand-700 ring-brand-100',
-  amber: 'bg-amber-50 text-amber-700 ring-amber-100',
-  red:   'bg-red-50 text-red-700 ring-red-100',
-  gray:  'bg-ink-100 text-ink-700 ring-ink-200',
-  blue:  'bg-sky-50 text-sky-700 ring-sky-100',
+  green:  'bg-brand-50 text-brand-700 ring-brand-100',
+  amber:  'bg-amber-50 text-amber-700 ring-amber-100',
+  red:    'bg-red-50 text-red-700 ring-red-100',
+  gray:   'bg-ink-100 text-ink-700 ring-ink-200',
+  blue:   'bg-sky-50 text-sky-700 ring-sky-100',
+  violet: 'bg-violet-50 text-violet-700 ring-violet-100',
 };
 export function Badge({ tone = 'gray', children }: { tone?: Tone; children: ReactNode }) {
   return (

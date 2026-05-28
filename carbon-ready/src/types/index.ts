@@ -7,8 +7,18 @@ export type AuditAction =
   | 'PROJECT_UPDATED'
   | 'CSV_UPLOADED'
   | 'CALCULATION_EXECUTED'
-  | 'EMISSION_FACTOR_ADDED';
-export type EntityType = 'project' | 'monitoring' | 'factor' | 'calculation';
+  | 'EMISSION_FACTOR_ADDED'
+  // Sprint 2 — Evidence & Verification
+  | 'EVIDENCE_UPLOADED'
+  | 'EVIDENCE_REPLACED'
+  | 'EVIDENCE_ARCHIVED'
+  | 'VERIFICATION_SUBMITTED'
+  | 'REVIEW_STARTED'
+  | 'COMMENT_ADDED'
+  | 'REVISION_REQUESTED'
+  | 'VERIFICATION_APPROVED'
+  | 'VERIFICATION_REJECTED';
+export type EntityType = 'project' | 'monitoring' | 'factor' | 'calculation' | 'evidence' | 'verification';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
 export interface Organization {
@@ -79,6 +89,92 @@ export interface AuditLog {
   hcs_topic_id: string | null;
   hcs_sequence_number: number | null;
   created_at: string;
+  // Sprint 2 — Advanced Audit Trail (optional; older entries may omit)
+  user_role?: UserRole | null;
+  ip_address?: string | null;
+  previous_value?: Record<string, unknown> | null;
+  new_value?: Record<string, unknown> | null;
+  row_hash?: string | null;
+  prev_row_hash?: string | null;
+}
+
+// ============================================================
+// Sprint 2 — Evidence Management
+// ============================================================
+export type EvidenceCategory =
+  | 'meter_reading'
+  | 'utility_bill'
+  | 'commissioning_report'
+  | 'site_photo'
+  | 'maintenance_report'
+  | 'supporting_evidence'
+  | 'verification_report';
+
+export type EvidenceStatus = 'active' | 'superseded' | 'archived';
+export type FileKind = 'pdf' | 'image' | 'xlsx';
+
+export interface EvidenceFile {
+  id: UUID;
+  project_id: UUID;
+  parent_id: UUID | null;          // previous version, if any
+  category: EvidenceCategory;
+  file_name: string;
+  kind: FileKind;
+  file_size: number;               // bytes
+  version_number: number;
+  status: EvidenceStatus;
+  description?: string;
+  content_hash: string;
+  uploaded_by: UUID;
+  uploaded_by_name: string;
+  uploaded_at: string;
+}
+
+// ============================================================
+// Sprint 2 — Verification Workflow
+// ============================================================
+export type VerificationState =
+  | 'draft'
+  | 'submitted'
+  | 'under_review'
+  | 'revision_required'
+  | 'approved'
+  | 'rejected';
+
+export interface VerificationComment {
+  id: UUID;
+  verification_id: UUID;
+  evidence_id: UUID | null;        // null = package-level
+  evidence_name?: string;
+  author_id: UUID;
+  author_name: string;
+  author_role: UserRole;
+  body: string;
+  reply_to?: UUID;
+  created_at: string;
+}
+
+export interface VerificationRequest {
+  id: UUID;
+  project_id: UUID;
+  created_by: UUID;
+  owner_name: string;
+  assigned_verifier_name: string;
+  state: VerificationState;
+  monitoring_period_start: string; // ISO date
+  monitoring_period_end: string;   // ISO date
+  reduction_kgco2e: number;        // carbon claim for the period
+  factors_snapshot: string;
+  evidence_ids: UUID[];
+  required_categories: EvidenceCategory[];
+  submitted_at: string | null;
+  locked_at: string | null;
+  sla_target_days: number;
+  rejection_reason?: string;
+  // Sprint 3 (Hedera Guardian) readiness — populated by the anchor worker
+  hash_value: string | null;
+  credential_id: string | null;
+  anchored_at: string | null;
 }
 
 export type CsvErrorCode =
