@@ -16,7 +16,7 @@ const ACTIONS: AuditAction[] = [
   'PROJECT_CREATED', 'PROJECT_UPDATED', 'CSV_UPLOADED', 'CALCULATION_EXECUTED', 'EMISSION_FACTOR_ADDED',
   'EVIDENCE_UPLOADED', 'EVIDENCE_REPLACED', 'EVIDENCE_ARCHIVED',
   'VERIFICATION_SUBMITTED', 'REVIEW_STARTED', 'COMMENT_ADDED', 'REVISION_REQUESTED',
-  'VERIFICATION_APPROVED', 'VERIFICATION_REJECTED',
+  'VERIFICATION_APPROVED', 'VERIFICATION_REJECTED', 'VERIFICATION_ANCHORED',
 ];
 const ENTITIES: EntityType[] = ['project', 'monitoring', 'factor', 'calculation', 'evidence', 'verification'];
 
@@ -35,6 +35,7 @@ const TONE: Partial<Record<AuditAction, 'green' | 'amber' | 'red' | 'gray' | 'bl
   REVISION_REQUESTED: 'amber',
   VERIFICATION_APPROVED: 'green',
   VERIFICATION_REJECTED: 'red',
+  VERIFICATION_ANCHORED: 'green',
 };
 
 // Recompute the chain (oldest→newest) and confirm each row_hash matches.

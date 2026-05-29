@@ -22,6 +22,7 @@ const ACTION_LABEL: Record<string, string> = {
   REVISION_REQUESTED: 'requested revision',
   VERIFICATION_APPROVED: 'approved & locked',
   VERIFICATION_REJECTED: 'rejected',
+  VERIFICATION_ANCHORED: 'anchored to Hedera Guardian',
   EVIDENCE_REPLACED: 'replaced evidence',
   EVIDENCE_UPLOADED: 'uploaded evidence',
 };

@@ -9,6 +9,7 @@ import { EmissionFactors } from './pages/EmissionFactors';
 import { AuditLogPage } from './pages/AuditLog';
 import { Verifications } from './pages/Verifications';
 import { ReviewDetail } from './pages/ReviewDetail';
+import { Guardian } from './pages/Guardian';
 
 export default function App() {
   return (
@@ -24,6 +25,7 @@ export default function App() {
           <Route path="/emission-factors" element={<EmissionFactors />} />
           <Route path="/verifications" element={<Verifications />} />
           <Route path="/verifications/:id" element={<ReviewDetail />} />
+          <Route path="/guardian" element={<Guardian />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
         </Route>
