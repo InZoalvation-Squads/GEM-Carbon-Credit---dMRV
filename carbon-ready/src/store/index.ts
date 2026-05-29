@@ -4,13 +4,16 @@ import type {
   Project, MonitoringRecord, EmissionFactor, CalculationResult,
   AuditLog, User, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
+  VerifiableCredential, GuardianConfig,
 } from '../types';
 import {
   seedOrg, seedUser, seedFactors, seedProjects, seedRecords, seedAudit,
-  seedEvidence, seedVerifications, seedComments,
+  seedEvidence, seedVerifications, seedComments, seedCredentials,
 } from '../data/seed';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
+import { buildApprovalSubject, issueCredential, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
   currentUser: User;
@@ -23,6 +26,8 @@ interface AppState {
   evidence: EvidenceFile[];
   verifications: VerificationRequest[];
   comments: VerificationComment[];
+  credentials: VerifiableCredential[];
+  guardianConfig: GuardianConfig;
 
   audit_write: (action: AuditAction, entity_type: EntityType, entity_id: UUID | null, payload?: Record<string, unknown>, extra?: AuditExtra) => void;
 
@@ -48,6 +53,9 @@ interface AppState {
   rejectVerification: (id: UUID, reason: string) => void;
   addComment: (verification_id: UUID, body: string, evidence?: { id: UUID; name: string }) => void;
 
+  // Sprint 3 — Hedera Guardian anchoring (simulated)
+  anchorVerification: (id: UUID) => void;
+
   resetToSeed: () => void;
 }
 
@@ -70,6 +78,8 @@ export const useStore = create<AppState>()(
       evidence: seedEvidence,
       verifications: seedVerifications,
       comments: seedComments,
+      credentials: seedCredentials,
+      guardianConfig: DEFAULT_GUARDIAN_CONFIG,
 
       audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) =>
         set((s) => ({
@@ -220,11 +230,32 @@ export const useStore = create<AppState>()(
         get().audit_write('COMMENT_ADDED', 'verification', verification_id, evidence ? { evidence: evidence.name } : {}, { new_value: { body } });
       },
 
+      // ---------------- Sprint 3: Guardian anchoring (simulated) ----------------
+      anchorVerification: (id) => {
+        const v = get().verifications.find((x) => x.id === id);
+        if (!v || v.state !== 'approved' || v.credential_id || !v.hash_value) return;
+        const issuedAt = new Date().toISOString();
+        const sequenceNumber = get().credentials.length + 1;
+        const subject = buildApprovalSubject(v, get().evidence);
+        const vc = issueCredential(subject, v.hash_value, sequenceNumber, get().guardianConfig, MRV_APPROVAL_SCHEMA_V1, issuedAt);
+        set((s) => ({
+          credentials: [vc, ...s.credentials],
+          verifications: s.verifications.map((x) =>
+            x.id === id
+              ? { ...x, credential_id: vc.id, anchored_at: issuedAt, hcs_topic_id: vc.hcs.topic_id, hcs_sequence_number: vc.hcs.sequence_number }
+              : x),
+        }));
+        get().audit_write('VERIFICATION_ANCHORED', 'verification', id,
+          { credential_id: vc.id, topic_id: vc.hcs.topic_id, sequence_number: vc.hcs.sequence_number },
+          { previous_value: { anchored: false }, new_value: { credential_id: vc.id, hcs_topic_id: vc.hcs.topic_id, hcs_sequence_number: vc.hcs.sequence_number } });
+      },
+
       resetToSeed: () => set({
         projects: seedProjects, records: seedRecords, factors: seedFactors, calculations: [], audit: seedAudit,
         evidence: seedEvidence, verifications: seedVerifications, comments: seedComments,
+        credentials: seedCredentials, guardianConfig: DEFAULT_GUARDIAN_CONFIG,
       }),
     }),
-    { name: 'carbon-ready-store-v2' }
+    { name: 'carbon-ready-store-v3' }
   )
 );
