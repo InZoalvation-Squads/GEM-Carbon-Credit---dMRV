@@ -110,4 +110,10 @@ export const api = {
     useStore.getState().rejectVerification(id, reason);
     return tick(undefined);
   },
+
+  // ---------------- Sprint 3: Guardian anchoring ----------------
+  async anchorVerification(id: UUID): Promise<void> {
+    useStore.getState().anchorVerification(id);
+    return tick(undefined);
+  },
 };
