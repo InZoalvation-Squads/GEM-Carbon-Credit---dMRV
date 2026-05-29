@@ -1,5 +1,5 @@
 # Carbon Ready — dMRV Working Document
-**Solar Rooftop Digital MRV Platform · Sprint 1 + Sprint 2**
+**Solar Rooftop Digital MRV Platform · Sprint 1 + Sprint 2 + Sprint 3**
 
 > เอกสารฉบับนี้อธิบายการทำงานของทั้งระบบ (ภาษาไทย + English). หัวข้อแต่ละส่วนจะมีสรุปภาษาไทยก่อน แล้วตามด้วยรายละเอียดภาษาอังกฤษ.
 > This document explains how the whole platform works. Each section leads with a Thai summary, then English detail.
@@ -9,8 +9,8 @@
 | **App** | Carbon Ready (`carbon-ready/`) |
 | **Domain** | Digital MRV (Monitoring, Reporting, Verification) สำหรับคาร์บอนเครดิตจากโซลาร์รูฟท็อป |
 | **Branch** | `feat/sprint-1-mvp` |
-| **Status** | Sprint 1 (MVP) + Sprint 2 (Evidence · Verification · Advanced Audit) merged |
-| **Next** | Sprint 3 — Hedera Guardian anchoring (เตรียม architecture ไว้แล้ว) |
+| **Status** | Sprint 1 (MVP) + Sprint 2 (Evidence · Verification · Advanced Audit) + Sprint 3 (simulated Guardian anchoring) merged |
+| **Next** | Real Hedera Guardian (swap `lib/guardian.ts` → Guardian REST + `@hashgraph/sdk`) |
 
 ---
 
@@ -64,7 +64,7 @@ Vite 5 · React 18 · TypeScript 5 (strict) · Tailwind 3 · React Router 6 · R
 cd carbon-ready
 npm install
 npm run dev        # http://localhost:5173 (หรือ 5174 ถ้าพอร์ตชน)
-npm test           # vitest — 25 tests
+npm test           # vitest — 32 tests
 npm run build      # tsc -b + vite build (production)
 npx tsc -b         # type-check only (ไม่มี npm script แยก ใช้คำสั่งนี้)
 ```
@@ -258,16 +258,30 @@ row_hash = shortHash( prev_row_hash || canonical({
 - `audit_logs.hcs_topic_id` / `hcs_sequence_number` — ฟิลด์ Hedera Consensus Service (ยัง null)
 - ลูกโซ่แฮชของ audit — แฮชล่าสุดของแพ็กเกจที่อนุมัติคือสิ่งที่จะ anchor
 
-**EN:** Sprint 3 adds a worker that reads approved packages, issues a Verifiable Credential via Hedera Guardian, anchors the hash on HCS, then writes back `credential_id` + `anchored_at`. No Hedera SDK or blockchain code exists yet — only the data seams. รายละเอียดเชิงลึกอยู่ใน `/Users/oppabig/dmrv-sprint2/docs/10-hedera-guardian-readiness.md`.
+**EN:** Sprint 3 adds a worker that reads approved packages, issues a Verifiable Credential via Hedera Guardian, anchors the hash on HCS, then writes back `credential_id` + `anchored_at`. รายละเอียดเชิงลึกอยู่ใน `/Users/oppabig/dmrv-sprint2/docs/10-hedera-guardian-readiness.md`.
+
+### Sprint 3 (simulated) — shipped ✅
+
+**ไทย:** Sprint 3 ทำ anchoring แบบ **จำลองในแอป** (ไม่มี Hedera จริง/ไม่มี backend/ไม่มี SDK) โดยต่อยอดจากตะเข็บข้างบน:
+
+- `lib/guardian-schema.ts` — `MRV_APPROVAL_SCHEMA_V1` (credential schema สไตล์ W3C VC, 10 ฟิลด์)
+- `lib/guardian.ts` — mock Guardian client: `DEFAULT_GUARDIAN_CONFIG` (issuer DID · topic · network=testnet), `buildApprovalSubject()`, `issueCredential()` (สร้าง VC + mock HCS coordinates แบบ deterministic)
+- `store.anchorVerification(id)` — ปุ่ม **Anchor to Hedera Guardian** บนหน้า Review Detail (เฉพาะ `approved` + ยังไม่ anchor) → ออก VC → เติม `credential_id`/`anchored_at`/`hcs_topic_id`/`hcs_sequence_number` → เขียน audit `VERIFICATION_ANCHORED` (ผูกแฮชต่อลูกโซ่เดิม) → expose ผ่าน `api.anchorVerification`
+- `pages/Guardian.tsx` (`/guardian`) — แท็บ **Schema** (แสดง schema + config) และ **Credential Registry** (ลิสต์ VC ที่ anchor แล้ว + mock HashScan link)
+- seed: pre-anchor `VR-1000` (`urn:vc:vr1000seed`) + audit row `aud-0010b`; persist key bump `v2 → v3`
+
+ทุกที่ที่แสดง credential/anchor มีป้าย **"Simulated · not a live Hedera transaction"**. ตะเข็บที่ implementation จริงจะมาแทนคือ `lib/guardian.ts` → Guardian REST + `@hashgraph/sdk` (แบบเดียวกับที่ `lib/api.ts` จะกลายเป็น `fetch()` จริง).
+
+**EN:** Sprint 3 ships the anchoring loop as a faithful **in-app simulation** — no real Hedera infra, backend, or SDK. The mock seams (`lib/guardian.ts`, `api.anchorVerification`) are exactly what a real Guardian REST + `@hashgraph/sdk` integration would replace. Tests: `guardian.test.ts` (2), `store/anchor.test.ts` (2), `pages/guardian.ui.test.tsx` (3) — 32 total.
 
 ---
 
 ## 13. Testing
 
 ```bash
-npm test     # vitest run — 25 tests (csv.test.ts ×13, calc.test.ts ×12)
+npm test     # vitest run — 32 tests
 ```
-**ไทย:** ครอบ `lib/csv.ts` และ `lib/calc.ts` (pure functions ที่ใช้ validate + คำนวณ). Sprint 2 ไม่ได้ลดความครอบคลุมของเทสเดิม (ผ่านครบ 25). แนะนำเพิ่มเทสสำหรับ state machine ของ verification และ `verifyChain()` ใน Sprint ถัดไป.
+**ไทย:** เทสเดิมครอบ `lib/csv.ts` (×13) และ `lib/calc.ts` (×12). Sprint 3 เพิ่ม `lib/guardian.test.ts` (×2 — mock Guardian client), `store/anchor.test.ts` (×2 — `anchorVerification` + chain integrity) และ `pages/guardian.ui.test.tsx` (×3 — render + interaction ของหน้า Guardian และปุ่ม Anchor). ผ่านครบ 32. แนะนำเพิ่มเทสสำหรับ state machine ของ verification และ `verifyChain()` ต่อไป.
 
 ---
 
