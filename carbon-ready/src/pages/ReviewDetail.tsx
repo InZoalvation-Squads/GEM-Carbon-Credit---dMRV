@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ChevronLeft, Lock, ShieldCheck, CheckCircle2, FileCheck2, MessageSquarePlus } from 'lucide-react';
+import { ChevronLeft, Lock, ShieldCheck, CheckCircle2, FileCheck2, MessageSquarePlus, Link2 } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../components/Card';
 import { Button } from '../components/Button';
 import { Textarea } from '../components/Textarea';
@@ -40,6 +40,8 @@ export function ReviewDetail() {
   const approveVerification = useStore((s) => s.approveVerification);
   const rejectVerification = useStore((s) => s.rejectVerification);
   const addComment = useStore((s) => s.addComment);
+  const anchorVerification = useStore((s) => s.anchorVerification);
+  const credential = useStore((s) => s.credentials.find((c) => c.id === (v?.credential_id ?? '')));
 
   const [draft, setDraft] = useState('');
   const [action, setAction] = useState<Action>(null);
@@ -92,8 +94,25 @@ export function ReviewDetail() {
             <Lock size={16} className="text-brand-700" />
             <div className="text-sm text-brand-800">
               {v.state === 'approved' ? (
-                <>Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'}. Evidence is read-only.{' '}
-                  <span className="font-mono text-xs">hash {v.hash_value}</span> · 🔒 anchoring pending — Hedera Guardian (Sprint 3).</>
+                v.credential_id == null ? (
+                  <div className="flex flex-wrap items-center gap-3">
+                    <span>Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'} · evidence read-only.{' '}
+                      <span className="font-mono text-xs">hash {v.hash_value}</span> · 🔒 anchoring pending.</span>
+                    <Button size="sm" onClick={() => anchorVerification(v.id)}>
+                      <Link2 size={14} /> Anchor to Hedera Guardian
+                    </Button>
+                  </div>
+                ) : (
+                  <div>
+                    <div className="flex items-center gap-2 font-medium text-brand-800">⛓ Anchored on Hedera Guardian (simulated)</div>
+                    <div className="mt-1 grid gap-0.5 text-xs text-brand-700 font-mono">
+                      <span>credential: {v.credential_id}</span>
+                      <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {v.anchored_at ? fmtDateTime(v.anchored_at) : ''}</span>
+                      {credential && <a className="underline" href={credential.hcs.explorer_url} target="_blank" rel="noreferrer">View on HashScan (mock) ↗</a>}
+                    </div>
+                    <div className="mt-1 text-[11px] text-ink-400">Simulated · not a live Hedera transaction.</div>
+                  </div>
+                )
               ) : (
                 <>Package was rejected and is closed. {v.rejection_reason && <em>“{v.rejection_reason}”</em>}</>
               )}
