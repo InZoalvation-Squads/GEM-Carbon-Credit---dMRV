@@ -17,7 +17,8 @@ export type AuditAction =
   | 'COMMENT_ADDED'
   | 'REVISION_REQUESTED'
   | 'VERIFICATION_APPROVED'
-  | 'VERIFICATION_REJECTED';
+  | 'VERIFICATION_REJECTED'
+  | 'VERIFICATION_ANCHORED';
 export type EntityType = 'project' | 'monitoring' | 'factor' | 'calculation' | 'evidence' | 'verification';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
@@ -175,6 +176,8 @@ export interface VerificationRequest {
   hash_value: string | null;
   credential_id: string | null;
   anchored_at: string | null;
+  hcs_topic_id: string | null;
+  hcs_sequence_number: number | null;
 }
 
 export type CsvErrorCode =
@@ -194,4 +197,42 @@ export interface CsvRowError {
 export interface CsvValidationResult {
   accepted: Array<{ record_date: string; generation_kwh: number }>;
   rejected: CsvRowError[];
+}
+
+// ============================================================
+// Sprint 3 — Hedera Guardian (simulated)
+// ============================================================
+export interface GuardianConfig {
+  issuer_did: string;
+  topic_id: string;
+  network: 'testnet';
+}
+
+export interface CredentialSchemaProperty {
+  key: string;
+  type: string;
+  description: string;
+}
+
+export interface CredentialSchema {
+  id: string;
+  name: string;
+  version: string;
+  type: string;
+  properties: CredentialSchemaProperty[];
+}
+
+export interface VerifiableCredential {
+  id: string;                 // also stored as VerificationRequest.credential_id
+  schema_id: string;
+  issuer_did: string;
+  issued_at: string;
+  subject: Record<string, unknown>;
+  package_hash: string;
+  hcs: {
+    topic_id: string;
+    sequence_number: number;
+    consensus_timestamp: string;
+    explorer_url: string;
+  };
 }
