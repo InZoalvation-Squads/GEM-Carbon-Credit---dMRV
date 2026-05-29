@@ -1,10 +1,11 @@
 import type {
   Organization, Project, MonitoringRecord, EmissionFactor, User, AuditLog,
   EvidenceFile, VerificationRequest, VerificationComment,
-  AuditAction, EntityType, UserRole,
+  AuditAction, EntityType, UserRole, VerifiableCredential,
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { auditRowHash } from '../store/audit';
+import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 
 const uid = (p: string, n: number) => `${p}-${String(n).padStart(4, '0')}`;
 
@@ -109,6 +110,7 @@ export const seedVerifications: VerificationRequest[] = [
     required_categories: REQUIRED, submitted_at: '2026-05-04T17:48:00Z',
     locked_at: null, sla_target_days: 7,
     hash_value: null, credential_id: null, anchored_at: null,
+    hcs_topic_id: null, hcs_sequence_number: null,
   },
   {
     id: 'VR-1002', project_id: 'prj-0002', created_by: U.id, owner_name: U.name,
@@ -119,6 +121,7 @@ export const seedVerifications: VerificationRequest[] = [
     required_categories: REQUIRED, submitted_at: '2026-05-05T01:05:00Z',
     locked_at: null, sla_target_days: 7,
     hash_value: null, credential_id: null, anchored_at: null,
+    hcs_topic_id: null, hcs_sequence_number: null,
   },
   {
     id: 'VR-1003', project_id: 'prj-0002', created_by: U.id, owner_name: U.name,
@@ -129,6 +132,7 @@ export const seedVerifications: VerificationRequest[] = [
     required_categories: REQUIRED, submitted_at: '2026-04-06T09:30:00Z',
     locked_at: null, sla_target_days: 7,
     hash_value: null, credential_id: null, anchored_at: null,
+    hcs_topic_id: null, hcs_sequence_number: null,
   },
   {
     id: 'VR-1000', project_id: 'prj-0001', created_by: U.id, owner_name: U.name,
@@ -138,7 +142,9 @@ export const seedVerifications: VerificationRequest[] = [
     evidence_ids: ['ev-0003'],
     required_categories: REQUIRED, submitted_at: '2026-04-08T03:00:00Z',
     locked_at: '2026-04-15T08:22:00Z', sla_target_days: 7,
-    hash_value: shortHash('VR-1000-approval-payload'), credential_id: null, anchored_at: null,
+    hash_value: shortHash('VR-1000-approval-payload'),
+    credential_id: 'urn:vc:vr1000seed', anchored_at: '2026-04-15T08:30:00Z',
+    hcs_topic_id: DEFAULT_GUARDIAN_CONFIG.topic_id, hcs_sequence_number: 1,
   },
 ];
 
@@ -147,6 +153,32 @@ export const seedComments: VerificationComment[] = [
   { id: 'cmt-0002', verification_id: 'VR-1001', evidence_id: 'ev-0001', evidence_name: 'pune-apr-2026-meter.pdf', author_id: U.id, author_name: U.name, author_role: 'esg_manager', body: 'Done — uploaded v2 with the serial number clearly in frame.', reply_to: 'cmt-0001', created_at: '2026-05-04T03:13:00Z' },
   { id: 'cmt-0003', verification_id: 'VR-1001', evidence_id: 'ev-0005', evidence_name: 'pune-inverter-log-apr.xlsx', author_id: 'usr-verif', author_name: 'Daniel Okoye', author_role: 'verifier', body: 'Inverter totals reconcile with the utility bill within 1.2%. Cross-checking the site photo timestamp next.', created_at: '2026-05-05T08:40:00Z' },
   { id: 'cmt-0004', verification_id: 'VR-1003', evidence_id: null, author_id: 'usr-verif', author_name: 'Daniel Okoye', author_role: 'verifier', body: 'Missing the commissioning report and a site photo for this period. Please add both before resubmitting.', created_at: '2026-04-07T10:15:00Z' },
+];
+
+// ============================================================
+// Sprint 3 — pre-anchored credential for VR-1000
+// ============================================================
+export const seedCredentials: VerifiableCredential[] = [
+  {
+    id: 'urn:vc:vr1000seed',
+    schema_id: 'mrv-approval-v1',
+    issuer_did: DEFAULT_GUARDIAN_CONFIG.issuer_did,
+    issued_at: '2026-04-15T08:30:00Z',
+    package_hash: shortHash('VR-1000-approval-payload'),
+    subject: {
+      verification_id: 'VR-1000', project_id: 'prj-0001',
+      monitoring_period_start: '2026-03-01', monitoring_period_end: '2026-03-31',
+      reduction_tco2e: 24.55, factors_snapshot: 'CEA 2025-v2 · 0.79 kgCO₂e/kWh',
+      evidence: [{ id: 'ev-0003', content_hash: shortHash('pune-commissioning') }],
+      approval_role: 'esg_manager', approved_at: '2026-04-15T08:22:00Z',
+      package_hash: shortHash('VR-1000-approval-payload'),
+    },
+    hcs: {
+      topic_id: DEFAULT_GUARDIAN_CONFIG.topic_id, sequence_number: 1,
+      consensus_timestamp: '2026-04-15T08:30:00Z',
+      explorer_url: `https://hashscan.io/${DEFAULT_GUARDIAN_CONFIG.network}/topic/${DEFAULT_GUARDIAN_CONFIG.topic_id}/message/1`,
+    },
+  },
 ];
 
 // ============================================================
@@ -198,6 +230,7 @@ export const seedAudit: AuditLog[] = buildChain([
   { id: 'aud-0001', user_role: 'project_owner', action: 'PROJECT_CREATED', entity_type: 'project', entity_id: 'prj-0001', payload: { name: 'Pune Rooftop Phase 1' }, new_value: { name: 'Pune Rooftop Phase 1' }, ip_address: '49.36.220.10', created_at: '2025-03-15T09:12:00Z' },
   { id: 'aud-0003', user_role: 'esg_manager', action: 'EMISSION_FACTOR_ADDED', entity_type: 'factor', entity_id: 'ef-0002', payload: { country: 'IN', source: 'CEA', version: 2 }, new_value: { factor_kgco2e_per_kwh: 0.79, version: 2 }, previous_value: { factor_kgco2e_per_kwh: 0.82, version: 1 }, created_at: '2025-04-01T08:00:00Z' },
   { id: 'aud-0010', user_role: 'esg_manager', action: 'VERIFICATION_APPROVED', entity_type: 'verification', entity_id: 'VR-1000', payload: { reduction_tco2e: 24.55 }, previous_value: { state: 'under_review' }, new_value: { state: 'approved', hash_value: shortHash('VR-1000-approval-payload'), locked_at: '2026-04-15T08:22:00Z' }, ip_address: '49.36.220.10', created_at: '2026-04-15T08:22:00Z' },
+  { id: 'aud-0010b', user_role: 'esg_manager', action: 'VERIFICATION_ANCHORED', entity_type: 'verification', entity_id: 'VR-1000', payload: { credential_id: 'urn:vc:vr1000seed', topic_id: DEFAULT_GUARDIAN_CONFIG.topic_id, sequence_number: 1 }, previous_value: { anchored: false }, new_value: { credential_id: 'urn:vc:vr1000seed', hcs_topic_id: DEFAULT_GUARDIAN_CONFIG.topic_id, hcs_sequence_number: 1 }, created_at: '2026-04-15T08:30:00Z' },
   { id: 'aud-0004', user_role: 'esg_manager', action: 'CSV_UPLOADED', entity_type: 'monitoring', entity_id: 'prj-0001', payload: { accepted: 180, rejected: 0 }, new_value: { accepted: 180, rejected: 0 }, created_at: '2026-05-04T02:30:00Z' },
   { id: 'aud-0011', user_role: 'project_owner', action: 'EVIDENCE_REPLACED', entity_type: 'evidence', entity_id: 'ev-0001', payload: { file_name: 'pune-apr-2026-meter.pdf' }, previous_value: { version_number: 1, content_hash: shortHash('pune-apr-meter-v1') }, new_value: { version_number: 2, content_hash: shortHash('pune-apr-meter-v2') }, ip_address: '49.36.220.10', created_at: '2026-05-04T03:11:00Z' },
   { id: 'aud-0012', user_role: 'project_owner', action: 'VERIFICATION_SUBMITTED', entity_type: 'verification', entity_id: 'VR-1001', payload: { reduction_tco2e: 23.7, evidence_count: 5 }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '49.36.220.10', created_at: '2026-05-04T17:48:00Z' },
