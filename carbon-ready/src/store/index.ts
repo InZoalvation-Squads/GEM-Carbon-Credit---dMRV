@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import type {
   Project, MonitoringRecord, EmissionFactor, CalculationResult,
-  AuditLog, User, Organization, UUID, AuditAction, EntityType,
+  AuditLog, User, UserRole, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
   VerifiableCredential, GuardianConfig,
 } from '../types';
@@ -17,6 +17,7 @@ import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
   currentUser: User;
+  setRole: (role: UserRole) => void;
   organization: Organization;
   projects: Project[];
   records: MonitoringRecord[];
@@ -69,6 +70,7 @@ export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: seedUser,
+      setRole: (role) => set((s) => ({ currentUser: { ...s.currentUser, role } })),
       organization: seedOrg,
       projects: seedProjects,
       records: seedRecords,
