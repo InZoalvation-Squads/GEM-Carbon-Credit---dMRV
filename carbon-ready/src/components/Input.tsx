@@ -11,13 +11,17 @@ export const Input = forwardRef<HTMLInputElement, Props>(function Input(
   const inputId = id ?? rest.name;
   return (
     <label className="block">
-      {label && <span className="block mb-1 text-sm font-medium text-ink-700">{label}</span>}
+      {label && <span className="block mb-1.5 text-[13px] font-medium text-ink-700">{label}</span>}
       <input
         ref={ref} id={inputId}
         className={clsx(
-          'block w-full rounded-md border border-ink-200 bg-white px-3 h-10 text-sm shadow-sm placeholder:text-ink-400',
-          'focus:border-brand-500 focus:ring-1 focus:ring-brand-500',
-          error && 'border-red-400', className
+          'block w-full rounded-lg border bg-white px-3 h-10 text-sm shadow-xs placeholder:text-ink-400',
+          'transition-colors duration-150 hover:border-ink-300',
+          'focus:outline-none focus:ring-4',
+          error
+            ? 'border-red-400 focus:border-red-500 focus:ring-red-500/15'
+            : 'border-ink-200 focus:border-brand-500 focus:ring-brand-500/15',
+          className,
         )}
         {...rest}
       />

@@ -3,9 +3,64 @@
 @tailwind utilities;
 
 html, body, #root { height: 100%; }
+
 body {
-  @apply bg-ink-50 text-ink-900 font-sans antialiased;
+  @apply text-ink-900 font-sans antialiased;
+  /* Refined OpenType: tighter, more characterful Inter */
+  font-feature-settings: 'cv11', 'ss01', 'cv02', 'cv03', 'cv04';
+  /* Soft layered backdrop instead of a flat fill */
+  background-color: #f6f8fb;
+  background-image:
+    radial-gradient(60rem 60rem at 105% -10%, rgba(16, 185, 129, 0.06), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 110%, rgba(20, 184, 166, 0.05), transparent 60%);
+  background-attachment: fixed;
 }
+
+/* Headings: tightened tracking for a designed feel */
+h1, h2, h3 { letter-spacing: -0.014em; }
+
+/* Tabular figures for all numeric/metric contexts */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Accessible, brand-tinted focus ring */
 *:focus-visible {
-  @apply outline-none ring-2 ring-brand-500 ring-offset-2 ring-offset-white rounded;
+  @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white rounded-md;
+}
+
+/* Selection in brand color */
+::selection { background: rgba(16, 185, 129, 0.18); color: #064e3b; }
+
+/* Refined, unobtrusive scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
+*::-webkit-scrollbar { width: 10px; height: 10px; }
+*::-webkit-scrollbar-thumb {
+  background-color: #cbd5e1;
+  border: 3px solid transparent;
+  border-radius: 9999px;
+  background-clip: content-box;
+}
+*::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; background-clip: content-box; }
+*::-webkit-scrollbar-track { background: transparent; }
+
+/* Loading shimmer skeleton */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  @apply bg-ink-100 rounded-md;
+}
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  @apply animate-shimmer;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+  }
 }

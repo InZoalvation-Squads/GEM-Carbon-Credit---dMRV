@@ -1,21 +1,36 @@
 import { HTMLAttributes, ReactNode } from 'react';
 import clsx from 'clsx';
 
-export function Card({ className, children, ...rest }: HTMLAttributes<HTMLDivElement>) {
+interface CardProps extends HTMLAttributes<HTMLDivElement> {
+  /** Lift + shadow on hover — use for clickable cards */
+  interactive?: boolean;
+}
+
+export function Card({ className, children, interactive, ...rest }: CardProps) {
   return (
-    <div className={clsx('rounded-xl border border-ink-200 bg-white shadow-card', className)} {...rest}>
+    <div
+      className={clsx(
+        'rounded-xl border border-ink-200/80 bg-white shadow-card',
+        interactive &&
+          'transition-all duration-200 hover:-translate-y-0.5 hover:shadow-lg hover:border-ink-200 cursor-pointer',
+        className,
+      )}
+      {...rest}
+    >
       {children}
     </div>
   );
 }
+
 export function CardHeader({ title, action }: { title: ReactNode; action?: ReactNode }) {
   return (
-    <div className="flex items-center justify-between px-5 py-4 border-b border-ink-100">
-      <h3 className="text-sm font-semibold text-ink-900">{title}</h3>
+    <div className="flex items-center justify-between gap-3 px-5 py-3.5 border-b border-ink-100">
+      <h3 className="text-[13px] font-semibold uppercase tracking-wide text-ink-500">{title}</h3>
       {action}
     </div>
   );
 }
+
 export function CardBody({ className, children }: { className?: string; children: ReactNode }) {
   return <div className={clsx('px-5 py-4', className)}>{children}</div>;
 }

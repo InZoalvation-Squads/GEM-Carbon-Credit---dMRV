@@ -2,6 +2,8 @@ import { useStore } from '../store';
 import { parseAndValidateCsv } from './csv';
 import { calculateCarbon } from './calc';
 import { locationToCountryCode } from './geo';
+import { toast } from '../components/Toast';
+import { formatNumber } from './format';
 import type {
   Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID,
   EvidenceFile, VerificationRequest, EvidenceCategory,
@@ -18,10 +20,14 @@ export const api = {
     return tick(useStore.getState().projects.find((p) => p.id === id));
   },
   async createProject(input: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id'>): Promise<Project> {
-    return tick(useStore.getState().createProject(input));
+    const project = useStore.getState().createProject(input);
+    toast.success('Project created', project.name);
+    return tick(project);
   },
   async updateProject(id: UUID, patch: Partial<Project>): Promise<Project | undefined> {
-    return tick(useStore.getState().updateProject(id, patch));
+    const project = useStore.getState().updateProject(id, patch);
+    toast.success('Project updated', project?.name);
+    return tick(project);
   },
 
   async uploadMonitoringCsv(project_id: UUID, csvText: string): Promise<CsvValidationResult & { uploaded_at: string }> {
@@ -35,6 +41,14 @@ export const api = {
       accepted: result.accepted.length,
       rejected: result.rejected.length,
     });
+    if (result.accepted.length === 0) {
+      toast.error('No rows imported', `${result.rejected.length} row(s) rejected — check the file format.`);
+    } else {
+      toast.success(
+        `${result.accepted.length} record(s) imported`,
+        result.rejected.length ? `${result.rejected.length} row(s) rejected.` : 'All rows passed validation.',
+      );
+    }
     return tick({ ...result, uploaded_at: new Date().toISOString() });
   },
 
@@ -55,6 +69,7 @@ export const api = {
       generation_kwh: result.totals.generation_kwh,
       reduction_kgco2e: result.totals.reduction_kgco2e,
     });
+    toast.success('Calculation complete', `${formatNumber(result.totals.reduction_tco2e, 2)} tCO₂e reduction`);
     return tick(result);
   },
 
@@ -62,7 +77,9 @@ export const api = {
     return tick(useStore.getState().factors);
   },
   async addFactor(input: Omit<EmissionFactor, 'id' | 'version' | 'is_current' | 'created_at'>): Promise<EmissionFactor> {
-    return tick(useStore.getState().addEmissionFactor(input));
+    const factor = useStore.getState().addEmissionFactor(input);
+    toast.success('Emission factor added', `${factor.country} · ${factor.source} v${factor.version}`);
+    return tick(factor);
   },
 
   // ---------------- Sprint 2: Evidence ----------------
@@ -73,13 +90,18 @@ export const api = {
     project_id: UUID,
     input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string }
   ): Promise<EvidenceFile> {
-    return tick(useStore.getState().uploadEvidence(project_id, input));
+    const file = useStore.getState().uploadEvidence(project_id, input);
+    toast.success('Evidence uploaded', file.file_name);
+    return tick(file);
   },
   async replaceEvidence(evidence_id: UUID, input: { file_name?: string; file_size: number }): Promise<EvidenceFile | undefined> {
-    return tick(useStore.getState().replaceEvidence(evidence_id, input));
+    const file = useStore.getState().replaceEvidence(evidence_id, input);
+    toast.success('New version uploaded', file ? `${file.file_name} · v${file.version_number}` : undefined);
+    return tick(file);
   },
   async archiveEvidence(evidence_id: UUID): Promise<void> {
     useStore.getState().archiveEvidence(evidence_id);
+    toast.info('Evidence archived');
     return tick(undefined);
   },
 
@@ -92,28 +114,34 @@ export const api = {
   },
   async submitVerification(id: UUID): Promise<void> {
     useStore.getState().submitVerification(id);
+    toast.success('Verification submitted', 'Sent to the review queue.');
     return tick(undefined);
   },
   async startReview(id: UUID): Promise<void> {
     useStore.getState().startReview(id);
+    toast.info('Review started');
     return tick(undefined);
   },
   async requestRevision(id: UUID, summary: string): Promise<void> {
     useStore.getState().requestRevision(id, summary);
+    toast.info('Revision requested', 'Returned to the project owner.');
     return tick(undefined);
   },
   async approveVerification(id: UUID, note?: string): Promise<void> {
     useStore.getState().approveVerification(id, note);
+    toast.success('Verification approved', 'Package locked and hash-sealed.');
     return tick(undefined);
   },
   async rejectVerification(id: UUID, reason: string): Promise<void> {
     useStore.getState().rejectVerification(id, reason);
+    toast.error('Verification rejected', reason);
     return tick(undefined);
   },
 
   // ---------------- Sprint 3: Guardian anchoring ----------------
   async anchorVerification(id: UUID): Promise<void> {
     useStore.getState().anchorVerification(id);
+    toast.success('Anchored to Hedera Guardian', 'Verifiable Credential issued.');
     return tick(undefined);
   },
 };

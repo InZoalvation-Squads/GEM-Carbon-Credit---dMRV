@@ -12,11 +12,17 @@ export function Modal({ open, onClose, title, children }: Props) {
   if (!open) return null;
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4" role="dialog" aria-modal="true">
-      <div className="absolute inset-0 bg-ink-900/40" onClick={onClose} />
-      <div className="relative w-full max-w-lg rounded-xl bg-white shadow-xl">
+      <div className="absolute inset-0 bg-ink-950/50 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
+      <div className="relative w-full max-w-lg rounded-2xl bg-white shadow-xl ring-1 ring-ink-900/5 animate-scale-in">
         <div className="flex items-center justify-between px-5 py-4 border-b border-ink-100">
-          <h2 className="text-sm font-semibold">{title}</h2>
-          <button onClick={onClose} aria-label="Close" className="text-ink-500 hover:text-ink-900"><X size={18} /></button>
+          <h2 className="text-base font-semibold text-ink-900">{title}</h2>
+          <button
+            onClick={onClose}
+            aria-label="Close"
+            className="grid h-8 w-8 place-items-center rounded-lg text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-900"
+          >
+            <X size={18} />
+          </button>
         </div>
         <div className="p-5">{children}</div>
       </div>

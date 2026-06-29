@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Carbon Ready dMRV — ระบบทำงานอย่างไร (Step by Step)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    /* ---- Carbon Ready CI ---- */
+    --brand-50:#ecfdf5; --brand-100:#d1fae5; --brand-500:#10b981; --brand-600:#059669; --brand-700:#047857;
+    --accent:#14b8a6;
+    --ink-50:#f8fafc; --ink-100:#f1f5f9; --ink-200:#e2e8f0; --ink-300:#cbd5e1;
+    --ink-400:#94a3b8; --ink-500:#64748b; --ink-600:#475569; --ink-700:#334155; --ink-900:#0f172a;
+    --amber:#d97706; --red:#dc2626; --green:var(--brand-600);
+    --card:#ffffff; --bg:var(--ink-50);
+    --shadow:0 1px 2px rgba(15,23,42,.04), 0 1px 3px rgba(15,23,42,.06);
+    --shadow-lg:0 10px 30px rgba(15,23,42,.10);
+  }
+  *{box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    margin:0; color:var(--ink-900); background:var(--bg);
+    font-family:"Inter","Noto Sans Thai",system-ui,-apple-system,"Segoe UI",sans-serif;
+    line-height:1.65; -webkit-font-smoothing:antialiased;
+  }
+  a{color:var(--brand-600);text-decoration:none}
+  a:hover{text-decoration:underline}
+
+  /* ---- Hero (slate sidebar tone) ---- */
+  header.hero{background:var(--ink-900);color:#fff;padding:44px 32px 38px;position:relative;overflow:hidden}
+  header.hero::after{content:"";position:absolute;right:-80px;top:-80px;width:340px;height:340px;border-radius:50%;
+    background:radial-gradient(circle,rgba(16,185,129,.22),transparent 70%)}
+  .hero-inner{max-width:980px;margin:0 auto;position:relative;z-index:1}
+  .brand{display:flex;align-items:center;gap:11px;margin-bottom:22px}
+  .brand .logo{width:38px;height:38px;border-radius:9px;background:var(--brand-500);display:flex;align-items:center;justify-content:center;box-shadow:0 4px 14px rgba(16,185,129,.4)}
+  .brand .logo svg{width:22px;height:22px}
+  .brand .name{font-weight:700;font-size:17px;letter-spacing:-.01em}
+  .brand .ver{margin-left:auto;font-size:12px;color:var(--ink-400)}
+  .hero .eyebrow{letter-spacing:.16em;text-transform:uppercase;font-size:12px;color:var(--brand-500);font-weight:700}
+  .hero h1{margin:8px 0 8px;font-size:34px;line-height:1.22;letter-spacing:-.02em;font-weight:800}
+  .hero p{margin:0;color:var(--ink-300);font-size:16px;max-width:700px}
+  .hero .meta{margin-top:22px;display:flex;gap:10px;flex-wrap:wrap}
+  .hero .meta span{font-size:12.5px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.1);padding:5px 12px;border-radius:20px;color:var(--ink-300)}
+  .hero .meta b{color:var(--brand-500)}
+
+  .wrap{max-width:980px;margin:0 auto;padding:0 32px}
+  main{padding:36px 0 80px}
+
+  /* ---- TOC ---- */
+  .toc{background:var(--card);border:1px solid var(--ink-200);border-radius:16px;padding:22px 26px;
+    margin:-26px auto 38px;max-width:980px;position:relative;z-index:2;box-shadow:var(--shadow-lg)}
+  .toc h2{margin:0 0 12px;font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-500);font-weight:700}
+  .toc ol{margin:0;padding-left:20px;columns:2;column-gap:36px}
+  .toc li{margin:5px 0;break-inside:avoid;font-size:14.5px}
+
+  section{margin:0 0 44px;scroll-margin-top:20px}
+  h2.sec{font-size:24px;margin:0 0 4px;color:var(--ink-900);display:flex;align-items:center;gap:13px;letter-spacing:-.01em;font-weight:800}
+  h2.sec .num{flex:none;width:38px;height:38px;border-radius:11px;background:var(--brand-50);color:var(--brand-600);
+    border:1.5px solid var(--brand-100);display:inline-flex;align-items:center;justify-content:center;font-size:16px;font-weight:800}
+  .sec-sub{color:var(--ink-500);margin:0 0 18px 51px;font-size:14px}
+  h3{font-size:17px;color:var(--ink-900);margin:24px 0 8px;font-weight:700;letter-spacing:-.01em}
+
+  .card{background:var(--card);border:1px solid var(--ink-200);border-radius:16px;padding:22px 26px;margin:14px 0;box-shadow:var(--shadow)}
+
+  /* ---- Step list ---- */
+  ol.steps{list-style:none;counter-reset:step;margin:0;padding:0}
+  ol.steps>li{counter-increment:step;position:relative;padding:0 0 22px 52px;margin:0}
+  ol.steps>li::before{content:counter(step);position:absolute;left:0;top:0;width:34px;height:34px;border-radius:10px;
+    background:var(--brand-500);color:#fff;font-weight:700;display:flex;align-items:center;justify-content:center;font-size:14px;box-shadow:0 2px 8px rgba(16,185,129,.35)}
+  ol.steps>li:not(:last-child)::after{content:"";position:absolute;left:16px;top:36px;bottom:2px;width:2px;background:var(--ink-200)}
+  ol.steps>li b{color:var(--ink-900)}
+
+  /* ---- Role chips ---- */
+  .who{display:inline-block;font-size:11px;font-weight:700;letter-spacing:.02em;padding:3px 10px;border-radius:7px;margin-bottom:5px}
+  .who.owner{background:#ecfdf5;color:var(--brand-700);border:1px solid var(--brand-100)}
+  .who.esg{background:#f0fdfa;color:#0f766e;border:1px solid #ccfbf1}
+  .who.verifier{background:#fffbeb;color:#b45309;border:1px solid #fef3c7}
+  .who.auditor{background:#f1f5f9;color:var(--ink-700);border:1px solid var(--ink-200)}
+  .who.system{background:#f8fafc;color:var(--ink-500);border:1px solid var(--ink-200)}
+
+  /* ---- Pills ---- */
+  .pill{display:inline-block;font-size:12px;padding:3px 11px;border-radius:7px;font-weight:600;margin:2px 4px 2px 0}
+  .pill.green{background:var(--brand-50);color:var(--brand-700)}
+  .pill.red{background:#fef2f2;color:var(--red)}
+  .pill.amber{background:#fffbeb;color:var(--amber)}
+  .pill.gray{background:var(--ink-100);color:var(--ink-600)}
+
+  code{background:var(--ink-100);border-radius:6px;padding:1px 6px;font-family:"SFMono-Regular",Consolas,monospace;font-size:12.5px;color:var(--brand-700)}
+
+  /* ---- Flow ---- */
+  .flow{display:flex;flex-wrap:wrap;align-items:stretch;gap:0;margin:20px 0}
+  .flow .node{flex:1;min-width:118px;background:var(--card);border:1px solid var(--ink-200);border-top:3px solid var(--brand-500);
+    border-radius:12px;padding:14px 12px;text-align:center;box-shadow:var(--shadow)}
+  .flow .node .ph{font-size:11px;color:var(--ink-400);text-transform:uppercase;letter-spacing:.05em;font-weight:600}
+  .flow .node .ti{font-weight:700;color:var(--ink-900);font-size:14px;margin-top:3px}
+  .flow .node .ds{font-size:12px;color:var(--ink-500);margin-top:4px}
+  .flow .arrow{display:flex;align-items:center;justify-content:center;color:var(--brand-500);font-size:20px;padding:0 4px;flex:0 0 auto;font-weight:700}
+
+  /* ---- State machine ---- */
+  .states{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:10px 0}
+  .state{padding:6px 14px;border-radius:9px;font-weight:600;font-size:13px;border:1px solid var(--ink-200);background:#fff}
+  .state.draft{background:var(--ink-100);color:var(--ink-600)}
+  .state.sub{background:#f0fdfa;color:#0f766e;border-color:#ccfbf1}
+  .state.rev{background:#fffbeb;color:var(--amber);border-color:#fef3c7}
+  .state.appr{background:var(--brand-50);color:var(--brand-700);border-color:var(--brand-100)}
+  .state.rej{background:#fef2f2;color:var(--red);border-color:#fee2e2}
+  .arr{color:var(--ink-400);font-size:18px}
+
+  table{width:100%;border-collapse:collapse;margin:12px 0;font-size:14px}
+  th,td{text-align:left;padding:9px 13px;border-bottom:1px solid var(--ink-200);vertical-align:top}
+  th{background:var(--ink-50);color:var(--ink-700);font-weight:700;font-size:13px}
+  tr:last-child td{border-bottom:none}
+
+  .note{border-left:3px solid var(--brand-500);background:var(--brand-50);padding:12px 18px;border-radius:0 10px 10px 0;margin:14px 0;font-size:14px}
+  .note.warn{border-left-color:var(--amber);background:#fffbeb}
+  .note b{color:var(--ink-900)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+  @media(max-width:720px){.grid2{grid-template-columns:1fr}.toc ol{columns:1}.hero h1{font-size:26px}}
+
+  footer{background:var(--ink-900);color:var(--ink-400);padding:30px 32px;font-size:13px;text-align:center}
+  footer .fbrand{display:inline-flex;align-items:center;gap:9px;color:#fff;font-weight:700;margin-bottom:8px}
+  footer .fbrand .logo{width:26px;height:26px;border-radius:7px;background:var(--brand-500);display:flex;align-items:center;justify-content:center}
+  footer .fbrand .logo svg{width:15px;height:15px}
+
+  @media print{
+    body{background:#fff}
+    .toc,.card,.flow .node{box-shadow:none}
+    header.hero,footer,h2.sec .num,ol.steps>li::before{-webkit-print-color-adjust:exact;print-color-adjust:exact}
+    section{break-inside:avoid}
+  }
+</style>
+</head>
+<body>
+<header class="hero">
+  <div class="hero-inner">
+    <div class="brand">
+      <span class="logo">
+        <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg>
+      </span>
+      <span class="name">Carbon Ready</span>
+      <span class="ver">v0.3.0 · Sprint 3</span>
+    </div>
+    <div class="eyebrow">Digital MRV Platform</div>
+    <h1>ระบบทำงานอย่างไร — อธิบาย Step by Step</h1>
+    <p>คู่มือสรุปการทำงานของแพลตฟอร์ม dMRV (Monitoring · Reporting · Verification) ตั้งแต่บันทึกข้อมูลการผลิตไฟฟ้า ไปจนถึงการออกใบรับรองคาร์บอนเครดิตและการ Anchor ขึ้น Hedera Guardian</p>
+    <div class="meta">
+      <span>เวอร์ชัน: <b>Sprint 1–3 (MVP)</b></span>
+      <span>Stack: <b>React + TypeScript + Zustand</b></span>
+      <span>สถานะข้อมูล: <b>localStorage (จำลอง)</b></span>
+    </div>
+  </div>
+</header>
+
+<nav class="toc">
+  <h2>สารบัญ</h2>
+  <ol>
+    <li><a href="#overview">ภาพรวมระบบ (Big Picture)</a></li>
+    <li><a href="#roles">ผู้ใช้งานและบทบาท</a></li>
+    <li><a href="#flow">ขั้นตอนการทำงานทั้งหมด (End-to-End)</a></li>
+    <li><a href="#monitoring">ขั้นที่ 1 — บันทึกข้อมูล (Monitoring)</a></li>
+    <li><a href="#calc">ขั้นที่ 2 — คำนวณคาร์บอน (Reporting)</a></li>
+    <li><a href="#evidence">ขั้นที่ 3 — รวบรวมหลักฐาน (Evidence)</a></li>
+    <li><a href="#verify">ขั้นที่ 4 — ตรวจสอบรับรอง (Verification)</a></li>
+    <li><a href="#anchor">ขั้นที่ 5 — Anchor ขึ้น Guardian</a></li>
+    <li><a href="#audit">ขั้นที่ 6 — Audit Trail (Hash Chain)</a></li>
+    <li><a href="#tech">เบื้องหลังทางเทคนิค</a></li>
+  </ol>
+</nav>
+
+<main class="wrap">
+
+  <!-- 0. OVERVIEW -->
+  <section id="overview">
+    <h2 class="sec"><span class="num">0</span> ภาพรวมระบบ (Big Picture)</h2>
+    <p class="sec-sub">Carbon Ready คือระบบ "ดิจิทัล MRV" สำหรับโครงการพลังงานสะอาด (เช่น โซลาร์รูฟท็อป) ที่ทำให้กระบวนการ <b>วัด → รายงาน → ตรวจสอบ → ออกใบรับรอง</b> มีหลักฐานครบ ตรวจย้อนได้ และป้องกันการแก้ไขข้อมูลย้อนหลัง</p>
+
+    <div class="card">
+      <p style="margin-top:0">ลองนึกภาพง่าย ๆ ว่าระบบทำ 4 อย่างหลัก:</p>
+      <div class="grid2">
+        <div>
+          <h3 style="margin-top:8px">📊 วัดและคำนวณ</h3>
+          <p style="margin:0;color:var(--ink-500);font-size:14px">รับข้อมูลการผลิตไฟฟ้า (kWh) แล้วคูณกับ "ค่าการปล่อยคาร์บอนของกริด" (Emission Factor) เพื่อหาว่าช่วยลดคาร์บอนได้กี่ตัน (tCO₂e)</p>
+        </div>
+        <div>
+          <h3 style="margin-top:8px">✅ ตรวจสอบและรับรอง</h3>
+          <p style="margin:0;color:var(--ink-500);font-size:14px">ผู้ตรวจสอบ (Verifier) ดูหลักฐานประกอบ แล้วอนุมัติ / ขอแก้ไข / ปฏิเสธ ผ่านขั้นตอนที่ควบคุมด้วย state machine</p>
+        </div>
+        <div>
+          <h3 style="margin-top:8px">🔗 ออกใบรับรอง + Anchor</h3>
+          <p style="margin:0;color:var(--ink-500);font-size:14px">เมื่ออนุมัติแล้ว ระบบออก Verifiable Credential (VC) และ Anchor ขึ้น Hedera Guardian (ปัจจุบัน<b>จำลอง</b>)</p>
+        </div>
+        <div>
+          <h3 style="margin-top:8px">🛡️ ตรวจย้อนหลังไม่ได้แอบแก้</h3>
+          <p style="margin:0;color:var(--ink-500);font-size:14px">ทุกการกระทำถูกบันทึกใน Audit Log ที่ผูกกันด้วย Hash Chain — ถ้ามีใครแก้ข้อมูล ระบบจะตรวจจับได้ทันที</p>
+        </div>
+      </div>
+    </div>
+    <div class="note warn"><b>หมายเหตุ:</b> ใน MVP นี้ ข้อมูลทั้งหมดเก็บใน <code>localStorage</code> ของเบราว์เซอร์ และการเชื่อม Hedera Guardian เป็นการ<b>จำลอง (simulated)</b> โดยออกแบบให้สลับไปต่อ Backend/Blockchain จริงได้โดยไม่ต้องแก้ UI</div>
+  </section>
+
+  <!-- 1. ROLES -->
+  <section id="roles">
+    <h2 class="sec"><span class="num">1</span> ผู้ใช้งานและบทบาท</h2>
+    <p class="sec-sub">ระบบออกแบบรอบ 4 บทบาทหลัก แต่ละบทบาทรับผิดชอบคนละช่วงของกระบวนการ</p>
+    <table>
+      <tr><th>บทบาท</th><th>หน้าที่หลัก</th><th>ทำในขั้นไหน</th></tr>
+      <tr><td><span class="who owner">Project Owner</span></td><td>สร้างโครงการ, อัปโหลดข้อมูลการผลิต, แนบหลักฐาน, ส่งแพ็กเกจขอรับรอง</td><td>ขั้น 1, 3, 4</td></tr>
+      <tr><td><span class="who esg">ESG Manager</span></td><td>ตั้งค่า Emission Factor, สั่งคำนวณคาร์บอน</td><td>ขั้น 2</td></tr>
+      <tr><td><span class="who verifier">Verifier</span></td><td>ตรวจหลักฐาน, แสดงความเห็น, อนุมัติ/ขอแก้/ปฏิเสธ, สั่ง Anchor</td><td>ขั้น 4, 5</td></tr>
+      <tr><td><span class="who auditor">Auditor</span></td><td>ตรวจสอบ Audit Log และความถูกต้องของ Hash Chain</td><td>ขั้น 6</td></tr>
+    </table>
+  </section>
+
+  <!-- 2. FLOW -->
+  <section id="flow">
+    <h2 class="sec"><span class="num">2</span> ขั้นตอนการทำงานทั้งหมด (End-to-End)</h2>
+    <p class="sec-sub">ภาพรวมการไหลของข้อมูล จากตัวเลขดิบ ไปจนถึงใบรับรองที่ Anchor แล้ว</p>
+    <div class="flow">
+      <div class="node"><div class="ph">ขั้น 1</div><div class="ti">Monitoring</div><div class="ds">อัปโหลด kWh</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ph">ขั้น 2</div><div class="ti">Calculation</div><div class="ds">คำนวณ tCO₂e</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ph">ขั้น 3</div><div class="ti">Evidence</div><div class="ds">แนบหลักฐาน</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ph">ขั้น 4</div><div class="ti">Verification</div><div class="ds">อนุมัติ + ล็อก</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ph">ขั้น 5</div><div class="ti">Anchor</div><div class="ds">ออก VC</div></div>
+    </div>
+    <div class="note">ตลอดทุกขั้น — ทุกการเปลี่ยนแปลงจะถูกเขียนลง <b>Audit Log (ขั้น 6)</b> อัตโนมัติ และผูกเข้ากับ Hash Chain เดิม</div>
+  </section>
+
+  <!-- 3. MONITORING -->
+  <section id="monitoring">
+    <h2 class="sec"><span class="num">3</span> ขั้นที่ 1 — บันทึกข้อมูลการผลิต (Monitoring)</h2>
+    <p class="sec-sub">หน้า <code>/projects</code> และ <code>/upload</code> · ผู้ทำหลัก: Project Owner</p>
+    <ol class="steps">
+      <li><span class="who owner">Project Owner</span><br><b>สร้างโครงการ</b> — ระบุชื่อ, ที่ตั้ง, กำลังติดตั้ง (kWp), วันที่ Commission เช่น "Pune Rooftop Phase 1 — อินเดีย — 250 kWp" ระบบจะ map ที่ตั้ง → ประเทศ เพื่อใช้เลือก Emission Factor ภายหลัง</li>
+      <li><span class="who owner">Project Owner</span><br><b>อัปโหลดไฟล์ CSV</b> รูปแบบ <code>Date,Generation_kWh</code> (เช่นข้อมูลรายวัน ธ.ค. 2025 – พ.ค. 2026)</li>
+      <li><span class="who system">System</span><br><b>ตรวจสอบทีละแถว</b> — ปฏิเสธแถวที่ผิดพลาดอัตโนมัติ:
+        <div style="margin-top:6px">
+          <span class="pill red">วันที่ซ้ำ</span>
+          <span class="pill red">ค่าติดลบ</span>
+          <span class="pill red">รูปแบบวันที่ผิด</span>
+          <span class="pill red">หัวคอลัมน์ไม่ครบ</span>
+          <span class="pill green">แถวที่ผ่าน → บันทึก</span>
+        </div>
+      </li>
+      <li><span class="who system">System</span><br><b>บันทึกข้อมูลที่ผ่าน</b> ลงตาราง <code>monitoring_records</code> และเขียน Audit Log: <code>CSV_UPLOADED</code></li>
+    </ol>
+  </section>
+
+  <!-- 4. CALC -->
+  <section id="calc">
+    <h2 class="sec"><span class="num">4</span> ขั้นที่ 2 — คำนวณคาร์บอน (Reporting)</h2>
+    <p class="sec-sub">หน้า <code>/emission-factors</code> และ <code>/calculations</code> · ผู้ทำหลัก: ESG Manager</p>
+    <ol class="steps">
+      <li><span class="who esg">ESG Manager</span><br><b>ตั้งค่า Emission Factor</b> — ค่าความเข้มข้นคาร์บอนของกริดไฟฟ้าแต่ละประเทศ (เช่น อินเดีย 0.79 kgCO₂e/kWh) ระบบเก็บแบบมีเวอร์ชัน — แต่ละคู่ (ประเทศ, แหล่ง) มีค่า "ปัจจุบัน" (<code>is_current</code>) ได้แค่หนึ่งค่า ค่าก่อนหน้าถูกเก็บเป็นประวัติ</li>
+      <li><span class="who esg">ESG Manager</span><br><b>สั่งคำนวณ</b> — เลือกโครงการ ระบบจับคู่ Emission Factor ที่มีผล ณ วันนั้นโดยอัตโนมัติ</li>
+      <li><span class="who system">System</span><br><b>คำนวณการลดคาร์บอน</b> ด้วยสูตร:
+        <div class="note" style="margin:8px 0">การลดคาร์บอน = ปริมาณไฟที่ผลิต (kWh) × Emission Factor (kgCO₂e/kWh)<br>เช่น 30,000 kWh × 0.79 ≈ 23,700 kgCO₂e ≈ <b>23.7 tCO₂e</b></div>
+        แล้วสรุปออกเป็น <b>รายวัน / รายเดือน / รวมทั้งหมด</b> พร้อมกราฟแนวโน้มรายเดือน
+      </li>
+      <li><span class="who system">System</span><br>บันทึกผลลง <code>calculation_results</code> และเขียน Audit Log: <code>CALCULATION_EXECUTED</code></li>
+    </ol>
+  </section>
+
+  <!-- 5. EVIDENCE -->
+  <section id="evidence">
+    <h2 class="sec"><span class="num">5</span> ขั้นที่ 3 — รวบรวมหลักฐาน (Evidence)</h2>
+    <p class="sec-sub">หน้า <code>/projects/:id</code> → แท็บ Evidence · ผู้ทำหลัก: Project Owner</p>
+    <ol class="steps">
+      <li><span class="who owner">Project Owner</span><br><b>อัปโหลดเอกสารประกอบ</b> (PDF / JPG / PNG / XLSX, ไม่เกิน 50 MB) เช่น ใบอ่านมิเตอร์, บิลค่าไฟ, รายงาน Commissioning, รูปหน้างาน, log จาก SCADA ของอินเวอร์เตอร์</li>
+      <li><span class="who system">System</span><br><b>เดาหมวดหมู่อัตโนมัติ</b> จากชื่อไฟล์ (ผู้ใช้ปรับได้) — มี 7 หมวด:
+        <div style="margin-top:6px">
+          <span class="pill gray">meter_reading</span><span class="pill gray">utility_bill</span><span class="pill gray">commissioning_report</span><span class="pill gray">site_photo</span><span class="pill gray">maintenance_report</span><span class="pill gray">supporting_evidence</span><span class="pill gray">verification_report</span>
+        </div>
+      </li>
+      <li><span class="who system">System</span><br><b>จัดเก็บแบบมีเวอร์ชัน</b> — ไฟล์แรกเป็น v1 (<code>active</code>) ถ้าอัปโหลดแทนที่ จะได้ v2 และ v1 ถูกทำเครื่องหมาย <code>superseded</code> (ผูกกันด้วย <code>parent_id</code>) แต่ละไฟล์มี <code>content_hash</code> เพื่อตรวจการแก้ไข</li>
+      <li><span class="who owner">Project Owner</span><br>สามารถ <b>Archive</b> (ซ่อนจากรายการหลักแต่เก็บประวัติไว้) ได้ และเมื่อแพ็กเกจถูกอนุมัติแล้ว หลักฐานทั้งหมดจะถูก <b>ล็อกเป็น read-only</b></li>
+    </ol>
+  </section>
+
+  <!-- 6. VERIFY -->
+  <section id="verify">
+    <h2 class="sec"><span class="num">6</span> ขั้นที่ 4 — ตรวจสอบและรับรอง (Verification)</h2>
+    <p class="sec-sub">หน้า <code>/verifications</code> และ <code>/verifications/:id</code> · ผู้ทำหลัก: Verifier</p>
+
+    <h3>State Machine ของแพ็กเกจตรวจสอบ</h3>
+    <div class="states">
+      <span class="state draft">draft</span><span class="arr">→</span>
+      <span class="state sub">submitted</span><span class="arr">→</span>
+      <span class="state sub">under_review</span><span class="arr">→</span>
+      <span class="state appr">approved 🔒</span>
+    </div>
+    <div class="states" style="margin-left:8px">
+      <span style="color:var(--ink-500);font-size:13px">จาก under_review ยังแยกไปได้:</span>
+      <span class="state rev">revision_required</span>
+      <span class="state rej">rejected</span>
+    </div>
+
+    <ol class="steps" style="margin-top:18px">
+      <li><span class="who owner">Project Owner</span><br><b>ส่งแพ็กเกจขอรับรอง</b> (VerificationRequest) ที่ผูกช่วงเวลา, ตัวเลขการลดคาร์บอน, snapshot ของ factor, และรายการหลักฐาน → state เป็น <code>submitted</code></li>
+      <li><span class="who verifier">Verifier</span><br><b>เปิดคิวงาน</b> ที่ <code>/verifications</code> เห็น KPI (จำนวนงานค้าง, ตัวจับเวลา SLA, อัตราขอแก้ไข, จำนวนอนุมัติ) แล้วกดเข้าแพ็กเกจ → state เป็น <code>under_review</code></li>
+      <li><span class="who verifier">Verifier</span><br><b>ตรวจความครบของหลักฐาน</b> ตามหมวดที่กำหนด (required_categories) อ่านเอกสาร และ<b>แสดงความเห็นแบบเธรด</b> (ตอบกลับกันได้ ระบุได้ว่าคอมเมนต์ระดับแพ็กเกจหรือระดับไฟล์)</li>
+      <li><span class="who verifier">Verifier</span><br><b>ตัดสินผล 1 ใน 3 ทาง:</b>
+        <table style="margin-top:8px">
+          <tr><th>การกระทำ</th><th>ผลลัพธ์</th></tr>
+          <tr><td><span class="pill green">อนุมัติ (Approve &amp; Lock)</span></td><td>state → <code>approved</code>, คำนวณ <code>hash_value</code> ของแพ็กเกจ, ล็อกหลักฐานเป็น read-only, บันทึก <code>locked_at</code> · Audit: <code>VERIFICATION_APPROVED</code></td></tr>
+          <tr><td><span class="pill amber">ขอแก้ไข (Request Revision)</span></td><td>state → <code>revision_required</code> ส่งกลับให้ Owner แก้แล้วส่งใหม่ · Audit: <code>REVISION_REQUESTED</code></td></tr>
+          <tr><td><span class="pill red">ปฏิเสธ (Reject)</span></td><td>state → <code>rejected</code> (สิ้นสุด) · Audit: <code>VERIFICATION_REJECTED</code></td></tr>
+        </table>
+      </li>
+    </ol>
+  </section>
+
+  <!-- 7. ANCHOR -->
+  <section id="anchor">
+    <h2 class="sec"><span class="num">7</span> ขั้นที่ 5 — Anchor ขึ้น Hedera Guardian</h2>
+    <p class="sec-sub">หน้า <code>/verifications/:id</code> และ <code>/guardian</code> · ผู้ทำหลัก: Verifier <span class="pill amber">จำลอง (Sprint 3)</span></p>
+    <ol class="steps">
+      <li><span class="who system">System</span><br>เมื่อแพ็กเกจ <code>approved</code> แล้ว จะขึ้นแบนเนอร์ <b>"🔒 รอ Anchor — Hedera Guardian"</b> และมีปุ่ม <b>"Anchor to Hedera Guardian"</b> ปรากฏ</li>
+      <li><span class="who verifier">Verifier</span><br><b>กดปุ่ม Anchor</b> ระบบสร้าง Verifiable Credential (VC) แบบจำลองตามสคีมา <code>MRV_APPROVAL_SCHEMA_V1</code> (มาตรฐาน W3C VC, 10 properties)</li>
+      <li><span class="who system">System</span><br>ออกใบรับรองโดยมีข้อมูล (สร้างแบบ deterministic จาก hash):
+        <table style="margin-top:8px">
+          <tr><th>ฟิลด์</th><th>ตัวอย่าง</th></tr>
+          <tr><td>Credential ID</td><td><code>urn:vc:vr1001…</code></td></tr>
+          <tr><td>Issuer DID</td><td><code>did:hedera:testnet:CarbonReadyIssuer…</code></td></tr>
+          <tr><td>HCS Topic / Sequence</td><td><code>0.0.480100</code> / <code>#2</code></td></tr>
+          <tr><td>Explorer (HashScan)</td><td><code>hashscan.io/testnet/topic/…/message/2</code></td></tr>
+        </table>
+        แล้วเขียนกลับลงแพ็กเกจ: <code>credential_id</code>, <code>anchored_at</code>, <code>hcs_topic_id</code>, <code>hcs_sequence_number</code> · Audit: <code>VERIFICATION_ANCHORED</code>
+      </li>
+      <li><span class="who verifier">Verifier</span><br><b>ตรวจ Credential Registry</b> ที่ <code>/guardian</code> (แท็บ Registry) เห็นรายการ VC ทั้งหมดที่ Anchor แล้ว พร้อมลิงก์ HashScan (จำลอง) — แท็บ Schema แสดงโครงสร้างสคีมาที่ใช้</li>
+    </ol>
+    <div class="note warn"><b>จำลอง vs ของจริง:</b> ปัจจุบันยังไม่ได้ต่อ Hedera SDK / Guardian REST จริง — ไฟล์ <code>lib/guardian.ts</code> สร้าง VC จำลองที่มี sequence number และ URL แบบกำหนดได้ เมื่อจะใช้งานจริง เพียงสลับไฟล์นี้เป็นไคลเอนต์ Guardian จริง โดย <b>UI ไม่ต้องแก้</b></div>
+  </section>
+
+  <!-- 8. AUDIT -->
+  <section id="audit">
+    <h2 class="sec"><span class="num">8</span> ขั้นที่ 6 — Audit Trail (Hash Chain)</h2>
+    <p class="sec-sub">หน้า <code>/audit-log</code> · ผู้ทำหลัก: Auditor · ทำงานเบื้องหลังตลอดทุกขั้น</p>
+    <div class="card">
+      <p style="margin-top:0"><b>หัวใจของความน่าเชื่อถือ:</b> ทุกการกระทำในระบบ (อัปโหลด, คำนวณ, อนุมัติ, anchor ฯลฯ) ถูกผนวกเข้า Audit Log แบบ <b>append-only</b> และแต่ละแถวผูกกับแถวก่อนหน้าด้วย Hash:</p>
+      <div class="note">row_hash = hash( prev_row_hash + canonical(ข้อมูลหลักของแถวนี้) )</div>
+      <p style="margin-bottom:0">เหมือนการ "ร้อยลูกโซ่" — ถ้ามีใครแก้แถวใดแถวหนึ่งย้อนหลัง ค่า hash ของแถวนั้นและทุกแถวหลังจากนั้นจะไม่ตรงกัน</p>
+    </div>
+    <ol class="steps">
+      <li><span class="who auditor">Auditor</span><br>เปิดหน้า <code>/audit-log</code> ระบบ<b>คำนวณลูกโซ่ใหม่ทั้งหมด</b>ตอนโหลด แล้วแสดงแบนเนอร์ผล:
+        <div style="margin-top:6px"><span class="pill green">✓ Hash chain verified · N rows</span> &nbsp;หรือ&nbsp; <span class="pill red">✗ Hash chain broken · ตรวจพบการแก้ไขหลังแถวที่ N</span></div>
+      </li>
+      <li><span class="who auditor">Auditor</span><br><b>กรองและตรวจสอบ</b>ตาม action / entity / ช่วงวันที่ แต่ละแถวแสดงผู้ทำ, การกระทำ, ข้อมูล <b>ก่อน → หลัง</b> (diff) และค่า <code>row_hash</code></li>
+    </ol>
+  </section>
+
+  <!-- 9. TECH -->
+  <section id="tech">
+    <h2 class="sec"><span class="num">9</span> เบื้องหลังทางเทคนิค (สำหรับนักพัฒนา)</h2>
+
+    <h3>สถาปัตยกรรมการไหลของข้อมูล</h3>
+    <div class="flow" style="margin-top:8px">
+      <div class="node"><div class="ti">UI Components</div><div class="ds">อ่านผ่าน useStore</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ti">Zustand Store</div><div class="ds">single source of truth</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ti">audit_write()</div><div class="ds">ผูก hash chain</div></div>
+      <div class="arrow">→</div>
+      <div class="node"><div class="ti">localStorage</div><div class="ds">persist อัตโนมัติ</div></div>
+    </div>
+    <p style="font-size:14px;color:var(--ink-500)">ทุกการเปลี่ยน state จะเรียก <code>audit_write()</code> อัตโนมัติ — หน้าเว็บไม่แตะ localStorage ตรง ๆ แต่ผ่าน store เสมอ ส่วน <code>lib/api.ts</code> เป็น facade ที่หุ้ม action ด้วย async (หน่วง 120ms จำลอง backend)</p>
+
+    <div class="grid2">
+      <div class="card">
+        <h3 style="margin-top:0">ไฟล์สำคัญ</h3>
+        <table style="font-size:13px">
+          <tr><td><code>src/types/index.ts</code></td><td>โครงสร้างข้อมูลทั้งหมด</td></tr>
+          <tr><td><code>src/store/index.ts</code></td><td>store + actions</td></tr>
+          <tr><td><code>src/store/audit.ts</code></td><td>ตรรกะ hash chain</td></tr>
+          <tr><td><code>src/lib/calc.ts</code></td><td>คำนวณคาร์บอน</td></tr>
+          <tr><td><code>src/lib/csv.ts</code></td><td>ตรวจ CSV</td></tr>
+          <tr><td><code>src/lib/guardian.ts</code></td><td>Guardian จำลอง</td></tr>
+          <tr><td><code>src/lib/api.ts</code></td><td>facade สำหรับ backend</td></tr>
+        </table>
+      </div>
+      <div class="card">
+        <h3 style="margin-top:0">จุดต่อขยายในอนาคต</h3>
+        <p style="font-size:14px;margin:0 0 8px"><b>ต่อ Backend จริง:</b> คงลายเซ็นเมธอดใน <code>lib/api.ts</code> เปลี่ยนแค่ body เป็น <code>fetch()</code> — UI ไม่ต้องแก้</p>
+        <p style="font-size:14px;margin:0 0 8px"><b>ต่อ Hedera จริง:</b> แทน <code>lib/guardian.ts</code> ด้วยไคลเอนต์ Guardian REST + <code>@hashgraph/sdk</code></p>
+        <p style="font-size:14px;margin:0"><b>Stack:</b> React 18 · TS 5 · Vite 5 · Tailwind 3 · Zustand 4 · Recharts · PapaParse</p>
+      </div>
+    </div>
+
+    <div class="note">มีชุดทดสอบ <b>32 tests</b> ครอบคลุม CSV validation, การคำนวณ, Guardian mock, การ anchor และ hash chain — รันด้วย <code>npm test</code></div>
+  </section>
+
+</main>
+
+<footer>
+  <div class="fbrand">
+    <span class="logo"><svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M11 20A7 7 0 0 1 9.8 6.1C15.5 5 17 4.48 19 2c1 2 2 4.18 2 8 0 5.5-4.78 10-10 10Z"/><path d="M2 21c0-3 1.85-5.36 5.08-6C9.5 14.52 12 13 13 12"/></svg></span>
+    Carbon Ready
+  </div>
+  <div>เอกสารสรุปการทำงานของระบบ (Sprint 1–3 MVP) · สร้างจากซอร์สโค้ดจริงในโปรเจกต์</div>
+  <div style="font-size:12px;margin-top:6px">เปิดไฟล์นี้ในเบราว์เซอร์ → กด Ctrl/Cmd + P เพื่อบันทึกเป็น PDF ได้</div>
+</footer>
+</body>
+</html>
