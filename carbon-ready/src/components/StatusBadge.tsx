@@ -2,7 +2,7 @@ import { FileSpreadsheet, FileText, Image as ImageIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { Badge } from './Badge';
 import { CATEGORY_LABEL, STATE_LABEL } from '../lib/labels';
-import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState } from '../types';
+import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState } from '../types';
 
 type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet';
 
@@ -38,6 +38,18 @@ export function FileKindIcon({ kind, className }: { kind: FileKind; className?: 
   if (kind === 'pdf') return <FileText size={16} className={clsx(cls, 'text-red-500')} />;
   if (kind === 'xlsx') return <FileSpreadsheet size={16} className={clsx(cls, 'text-brand-600')} />;
   return <ImageIcon size={16} className={clsx(cls, 'text-sky-500')} />;
+}
+
+const pddStateTone: Record<PddState, Tone> = {
+  draft: 'gray', submitted: 'blue', under_validation: 'violet',
+  revision_required: 'amber', registered: 'green', rejected: 'red',
+};
+const pddStateLabel: Record<PddState, string> = {
+  draft: 'Draft', submitted: 'Submitted', under_validation: 'Under Validation',
+  revision_required: 'Revision Required', registered: 'Registered', rejected: 'Rejected',
+};
+export function PddStatusBadge({ state }: { state: PddState }) {
+  return <Badge tone={pddStateTone[state]}>{pddStateLabel[state]}</Badge>;
 }
 
 export function EvidenceStatusDot({ status }: { status: EvidenceStatus }) {
