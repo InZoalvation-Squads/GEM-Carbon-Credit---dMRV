@@ -8,7 +8,6 @@ export type AuditAction =
   | 'CSV_UPLOADED'
   | 'CALCULATION_EXECUTED'
   | 'EMISSION_FACTOR_ADDED'
-  // Sprint 2 — Evidence & Verification
   | 'EVIDENCE_UPLOADED'
   | 'EVIDENCE_REPLACED'
   | 'EVIDENCE_ARCHIVED'
@@ -18,8 +17,18 @@ export type AuditAction =
   | 'REVISION_REQUESTED'
   | 'VERIFICATION_APPROVED'
   | 'VERIFICATION_REJECTED'
-  | 'VERIFICATION_ANCHORED';
-export type EntityType = 'project' | 'monitoring' | 'factor' | 'calculation' | 'evidence' | 'verification';
+  | 'VERIFICATION_ANCHORED'
+  // Registration (Gate 1 — PDD validation)
+  | 'METHODOLOGY_SELECTED'
+  | 'PDD_SUBMITTED'
+  | 'VALIDATION_STARTED'
+  | 'PDD_REVISION_REQUESTED'
+  | 'PROJECT_REGISTERED'
+  | 'PDD_REJECTED';
+
+export type EntityType =
+  | 'project' | 'monitoring' | 'factor' | 'calculation'
+  | 'evidence' | 'verification' | 'methodology' | 'pdd';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
 export interface Organization {
@@ -37,6 +46,13 @@ export interface User {
   created_at: string;
 }
 
+export type ProjectLifecycle =
+  | 'unregistered'      // no methodology chosen yet
+  | 'pdd_draft'         // filling PDD
+  | 'under_validation'  // submitted, awaiting VVB
+  | 'registered'        // dMRV unlocked
+  | 'rejected';
+
 export interface Project {
   id: UUID;
   organization_id: UUID;
@@ -45,6 +61,7 @@ export interface Project {
   capacity_kwp: number;
   commission_date: string;       // ISO date
   status: ProjectStatus;
+  lifecycle_stage: ProjectLifecycle;   // registration gate
   created_at: string;
   updated_at: string;
 }
@@ -147,6 +164,7 @@ export interface VerificationComment {
   verification_id: UUID;
   evidence_id: UUID | null;        // null = package-level
   evidence_name?: string;
+  section_key?: string;        // PDD section a comment is attached to (registration)
   author_id: UUID;
   author_name: string;
   author_role: UserRole;
@@ -235,4 +253,74 @@ export interface VerifiableCredential {
     consensus_timestamp: string;
     explorer_url: string;
   };
+}
+
+// ============================================================
+// Registration — Methodology (Guardian Policy) & PDD
+// ============================================================
+export type PddFieldType =
+  | 'text' | 'textarea' | 'number' | 'select' | 'date'
+  | 'boolean' | 'url' | 'email' | 'image' | 'computed';
+
+export type PddComputedSource =
+  | 'capacity_kwp' | 'project_location' | 'commission_date'
+  | 'grid_factor' | 'er_estimate';
+
+export interface PddFieldSchema {
+  key: string;                 // unique across the methodology
+  label: string;
+  type: PddFieldType;
+  unit?: string;
+  required: boolean;
+  options?: string[];          // for 'select'
+  help?: string;
+  showIf?: { field: string; equals: string };   // conditional visibility
+  source?: PddComputedSource;  // for 'computed'
+}
+
+export interface PddSectionSchema {
+  key: string;
+  title: string;
+  help?: string;
+  fields: PddFieldSchema[];
+}
+
+export interface MonitoringParam {
+  key: string;
+  label: string;
+  unit: string;
+  method: string;
+  frequency: string;
+}
+
+export interface Methodology {
+  id: UUID;
+  code: string;                // 'T-VER-S-01'
+  name: string;
+  standard: 'T-VER';
+  version: string;
+  sectoral_scope: string;
+  status: 'active' | 'deprecated';
+  pdd_sections: PddSectionSchema[];
+  required_evidence: EvidenceCategory[];
+  monitoring_params: MonitoringParam[];
+}
+
+export type PddState =
+  | 'draft' | 'submitted' | 'under_validation'
+  | 'revision_required' | 'registered' | 'rejected';
+
+export interface ProjectDesignDocument {
+  id: UUID;                    // 'PDD-xxxx'
+  project_id: UUID;
+  methodology_id: UUID;
+  methodology_snapshot: string;   // code + version, frozen at submit
+  state: PddState;
+  section_data: Record<string, unknown>;   // keyed by field.key
+  evidence_ids: UUID[];
+  assigned_validator_name: string;
+  submitted_at: string | null;
+  validated_at: string | null;    // = registered timestamp
+  content_hash: string | null;    // frozen at register
+  rejection_reason?: string;
 }
