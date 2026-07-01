@@ -274,21 +274,26 @@ export const useStore = create<AppState>()(
       // ---------------- Registration: Gate 1 (PDD validation) ----------------
       pddByProject: (project_id) => get().pdds.find((p) => p.project_id === project_id),
 
+      // In-flight PDDs needing validator attention (includes revision_required).
       validationQueue: () =>
         get().pdds.filter((p) => p.state !== 'draft' && p.state !== 'registered' && p.state !== 'rejected'),
 
       selectMethodology: (project_id, methodology_id) => {
         const existing = get().pdds.find((p) => p.project_id === project_id);
         if (existing) {
-          if (existing.methodology_id !== methodology_id) {
+          const editable = existing.state === 'draft' || existing.state === 'revision_required';
+          if (editable && existing.methodology_id !== methodology_id) {
             set((s) => ({ pdds: s.pdds.map((p) => (p.id === existing.id ? { ...p, methodology_id } : p)) }));
+            get().audit_write('METHODOLOGY_SELECTED', 'pdd', existing.id, { project_id, methodology_id },
+              { previous_value: { methodology_id: existing.methodology_id }, new_value: { methodology_id } });
           }
           return get().pdds.find((p) => p.id === existing.id)!;
         }
         const pdd: ProjectDesignDocument = {
           id: uid('PDD'), project_id, methodology_id,
           methodology_snapshot: '', state: 'draft', section_data: {}, evidence_ids: [],
-          assigned_validator_name: 'Daniel Okoye', submitted_at: null, validated_at: null, content_hash: null,
+          assigned_validator_name: 'Daniel Okoye', // seeded reviewer; reassignment out of scope
+          submitted_at: null, validated_at: null, content_hash: null,
         };
         set((s) => ({
           pdds: [pdd, ...s.pdds],
@@ -299,6 +304,8 @@ export const useStore = create<AppState>()(
         return pdd;
       },
 
+      // Draft autosave is intentionally NOT audited — high-frequency editing, not a
+      // regulatory state change. The audit trail begins at submitPdd.
       savePddDraft: (pdd_id, section_data, evidence_ids) => {
         set((s) => ({ pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, section_data, evidence_ids } : p)) }));
       },
@@ -319,9 +326,10 @@ export const useStore = create<AppState>()(
       },
 
       startValidation: (pdd_id) => {
+        const pdd = get().pdds.find((p) => p.id === pdd_id);
         set((s) => ({ pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'under_validation' } : p)) }));
         get().audit_write('VALIDATION_STARTED', 'pdd', pdd_id, {},
-          { previous_value: { state: 'submitted' }, new_value: { state: 'under_validation' } });
+          { previous_value: { state: pdd?.state ?? 'submitted' }, new_value: { state: 'under_validation' } });
       },
 
       requestPddRevision: (pdd_id, summary) => {

@@ -8,7 +8,7 @@ describe('registration store', () => {
 
   it('selectMethodology creates a draft PDD and moves project to pdd_draft', () => {
     const s = useStore.getState();
-    // prj-0004 already has a draft PDD; use a project with none by first clearing via a fresh select on prj-0003 is registered-path.
+    // prj-0004 already has a revision_required PDD; use a project with none by first clearing via a fresh select on prj-0003 is registered-path.
     const pdd = s.selectMethodology('prj-0004', 'meth-tver-solar');
     expect(pdd.state).toMatch(/draft|revision_required/);
     expect(useStore.getState().projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('pdd_draft');
@@ -65,5 +65,14 @@ describe('registration store', () => {
     const q = useStore.getState().validationQueue();
     expect(q.every((p) => p.state !== 'registered')).toBe(true);
     expect(q.some((p) => p.id === 'PDD-2002')).toBe(true);
+  });
+
+  it('rejectPdd moves the pdd and project to rejected', () => {
+    const s = useStore.getState();
+    const pdd = s.pddByProject('prj-0004')!;
+    s.rejectPdd(pdd.id, 'Ineligible site');
+    const after = useStore.getState();
+    expect(after.pdds.find((p) => p.id === pdd.id)?.state).toBe('rejected');
+    expect(after.projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('rejected');
   });
 });
