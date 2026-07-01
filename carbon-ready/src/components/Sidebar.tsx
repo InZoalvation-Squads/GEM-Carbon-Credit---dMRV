@@ -2,6 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, FolderKanban, Upload, Calculator, Gauge,
   ScrollText, ClipboardCheck, Link2, Building2,
+  FileText, FilePlus2, ShieldCheck,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useStore } from '../store';
@@ -10,6 +11,14 @@ type Item = { to: string; label: string; icon: typeof LayoutDashboard };
 type Group = { heading: string; items: Item[] };
 
 const groups: Group[] = [
+  {
+    heading: 'Registration',
+    items: [
+      { to: '/methodologies', label: 'Methodologies',   icon: FileText },
+      { to: '/registration',  label: 'Register Project', icon: FilePlus2 },
+      { to: '/validation',    label: 'Validation Queue', icon: ShieldCheck },
+    ],
+  },
   {
     heading: 'Overview',
     items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],

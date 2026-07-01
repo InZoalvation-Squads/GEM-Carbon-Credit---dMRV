@@ -10,6 +10,11 @@ import { AuditLogPage } from './pages/AuditLog';
 import { Verifications } from './pages/Verifications';
 import { ReviewDetail } from './pages/ReviewDetail';
 import { Guardian } from './pages/Guardian';
+import { Methodologies } from './pages/Methodologies';
+import { Registration } from './pages/Registration';
+import { PddDocument } from './pages/PddDocument';
+import { ValidationQueue } from './pages/ValidationQueue';
+import { ValidationDetail } from './pages/ValidationDetail';
 
 export default function App() {
   return (
@@ -18,6 +23,13 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/methodologies" element={<Methodologies />} />
+          <Route path="/methodologies/:id" element={<Methodologies />} />
+          <Route path="/registration" element={<Registration />} />
+          <Route path="/registration/:pddId" element={<Registration />} />
+          <Route path="/registration/:pddId/document" element={<PddDocument />} />
+          <Route path="/validation" element={<ValidationQueue />} />
+          <Route path="/validation/:pddId" element={<ValidationDetail />} />
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/upload" element={<UploadPage />} />
