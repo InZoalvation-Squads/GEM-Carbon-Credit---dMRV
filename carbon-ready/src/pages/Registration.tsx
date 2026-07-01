@@ -10,7 +10,9 @@ import { Select } from '../components/Select';
 import { Textarea } from '../components/Textarea';
 import { EmptyState } from '../components/EmptyState';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
-import type { PddFieldSchema, PddComputedSource } from '../types';
+import type { PddFieldSchema, PddComputedSource, Project } from '../types';
+
+const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft', 'revision_required'];
 
 export function Registration() {
   const { pddId } = useParams();
@@ -24,7 +26,7 @@ export function Registration() {
   // ---- Entry screen: no pdd yet → choose methodology + project ----
   const [methId, setMethId] = useState(methodologies[0]?.id ?? '');
   const [projId, setProjId] = useState('');
-  const candidateProjects = projects.filter((p) => p.lifecycle_stage === 'unregistered' || p.lifecycle_stage === 'pdd_draft' || !pdds.some((x) => x.project_id === p.id));
+  const candidateProjects = projects.filter((p) => EDITABLE_STAGES.includes(p.lifecycle_stage));
 
   async function startRegistration() {
     if (!methId || !projId) return;
