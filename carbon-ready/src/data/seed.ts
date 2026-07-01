@@ -54,7 +54,7 @@ export const seedPdds: ProjectDesignDocument[] = [
   {
     id: 'PDD-2000', project_id: 'prj-0001', methodology_id: TVER_SOLAR_METHODOLOGY.id,
     methodology_snapshot: 'T-VER-S-01 v3.0', state: 'registered',
-    section_data: REGISTERED_SECTION_DATA, evidence_ids: ['ev-0003', 'ev-0004'],
+    section_data: REGISTERED_SECTION_DATA, evidence_ids: ['ev-0003'],
     assigned_validator_name: VALIDATOR, submitted_at: '2025-03-16T00:00:00Z',
     validated_at: '2025-03-20T00:00:00Z', content_hash: shortHash('PDD-2000-registered'),
   },
@@ -277,6 +277,7 @@ function buildChain(specs: AuditSpec[]): AuditLog[] {
 export const seedAudit: AuditLog[] = buildChain([
   { id: 'aud-0002', user_role: 'project_owner', action: 'PROJECT_CREATED', entity_type: 'project', entity_id: 'prj-0002', payload: { name: 'Bangkok Industrial Park' }, new_value: { name: 'Bangkok Industrial Park' }, ip_address: '124.122.9.55', created_at: '2024-11-01T10:05:00Z' },
   { id: 'aud-0008', user_role: 'project_owner', action: 'EVIDENCE_UPLOADED', entity_type: 'evidence', entity_id: 'ev-0008', payload: { file_name: 'bkk-commissioning-2024-11.pdf', category: 'commissioning_report' }, new_value: { version_number: 1, file_size: 2_210_440 }, ip_address: '124.122.9.55', created_at: '2024-11-02T02:00:00Z' },
+  { id: 'aud-0020', user_role: 'esg_manager', action: 'PROJECT_REGISTERED', entity_type: 'pdd', entity_id: 'PDD-2001', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'under_validation' }, new_value: { state: 'registered', content_hash: shortHash('PDD-2001-registered') }, created_at: '2024-11-10T00:00:00Z' },
   { id: 'aud-0001', user_role: 'project_owner', action: 'PROJECT_CREATED', entity_type: 'project', entity_id: 'prj-0001', payload: { name: 'Pune Rooftop Phase 1' }, new_value: { name: 'Pune Rooftop Phase 1' }, ip_address: '49.36.220.10', created_at: '2025-03-15T09:12:00Z' },
   { id: 'aud-0003', user_role: 'esg_manager', action: 'EMISSION_FACTOR_ADDED', entity_type: 'factor', entity_id: 'ef-0002', payload: { country: 'IN', source: 'CEA', version: 2 }, new_value: { factor_kgco2e_per_kwh: 0.79, version: 2 }, previous_value: { factor_kgco2e_per_kwh: 0.82, version: 1 }, created_at: '2025-04-01T08:00:00Z' },
   { id: 'aud-0010', user_role: 'esg_manager', action: 'VERIFICATION_APPROVED', entity_type: 'verification', entity_id: 'VR-1000', payload: { reduction_tco2e: 24.55 }, previous_value: { state: 'under_review' }, new_value: { state: 'approved', hash_value: shortHash('VR-1000-approval-payload'), locked_at: '2026-04-15T08:22:00Z' }, ip_address: '49.36.220.10', created_at: '2026-04-15T08:22:00Z' },
@@ -287,7 +288,6 @@ export const seedAudit: AuditLog[] = buildChain([
   { id: 'aud-0013', user_role: 'verifier', action: 'REVIEW_STARTED', entity_type: 'verification', entity_id: 'VR-1001', payload: {}, previous_value: { state: 'submitted' }, new_value: { state: 'under_review' }, ip_address: '102.89.34.7', created_at: '2026-05-05T02:12:00Z' },
   { id: 'aud-0014', user_role: 'verifier', action: 'COMMENT_ADDED', entity_type: 'verification', entity_id: 'VR-1001', payload: { evidence: 'pune-inverter-log-apr.xlsx' }, new_value: { body: 'Inverter totals reconcile with the utility bill within 1.2%…' }, ip_address: '102.89.34.7', created_at: '2026-05-05T08:40:00Z' },
   { id: 'aud-0015', user_role: 'project_owner', action: 'VERIFICATION_SUBMITTED', entity_type: 'verification', entity_id: 'VR-1002', payload: { reduction_tco2e: 50.18, evidence_count: 3 }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '124.122.9.55', created_at: '2026-05-05T01:05:00Z' },
-  { id: 'aud-0020', user_role: 'esg_manager', action: 'PROJECT_REGISTERED', entity_type: 'pdd', entity_id: 'PDD-2001', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'under_validation' }, new_value: { state: 'registered', content_hash: shortHash('PDD-2001-registered') }, created_at: '2024-11-10T00:00:00Z' },
-  { id: 'aud-0021', user_role: 'project_owner', action: 'PDD_SUBMITTED', entity_type: 'pdd', entity_id: 'PDD-2002', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '124.122.9.55', created_at: '2026-06-20T09:00:00Z' },
   { id: 'aud-0022', user_role: 'verifier', action: 'PDD_REVISION_REQUESTED', entity_type: 'pdd', entity_id: 'PDD-2003', payload: { summary: 'Additionality section incomplete' }, previous_value: { state: 'under_validation' }, new_value: { state: 'revision_required' }, ip_address: '102.89.34.7', created_at: '2026-06-12T10:00:00Z' },
+  { id: 'aud-0021', user_role: 'project_owner', action: 'PDD_SUBMITTED', entity_type: 'pdd', entity_id: 'PDD-2002', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '124.122.9.55', created_at: '2026-06-20T09:00:00Z' },
 ]);
