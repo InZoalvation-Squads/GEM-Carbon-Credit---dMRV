@@ -70,7 +70,7 @@ describe('resolveComputed', () => {
   });
   it('estimates annual reduction in tCO2e (> 0)', () => {
     const er = resolveComputed('er_estimate', ctx) as number;
-    expect(er).toBeGreaterThan(0);
+    expect(er).toBeCloseTo(488.458, 2);
   });
 });
 
@@ -81,5 +81,10 @@ describe('pddContentHash', () => {
     const h3 = pddContentHash({ methodology_snapshot: 'T-VER-S-01 v1.0', section_data: { a: 2 }, evidence_ids: ['e1'] });
     expect(h1).toBe(h2);
     expect(h1).not.toBe(h3);
+  });
+  it('is order-independent in evidence_ids', () => {
+    const a = pddContentHash({ methodology_snapshot: 'm', section_data: { a: 1 }, evidence_ids: ['e2', 'e1'] });
+    const b = pddContentHash({ methodology_snapshot: 'm', section_data: { a: 1 }, evidence_ids: ['e1', 'e2'] });
+    expect(a).toBe(b);
   });
 });

@@ -57,7 +57,8 @@ export function resolveComputed(source: PddComputedSource, ctx: ComputeContext):
     case 'er_estimate': {
       const gf = gridFactor(ctx);
       if (gf === null) return null;
-      const pr = Number(ctx.sectionData.performance_ratio ?? DEFAULT_PERFORMANCE_RATIO);
+      const raw = Number(ctx.sectionData.performance_ratio ?? DEFAULT_PERFORMANCE_RATIO);
+      const pr = Number.isNaN(raw) || raw <= 0 ? DEFAULT_PERFORMANCE_RATIO : raw;
       const annualKwh = ctx.project.capacity_kwp * SUN_HOURS_PER_DAY * 365;
       const tco2e = (annualKwh * gf * pr) / 1000;
       return Math.round(tco2e * 1000) / 1000;
