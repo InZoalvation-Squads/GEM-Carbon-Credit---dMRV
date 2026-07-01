@@ -7,6 +7,7 @@ import { formatNumber } from './format';
 import type {
   Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID,
   EvidenceFile, VerificationRequest, EvidenceCategory,
+  Methodology, ProjectDesignDocument,
 } from '../types';
 
 const tick = <T>(value: T, ms = 120): Promise<T> =>
@@ -19,7 +20,7 @@ export const api = {
   async getProject(id: UUID): Promise<Project | undefined> {
     return tick(useStore.getState().projects.find((p) => p.id === id));
   },
-  async createProject(input: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id'>): Promise<Project> {
+  async createProject(input: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id' | 'lifecycle_stage'>): Promise<Project> {
     const project = useStore.getState().createProject(input);
     toast.success('Project created', project.name);
     return tick(project);
@@ -143,5 +144,56 @@ export const api = {
     useStore.getState().anchorVerification(id);
     toast.success('Anchored to Hedera Guardian', 'Verifiable Credential issued.');
     return tick(undefined);
+  },
+
+  // ---------------- Registration: Gate 1 ----------------
+  async listMethodologies(): Promise<Methodology[]> {
+    return tick(useStore.getState().methodologies);
+  },
+  async getMethodology(id: UUID): Promise<Methodology | undefined> {
+    return tick(useStore.getState().methodologies.find((m) => m.id === id));
+  },
+  async listPdds(): Promise<ProjectDesignDocument[]> {
+    return tick(useStore.getState().pdds);
+  },
+  async getPdd(id: UUID): Promise<ProjectDesignDocument | undefined> {
+    return tick(useStore.getState().pdds.find((p) => p.id === id));
+  },
+  async selectMethodology(project_id: UUID, methodology_id: UUID): Promise<ProjectDesignDocument> {
+    return tick(useStore.getState().selectMethodology(project_id, methodology_id));
+  },
+  async savePddDraft(pdd_id: UUID, section_data: Record<string, unknown>, evidence_ids: UUID[]): Promise<void> {
+    useStore.getState().savePddDraft(pdd_id, section_data, evidence_ids);
+    return tick(undefined, 60);
+  },
+  async submitPdd(pdd_id: UUID): Promise<void> {
+    useStore.getState().submitPdd(pdd_id);
+    toast.success('PDD submitted', 'Sent to the validation queue.');
+    return tick(undefined);
+  },
+  async startValidation(pdd_id: UUID): Promise<void> {
+    useStore.getState().startValidation(pdd_id);
+    toast.info('Validation started');
+    return tick(undefined);
+  },
+  async requestPddRevision(pdd_id: UUID, summary: string): Promise<void> {
+    useStore.getState().requestPddRevision(pdd_id, summary);
+    toast.info('Revision requested', 'Returned to the project proponent.');
+    return tick(undefined);
+  },
+  async registerProject(pdd_id: UUID): Promise<boolean> {
+    const ok = useStore.getState().registerProject(pdd_id);
+    if (ok) toast.success('Project registered', 'dMRV is now unlocked for this project.');
+    else toast.error('Cannot register', 'PDD is incomplete — required fields are missing.');
+    return tick(ok);
+  },
+  async rejectPdd(pdd_id: UUID, reason: string): Promise<void> {
+    useStore.getState().rejectPdd(pdd_id, reason);
+    toast.error('PDD rejected', reason);
+    return tick(undefined);
+  },
+  async addPddComment(pdd_id: UUID, body: string, section_key?: string): Promise<void> {
+    useStore.getState().addPddComment(pdd_id, body, section_key);
+    return tick(undefined, 60);
   },
 };
