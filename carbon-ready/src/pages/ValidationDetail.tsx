@@ -25,7 +25,7 @@ export function ValidationDetail() {
   if (!pdd || !methodology || !project) return <EmptyState title="PDD not found" hint="This validation item does not exist." />;
   const ctx = { project, factors, sectionData: pdd.section_data };
   const check = validatePdd(methodology, pdd.section_data);
-  const canAct = pdd.state === 'submitted' || pdd.state === 'under_validation';
+  const canAct = pdd.state === 'under_validation';
 
   function value(fieldKey: string, source?: PddComputedSource) {
     if (source) { const v = resolveComputed(source, ctx); return v === null || v === undefined ? '—' : String(v); }
@@ -84,7 +84,7 @@ export function ValidationDetail() {
 
           <Card className="p-5">
             <h3 className="mb-2 text-sm font-semibold text-ink-900">Notes & comments</h3>
-            <div className="mb-3 space-y-2">
+            <div className="mb-3 space-y-2 max-h-80 overflow-y-auto">
               {comments.length === 0 && <p className="text-sm text-ink-400">No comments yet.</p>}
               {comments.map((c) => (
                 <div key={c.id} className="rounded-lg bg-ink-50 p-2 text-sm">

@@ -339,7 +339,7 @@ export const useStore = create<AppState>()(
           projects: pdd ? s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)) : s.projects,
         }));
         get().audit_write('PDD_REVISION_REQUESTED', 'pdd', pdd_id, { summary },
-          { previous_value: { state: 'under_validation' }, new_value: { state: 'revision_required', summary } });
+          { previous_value: { state: pdd?.state ?? 'under_validation' }, new_value: { state: 'revision_required', summary } });
       },
 
       registerProject: (pdd_id) => {
