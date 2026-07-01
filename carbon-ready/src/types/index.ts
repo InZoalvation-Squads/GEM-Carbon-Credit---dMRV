@@ -49,7 +49,6 @@ export interface User {
 export type ProjectLifecycle =
   | 'unregistered'      // no methodology chosen yet
   | 'pdd_draft'         // filling PDD
-  | 'revision_required' // sent back for revision by VVB
   | 'under_validation'  // submitted, awaiting VVB
   | 'registered'        // dMRV unlocked
   | 'rejected';

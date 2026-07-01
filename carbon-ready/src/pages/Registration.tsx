@@ -12,7 +12,7 @@ import { EmptyState } from '../components/EmptyState';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
 import type { PddFieldSchema, PddComputedSource, Project } from '../types';
 
-const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft', 'revision_required'];
+const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft'];
 
 export function Registration() {
   const { pddId } = useParams();
