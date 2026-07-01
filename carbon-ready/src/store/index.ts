@@ -5,11 +5,14 @@ import type {
   AuditLog, User, UserRole, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
   VerifiableCredential, GuardianConfig,
+  Methodology, ProjectDesignDocument,
 } from '../types';
 import {
   seedOrg, seedUser, seedFactors, seedProjects, seedRecords, seedAudit,
   seedEvidence, seedVerifications, seedComments, seedCredentials,
+  seedMethodologies, seedPdds,
 } from '../data/seed';
+import { validatePdd, pddContentHash } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
 import { buildApprovalSubject, issueCredential, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
@@ -29,10 +32,24 @@ interface AppState {
   comments: VerificationComment[];
   credentials: VerifiableCredential[];
   guardianConfig: GuardianConfig;
+  methodologies: Methodology[];
+  pdds: ProjectDesignDocument[];
+
+  // Registration (Gate 1)
+  selectMethodology: (project_id: UUID, methodology_id: UUID) => ProjectDesignDocument;
+  savePddDraft: (pdd_id: UUID, section_data: Record<string, unknown>, evidence_ids: UUID[]) => void;
+  submitPdd: (pdd_id: UUID) => void;
+  startValidation: (pdd_id: UUID) => void;
+  requestPddRevision: (pdd_id: UUID, summary: string) => void;
+  registerProject: (pdd_id: UUID) => boolean;
+  rejectPdd: (pdd_id: UUID, reason: string) => void;
+  addPddComment: (pdd_id: UUID, body: string, section_key?: string) => void;
+  pddByProject: (project_id: UUID) => ProjectDesignDocument | undefined;
+  validationQueue: () => ProjectDesignDocument[];
 
   audit_write: (action: AuditAction, entity_type: EntityType, entity_id: UUID | null, payload?: Record<string, unknown>, extra?: AuditExtra) => void;
 
-  createProject: (p: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id'>) => Project;
+  createProject: (p: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id' | 'lifecycle_stage'>) => Project;
   updateProject: (id: UUID, patch: Partial<Project>) => Project | undefined;
 
   addMonitoringRecords: (project_id: UUID, rows: Array<{ record_date: string; generation_kwh: number }>) => number;
@@ -82,6 +99,8 @@ export const useStore = create<AppState>()(
       comments: seedComments,
       credentials: seedCredentials,
       guardianConfig: DEFAULT_GUARDIAN_CONFIG,
+      methodologies: seedMethodologies,
+      pdds: seedPdds,
 
       audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) =>
         set((s) => ({
@@ -97,7 +116,7 @@ export const useStore = create<AppState>()(
 
       createProject: (input) => {
         const now = new Date().toISOString();
-        const p: Project = { id: uid('prj'), organization_id: get().organization.id, created_at: now, updated_at: now, ...input };
+        const p: Project = { id: uid('prj'), organization_id: get().organization.id, lifecycle_stage: 'unregistered', created_at: now, updated_at: now, ...input };
         set((s) => ({ projects: [p, ...s.projects] }));
         get().audit_write('PROJECT_CREATED', 'project', p.id, { name: p.name }, { new_value: { name: p.name } });
         return p;
@@ -252,10 +271,113 @@ export const useStore = create<AppState>()(
           { previous_value: { anchored: false }, new_value: { credential_id: vc.id, hcs_topic_id: vc.hcs.topic_id, hcs_sequence_number: vc.hcs.sequence_number } });
       },
 
+      // ---------------- Registration: Gate 1 (PDD validation) ----------------
+      pddByProject: (project_id) => get().pdds.find((p) => p.project_id === project_id),
+
+      validationQueue: () =>
+        get().pdds.filter((p) => p.state !== 'draft' && p.state !== 'registered' && p.state !== 'rejected'),
+
+      selectMethodology: (project_id, methodology_id) => {
+        const existing = get().pdds.find((p) => p.project_id === project_id);
+        if (existing) {
+          if (existing.methodology_id !== methodology_id) {
+            set((s) => ({ pdds: s.pdds.map((p) => (p.id === existing.id ? { ...p, methodology_id } : p)) }));
+          }
+          return get().pdds.find((p) => p.id === existing.id)!;
+        }
+        const pdd: ProjectDesignDocument = {
+          id: uid('PDD'), project_id, methodology_id,
+          methodology_snapshot: '', state: 'draft', section_data: {}, evidence_ids: [],
+          assigned_validator_name: 'Daniel Okoye', submitted_at: null, validated_at: null, content_hash: null,
+        };
+        set((s) => ({
+          pdds: [pdd, ...s.pdds],
+          projects: s.projects.map((p) => (p.id === project_id ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)),
+        }));
+        get().audit_write('METHODOLOGY_SELECTED', 'pdd', pdd.id, { project_id, methodology_id },
+          { new_value: { state: 'draft' } });
+        return pdd;
+      },
+
+      savePddDraft: (pdd_id, section_data, evidence_ids) => {
+        set((s) => ({ pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, section_data, evidence_ids } : p)) }));
+      },
+
+      submitPdd: (pdd_id) => {
+        const pdd = get().pdds.find((p) => p.id === pdd_id);
+        if (!pdd) return;
+        const m = get().methodologies.find((x) => x.id === pdd.methodology_id);
+        const snapshot = m ? `${m.code} ${m.version}` : pdd.methodology_snapshot;
+        set((s) => ({
+          pdds: s.pdds.map((p) => (p.id === pdd_id
+            ? { ...p, state: 'submitted', methodology_snapshot: snapshot, submitted_at: p.submitted_at ?? new Date().toISOString() }
+            : p)),
+          projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'under_validation' as const } : p)),
+        }));
+        get().audit_write('PDD_SUBMITTED', 'pdd', pdd_id, { methodology: snapshot },
+          { previous_value: { state: pdd.state }, new_value: { state: 'submitted' } });
+      },
+
+      startValidation: (pdd_id) => {
+        set((s) => ({ pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'under_validation' } : p)) }));
+        get().audit_write('VALIDATION_STARTED', 'pdd', pdd_id, {},
+          { previous_value: { state: 'submitted' }, new_value: { state: 'under_validation' } });
+      },
+
+      requestPddRevision: (pdd_id, summary) => {
+        const pdd = get().pdds.find((p) => p.id === pdd_id);
+        set((s) => ({
+          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'revision_required', rejection_reason: summary } : p)),
+          projects: pdd ? s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)) : s.projects,
+        }));
+        get().audit_write('PDD_REVISION_REQUESTED', 'pdd', pdd_id, { summary },
+          { previous_value: { state: 'under_validation' }, new_value: { state: 'revision_required', summary } });
+      },
+
+      registerProject: (pdd_id) => {
+        const pdd = get().pdds.find((p) => p.id === pdd_id);
+        if (!pdd) return false;
+        const m = get().methodologies.find((x) => x.id === pdd.methodology_id);
+        if (!m) return false;
+        const check = validatePdd(m, pdd.section_data);
+        if (!check.ok) return false;
+        const snapshot = pdd.methodology_snapshot || `${m.code} ${m.version}`;
+        const content_hash = pddContentHash({ methodology_snapshot: snapshot, section_data: pdd.section_data, evidence_ids: pdd.evidence_ids });
+        const validated_at = new Date().toISOString();
+        set((s) => ({
+          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash } : p)),
+          projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'registered' as const } : p)),
+        }));
+        get().audit_write('PROJECT_REGISTERED', 'pdd', pdd_id, { methodology: snapshot },
+          { previous_value: { state: pdd.state }, new_value: { state: 'registered', content_hash } });
+        return true;
+      },
+
+      rejectPdd: (pdd_id, reason) => {
+        const pdd = get().pdds.find((p) => p.id === pdd_id);
+        set((s) => ({
+          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'rejected', rejection_reason: reason } : p)),
+          projects: pdd ? s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'rejected' as const } : p)) : s.projects,
+        }));
+        get().audit_write('PDD_REJECTED', 'pdd', pdd_id, { reason },
+          { previous_value: { state: pdd?.state ?? null }, new_value: { state: 'rejected', reason } });
+      },
+
+      addPddComment: (pdd_id, body, section_key) => {
+        const u = get().currentUser;
+        const c: VerificationComment = {
+          id: uid('cmt'), verification_id: pdd_id, evidence_id: null, section_key,
+          author_id: u.id, author_name: u.name, author_role: u.role, body, created_at: new Date().toISOString(),
+        };
+        set((s) => ({ comments: [...s.comments, c] }));
+        get().audit_write('COMMENT_ADDED', 'pdd', pdd_id, section_key ? { section: section_key } : {}, { new_value: { body } });
+      },
+
       resetToSeed: () => set({
         projects: seedProjects, records: seedRecords, factors: seedFactors, calculations: [], audit: seedAudit,
         evidence: seedEvidence, verifications: seedVerifications, comments: seedComments,
         credentials: seedCredentials, guardianConfig: DEFAULT_GUARDIAN_CONFIG,
+        methodologies: seedMethodologies, pdds: seedPdds,
       }),
     }),
     { name: 'carbon-ready-store-v3' }
