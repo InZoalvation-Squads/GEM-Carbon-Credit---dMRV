@@ -6,6 +6,7 @@ import { Badge } from '../components/Badge';
 import { Table, THead, TR, TH, TD } from '../components/Table';
 import { FileDrop } from '../components/FileDrop';
 import { PageHeader } from '../components/PageHeader';
+import { RegistrationGate } from '../components/RegistrationGate';
 import { useStore } from '../store';
 import { parseAndValidateCsv } from '../lib/csv';
 import { api } from '../lib/api';
@@ -48,63 +49,65 @@ export function UploadPage() {
         </Select>
       </Card>
 
-      {!preview && !submitted && (
-        <Card className="mb-4">
-          <CardBody><FileDrop onFile={onFile} /></CardBody>
-        </Card>
-      )}
+      <RegistrationGate projectId={projectId}>
+        {!preview && !submitted && (
+          <Card className="mb-4">
+            <CardBody><FileDrop onFile={onFile} /></CardBody>
+          </Card>
+        )}
 
-      {preview && (
-        <Card className="mb-4">
-          <CardHeader title="Validation Report" />
+        {preview && (
+          <Card className="mb-4">
+            <CardHeader title="Validation Report" />
+            <CardBody>
+              <div className="flex items-center gap-3 mb-4">
+                <Badge tone="green"><CheckCircle2 size={12} /> {preview.accepted.length} accepted</Badge>
+                <Badge tone={preview.rejected.length ? 'red' : 'gray'}><AlertTriangle size={12} /> {preview.rejected.length} rejected</Badge>
+              </div>
+              {preview.rejected.length > 0 && (
+                <Table>
+                  <THead><TR><TH>Row</TH><TH>Code</TH><TH>Date</TH><TH>Value</TH></TR></THead>
+                  <tbody>
+                    {preview.rejected.slice(0, 50).map((r, i) => (
+                      <TR key={i}>
+                        <TD>{r.row}</TD>
+                        <TD className="font-mono text-xs">{r.code}</TD>
+                        <TD>{r.date ?? '—'}</TD>
+                        <TD>{r.value ?? '—'}</TD>
+                      </TR>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+              <div className="flex justify-end gap-2 mt-4">
+                <Button variant="secondary" onClick={reset}>Cancel</Button>
+                <Button onClick={confirm} disabled={preview.accepted.length === 0}>Confirm Upload {preview.accepted.length} rows</Button>
+              </div>
+            </CardBody>
+          </Card>
+        )}
+
+        {submitted && (
+          <Card className="mb-4">
+            <CardBody>
+              <div className="text-sm">
+                <span className="font-medium">Upload complete.</span> {submitted.accepted} rows saved, {submitted.rejected} rejected.
+              </div>
+              <div className="mt-3"><Button variant="secondary" onClick={reset}>Upload another file</Button></div>
+            </CardBody>
+          </Card>
+        )}
+
+        <Card>
+          <CardHeader title="CSV Format" />
           <CardBody>
-            <div className="flex items-center gap-3 mb-4">
-              <Badge tone="green"><CheckCircle2 size={12} /> {preview.accepted.length} accepted</Badge>
-              <Badge tone={preview.rejected.length ? 'red' : 'gray'}><AlertTriangle size={12} /> {preview.rejected.length} rejected</Badge>
-            </div>
-            {preview.rejected.length > 0 && (
-              <Table>
-                <THead><TR><TH>Row</TH><TH>Code</TH><TH>Date</TH><TH>Value</TH></TR></THead>
-                <tbody>
-                  {preview.rejected.slice(0, 50).map((r, i) => (
-                    <TR key={i}>
-                      <TD>{r.row}</TD>
-                      <TD className="font-mono text-xs">{r.code}</TD>
-                      <TD>{r.date ?? '—'}</TD>
-                      <TD>{r.value ?? '—'}</TD>
-                    </TR>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-            <div className="flex justify-end gap-2 mt-4">
-              <Button variant="secondary" onClick={reset}>Cancel</Button>
-              <Button onClick={confirm} disabled={preview.accepted.length === 0}>Confirm Upload {preview.accepted.length} rows</Button>
-            </div>
-          </CardBody>
-        </Card>
-      )}
-
-      {submitted && (
-        <Card className="mb-4">
-          <CardBody>
-            <div className="text-sm">
-              <span className="font-medium">Upload complete.</span> {submitted.accepted} rows saved, {submitted.rejected} rejected.
-            </div>
-            <div className="mt-3"><Button variant="secondary" onClick={reset}>Upload another file</Button></div>
-          </CardBody>
-        </Card>
-      )}
-
-      <Card>
-        <CardHeader title="CSV Format" />
-        <CardBody>
-          <pre className="bg-ink-50 text-xs p-3 rounded-md overflow-x-auto">{`Date,Generation_kWh
+            <pre className="bg-ink-50 text-xs p-3 rounded-md overflow-x-auto">{`Date,Generation_kWh
 2026-01-01,1234.5
 2026-01-02,1180.2`}</pre>
-          <p className="mt-3 text-sm text-ink-500">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Generation must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
-        </CardBody>
-      </Card>
+            <p className="mt-3 text-sm text-ink-500">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Generation must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
+          </CardBody>
+        </Card>
+      </RegistrationGate>
     </div>
   );
 }
