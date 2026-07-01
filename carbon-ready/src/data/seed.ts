@@ -2,8 +2,10 @@ import type {
   Organization, Project, MonitoringRecord, EmissionFactor, User, AuditLog,
   EvidenceFile, VerificationRequest, VerificationComment,
   AuditAction, EntityType, UserRole, VerifiableCredential,
+  Methodology, ProjectDesignDocument,
 } from '../types';
 import { shortHash } from '../lib/hash';
+import { TVER_SOLAR_METHODOLOGY } from './methodology-tver-solar';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 
@@ -27,9 +29,57 @@ export const seedFactors: EmissionFactor[] = [
 ];
 
 export const seedProjects: Project[] = [
-  { id: 'prj-0001', organization_id: seedOrg.id, name: 'Pune Rooftop Phase 1',  location: 'Pune, India',     capacity_kwp: 250,  commission_date: '2025-03-15', status: 'active', created_at: '2025-03-15T00:00:00Z', updated_at: '2025-03-15T00:00:00Z' },
-  { id: 'prj-0002', organization_id: seedOrg.id, name: 'Bangkok Industrial Park',location: 'Bangkok, Thailand',capacity_kwp: 820,  commission_date: '2024-11-01', status: 'active', created_at: '2024-11-01T00:00:00Z', updated_at: '2024-11-01T00:00:00Z' },
-  { id: 'prj-0003', organization_id: seedOrg.id, name: 'Hanoi Warehouse Cluster',location: 'Hanoi, Vietnam',  capacity_kwp: 510,  commission_date: '2026-02-10', status: 'draft',  created_at: '2026-02-10T00:00:00Z', updated_at: '2026-02-10T00:00:00Z' },
+  { id: 'prj-0001', organization_id: seedOrg.id, name: 'Pune Rooftop Phase 1',   location: 'Pune, India',      capacity_kwp: 250, commission_date: '2025-03-15', status: 'active', lifecycle_stage: 'registered',       created_at: '2025-03-15T00:00:00Z', updated_at: '2025-03-15T00:00:00Z' },
+  { id: 'prj-0002', organization_id: seedOrg.id, name: 'Bangkok Industrial Park', location: 'Bangkok, Thailand', capacity_kwp: 820, commission_date: '2024-11-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2024-11-01T00:00:00Z', updated_at: '2024-11-01T00:00:00Z' },
+  { id: 'prj-0003', organization_id: seedOrg.id, name: 'Hanoi Warehouse Cluster', location: 'Hanoi, Vietnam',    capacity_kwp: 510, commission_date: '2026-02-10', status: 'draft',  lifecycle_stage: 'under_validation', created_at: '2026-02-10T00:00:00Z', updated_at: '2026-02-10T00:00:00Z' },
+  { id: 'prj-0004', organization_id: seedOrg.id, name: 'Chiang Mai Community Solar', location: 'Chiang Mai, Thailand', capacity_kwp: 300, commission_date: '2026-05-01', status: 'draft', lifecycle_stage: 'pdd_draft', created_at: '2026-05-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z' },
+];
+
+export const seedMethodologies: Methodology[] = [TVER_SOLAR_METHODOLOGY];
+
+const VALIDATOR = 'Daniel Okoye';
+
+// A fully-answered PDD payload reused by the registered seed PDDs.
+const REGISTERED_SECTION_DATA = {
+  technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
+  baseline_scenario: 'Grid electricity displaced by solar generation',
+  barrier_type: 'Investment', investment_metric: 'IRR',
+  barrier_explanation: 'Project IRR without carbon revenue is below the developer hurdle rate.',
+  common_practice: true, performance_ratio: 0.8,
+  monitored_parameter: 'EG_PJ', measurement_method: 'Revenue-grade bi-directional meter',
+  monitoring_frequency: 'Monthly', qaqc_procedure: 'Monthly meter reads cross-checked against utility bill.',
+};
+
+export const seedPdds: ProjectDesignDocument[] = [
+  {
+    id: 'PDD-2000', project_id: 'prj-0001', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: 'T-VER-S-01 v3.0', state: 'registered',
+    section_data: REGISTERED_SECTION_DATA, evidence_ids: ['ev-0003', 'ev-0004'],
+    assigned_validator_name: VALIDATOR, submitted_at: '2025-03-16T00:00:00Z',
+    validated_at: '2025-03-20T00:00:00Z', content_hash: shortHash('PDD-2000-registered'),
+  },
+  {
+    id: 'PDD-2001', project_id: 'prj-0002', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: 'T-VER-S-01 v3.0', state: 'registered',
+    section_data: REGISTERED_SECTION_DATA, evidence_ids: ['ev-0008'],
+    assigned_validator_name: VALIDATOR, submitted_at: '2024-11-03T00:00:00Z',
+    validated_at: '2024-11-10T00:00:00Z', content_hash: shortHash('PDD-2001-registered'),
+  },
+  {
+    id: 'PDD-2002', project_id: 'prj-0003', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: 'T-VER-S-01 v3.0', state: 'submitted',
+    section_data: REGISTERED_SECTION_DATA, evidence_ids: [],
+    assigned_validator_name: VALIDATOR, submitted_at: '2026-06-20T09:00:00Z',
+    validated_at: null, content_hash: null,
+  },
+  {
+    id: 'PDD-2003', project_id: 'prj-0004', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: 'T-VER-S-01 v3.0', state: 'revision_required',
+    section_data: { technology: 'Solar PV rooftop', grid_connection: 'Grid-connected', performance_ratio: 0.8 },
+    evidence_ids: [], assigned_validator_name: VALIDATOR,
+    submitted_at: '2026-06-10T09:00:00Z', validated_at: null, content_hash: null,
+    rejection_reason: 'Additionality section incomplete; attach commissioning report.',
+  },
 ];
 
 function generationFor(kwp: number, dateIso: string, seed: number): number {
@@ -237,4 +287,7 @@ export const seedAudit: AuditLog[] = buildChain([
   { id: 'aud-0013', user_role: 'verifier', action: 'REVIEW_STARTED', entity_type: 'verification', entity_id: 'VR-1001', payload: {}, previous_value: { state: 'submitted' }, new_value: { state: 'under_review' }, ip_address: '102.89.34.7', created_at: '2026-05-05T02:12:00Z' },
   { id: 'aud-0014', user_role: 'verifier', action: 'COMMENT_ADDED', entity_type: 'verification', entity_id: 'VR-1001', payload: { evidence: 'pune-inverter-log-apr.xlsx' }, new_value: { body: 'Inverter totals reconcile with the utility bill within 1.2%…' }, ip_address: '102.89.34.7', created_at: '2026-05-05T08:40:00Z' },
   { id: 'aud-0015', user_role: 'project_owner', action: 'VERIFICATION_SUBMITTED', entity_type: 'verification', entity_id: 'VR-1002', payload: { reduction_tco2e: 50.18, evidence_count: 3 }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '124.122.9.55', created_at: '2026-05-05T01:05:00Z' },
+  { id: 'aud-0020', user_role: 'esg_manager', action: 'PROJECT_REGISTERED', entity_type: 'pdd', entity_id: 'PDD-2001', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'under_validation' }, new_value: { state: 'registered', content_hash: shortHash('PDD-2001-registered') }, created_at: '2024-11-10T00:00:00Z' },
+  { id: 'aud-0021', user_role: 'project_owner', action: 'PDD_SUBMITTED', entity_type: 'pdd', entity_id: 'PDD-2002', payload: { methodology: 'T-VER-S-01 v3.0' }, previous_value: { state: 'draft' }, new_value: { state: 'submitted' }, ip_address: '124.122.9.55', created_at: '2026-06-20T09:00:00Z' },
+  { id: 'aud-0022', user_role: 'verifier', action: 'PDD_REVISION_REQUESTED', entity_type: 'pdd', entity_id: 'PDD-2003', payload: { summary: 'Additionality section incomplete' }, previous_value: { state: 'under_validation' }, new_value: { state: 'revision_required' }, ip_address: '102.89.34.7', created_at: '2026-06-12T10:00:00Z' },
 ]);
