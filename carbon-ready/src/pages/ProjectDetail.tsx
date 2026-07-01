@@ -11,6 +11,7 @@ import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
 import { ChevronLeft, Upload as UploadIcon } from 'lucide-react';
 import clsx from 'clsx';
+import { RegistrationGate } from '../components/RegistrationGate';
 
 type Tab = 'overview' | 'evidence';
 
@@ -77,31 +78,33 @@ export function ProjectDetail() {
         ))}
       </div>
 
-      {tab === 'overview' ? (
-        <Card>
-          <CardHeader title="Monitoring Records" />
-          <CardBody className="p-0">
-            {records.length === 0 ? (
-              <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
-            ) : (
-              <Table>
-                <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
-                <tbody>
-                  {records.slice(0, 50).map((r) => (
-                    <TR key={r.id}>
-                      <TD>{fmtDate(r.record_date)}</TD>
-                      <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
-                      <TD className="text-ink-500">{r.source}</TD>
-                    </TR>
-                  ))}
-                </tbody>
-              </Table>
-            )}
-          </CardBody>
-        </Card>
-      ) : (
-        <ProjectEvidenceTab projectId={project.id} />
-      )}
+      <RegistrationGate projectId={project.id}>
+        {tab === 'overview' ? (
+          <Card>
+            <CardHeader title="Monitoring Records" />
+            <CardBody className="p-0">
+              {records.length === 0 ? (
+                <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
+              ) : (
+                <Table>
+                  <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
+                  <tbody>
+                    {records.slice(0, 50).map((r) => (
+                      <TR key={r.id}>
+                        <TD>{fmtDate(r.record_date)}</TD>
+                        <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
+                        <TD className="text-ink-500">{r.source}</TD>
+                      </TR>
+                    ))}
+                  </tbody>
+                </Table>
+              )}
+            </CardBody>
+          </Card>
+        ) : (
+          <ProjectEvidenceTab projectId={project.id} />
+        )}
+      </RegistrationGate>
     </div>
   );
 }

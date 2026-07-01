@@ -347,6 +347,7 @@ export const useStore = create<AppState>()(
         if (!pdd) return false;
         const m = get().methodologies.find((x) => x.id === pdd.methodology_id);
         if (!m) return false;
+        if (pdd.state !== 'under_validation') return false;
         const check = validatePdd(m, pdd.section_data);
         if (!check.ok) return false;
         const snapshot = pdd.methodology_snapshot || `${m.code} ${m.version}`;
