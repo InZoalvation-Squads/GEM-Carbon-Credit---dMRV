@@ -1,0 +1,20 @@
+import type { Methodology } from '../../types';
+import { TVER_SOLAR_METHODOLOGY } from '../methodology-tver-solar';
+import { TVER_WIND_METHODOLOGY } from './tver-wind';
+import { TVER_BIOMASS_METHODOLOGY } from './tver-biomass';
+import { TVER_BIOGAS_METHODOLOGY } from './tver-biogas';
+import { TVER_FORESTRY_METHODOLOGY } from './tver-forestry';
+import { TVER_WASTE_LFG_METHODOLOGY } from './tver-waste-lfg';
+import { VERRA_VM0042_METHODOLOGY } from './verra-vm0042';
+import { CDM_ARACM0003_METHODOLOGY } from './cdm-ar-acm0003';
+
+export const ALL_METHODOLOGIES: Methodology[] = [
+  TVER_SOLAR_METHODOLOGY,
+  TVER_WIND_METHODOLOGY,
+  TVER_BIOMASS_METHODOLOGY,
+  TVER_BIOGAS_METHODOLOGY,
+  TVER_FORESTRY_METHODOLOGY,
+  TVER_WASTE_LFG_METHODOLOGY,
+  VERRA_VM0042_METHODOLOGY,
+  CDM_ARACM0003_METHODOLOGY,
+];

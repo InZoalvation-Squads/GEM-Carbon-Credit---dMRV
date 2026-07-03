@@ -6,6 +6,7 @@ import type {
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from './methodology-tver-solar';
+import { ALL_METHODOLOGIES } from './methodologies';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 
@@ -35,7 +36,7 @@ export const seedProjects: Project[] = [
   { id: 'prj-0004', organization_id: seedOrg.id, name: 'Chiang Mai Community Solar', location: 'Chiang Mai, Thailand', capacity_kwp: 300, commission_date: '2026-05-01', status: 'draft', lifecycle_stage: 'pdd_draft', created_at: '2026-05-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z' },
 ];
 
-export const seedMethodologies: Methodology[] = [TVER_SOLAR_METHODOLOGY];
+export const seedMethodologies: Methodology[] = ALL_METHODOLOGIES;
 
 const VALIDATOR = 'Daniel Okoye';
 
