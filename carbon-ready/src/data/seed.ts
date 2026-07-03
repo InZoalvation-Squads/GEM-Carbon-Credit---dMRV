@@ -180,14 +180,14 @@ function buildRecords(): MonitoringRecord[] {
 
 // Explicit monthly driver records for the non-solar sample projects.
 // generation_kwh holds the period driver value in the methodology's input_unit.
-const EXTRA_RECORDS: Array<{ project_id: string; unit_hint: string; monthly: number; count: number; start: string }> = [
-  { project_id: 'prj-1001', unit_hint: 'kWh',    monthly: 5_400_000, count: 6, start: '2026-01-01' }, // wind → grid_displacement
-  { project_id: 'prj-1002', unit_hint: 'kWh',    monthly: 3_200_000, count: 6, start: '2026-01-01' }, // biomass
-  { project_id: 'prj-1003', unit_hint: 'kWh',    monthly: 720_000,   count: 6, start: '2026-01-01' }, // biogas
-  { project_id: 'prj-1004', unit_hint: 'tCO2e',  monthly: 800,       count: 4, start: '2025-01-01' }, // forestry → biomass_stock_change
-  { project_id: 'prj-1005', unit_hint: 't CH4',  monthly: 125,       count: 6, start: '2026-01-01' }, // LFG → ch4_avoidance
-  { project_id: 'prj-1006', unit_hint: 'tCO2e',  monthly: 430,       count: 4, start: '2025-01-01' }, // VM0042 → direct_entry
-  { project_id: 'prj-1007', unit_hint: 'tCO2e',  monthly: 600,       count: 4, start: '2025-01-01' }, // CDM A/R → biomass_stock_change
+const EXTRA_RECORDS: Array<{ project_id: string; monthly: number; count: number; start: string }> = [
+  { project_id: 'prj-1001', monthly: 5_400_000, count: 6, start: '2026-01-01' }, // wind, kWh → grid_displacement
+  { project_id: 'prj-1002', monthly: 3_200_000, count: 6, start: '2026-01-01' }, // biomass, kWh → grid_displacement
+  { project_id: 'prj-1003', monthly: 720_000,   count: 6, start: '2026-01-01' }, // biogas, kWh → grid_displacement
+  { project_id: 'prj-1004', monthly: 800,       count: 4, start: '2025-01-01' }, // forestry, tCO2e → biomass_stock_change
+  { project_id: 'prj-1005', monthly: 125,       count: 6, start: '2026-01-01' }, // LFG, t CH4 → ch4_avoidance
+  { project_id: 'prj-1006', monthly: 430,       count: 4, start: '2025-01-01' }, // VM0042, tCO2e → direct_entry
+  { project_id: 'prj-1007', monthly: 600,       count: 4, start: '2025-01-01' }, // CDM A/R, tCO2e → biomass_stock_change
 ];
 
 function buildExtraRecords(): MonitoringRecord[] {
