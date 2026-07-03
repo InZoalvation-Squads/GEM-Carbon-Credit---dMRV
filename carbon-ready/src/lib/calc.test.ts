@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { calculateCarbon, pickFactorForDate } from './calc';
-import type { EmissionFactor, MonitoringRecord } from '../types';
+import type { EmissionFactor, MethodologyCalculation, MonitoringRecord } from '../types';
 
 const ef = (over: Partial<EmissionFactor>): EmissionFactor => ({
   id: 'ef-1', country: 'IN', source: 'CEA', factor_kgco2e_per_kwh: 0.82,
@@ -115,5 +115,39 @@ describe('calculateCarbon', () => {
       [oldEf, newEf]
     );
     expect(r.emission_factor_id).toBe('new');
+  });
+});
+
+const rec = (date: string, driver: number): MonitoringRecord => ({
+  id: `m-${date}`, project_id: 'p1', record_date: date,
+  generation_kwh: driver, source: 'seed', uploaded_at: '2026-01-01T00:00:00Z',
+});
+
+describe('calculateCarbon — formula dispatch', () => {
+  it('biomass_stock_change sums the driver as tCO2e', () => {
+    const calc: MethodologyCalculation = { formula: 'biomass_stock_change', input_param: 'dC', input_unit: 'tCO2e' };
+    const out = calculateCarbon([rec('2026-01-01', 10), rec('2026-02-01', 20)], [], undefined, calc);
+    expect(out.emission_factor_id).toBeNull();
+    expect(out.totals.reduction_tco2e).toBe(30);
+    expect(out.totals.reduction_kgco2e).toBe(30000);
+  });
+
+  it('direct_entry sums the driver as tCO2e', () => {
+    const calc: MethodologyCalculation = { formula: 'direct_entry', input_param: 'ER', input_unit: 'tCO2e' };
+    const out = calculateCarbon([rec('2026-01-01', 5), rec('2026-02-01', 5)], [], undefined, calc);
+    expect(out.totals.reduction_tco2e).toBe(10);
+  });
+
+  it('ch4_avoidance multiplies the driver by GWP', () => {
+    const calc: MethodologyCalculation = { formula: 'ch4_avoidance', input_param: 'CH4', input_unit: 't CH4', gwp_ch4: 28 };
+    const out = calculateCarbon([rec('2026-01-01', 1), rec('2026-02-01', 2)], [], undefined, calc);
+    expect(out.totals.reduction_tco2e).toBe(84);
+  });
+
+  it('grid_displacement (default, no calc arg) is unchanged', () => {
+    const factors = [{ id: 'ef1', country: 'TH', source: 'EGAT', factor_kgco2e_per_kwh: 0.5, effective_date: '2025-01-01', version: 1, is_current: true, created_at: '2025-01-01T00:00:00Z' }];
+    const out = calculateCarbon([rec('2026-01-01', 1000)], factors, undefined);
+    expect(out.emission_factor_id).toBe('ef1');
+    expect(out.totals.reduction_kgco2e).toBe(500);
   });
 });
