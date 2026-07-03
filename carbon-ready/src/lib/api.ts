@@ -61,10 +61,13 @@ export const api = {
     const state = useStore.getState();
     const project = state.projects.find((p) => p.id === project_id);
     if (!project) throw new Error('Project not found');
+    const pdd = state.pddByProject(project_id);
+    const methodology = state.methodologies.find((m) => m.id === pdd?.methodology_id);
+    const calculation = methodology?.calculation;
     const country = locationToCountryCode(project.location.split(',').pop()?.trim() ?? '');
     const factors = state.factors.filter((f) => f.country === country);
     const records = state.records.filter((r) => r.project_id === project_id);
-    const result = calculateCarbon(records, factors, range);
+    const result = calculateCarbon(records, factors, range, calculation);
     state.audit_write('CALCULATION_EXECUTED', 'calculation', project_id, {
       emission_factor_id: result.emission_factor_id,
       generation_kwh: result.totals.generation_kwh,
