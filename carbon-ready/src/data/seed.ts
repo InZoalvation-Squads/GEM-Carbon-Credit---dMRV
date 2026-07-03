@@ -6,7 +6,12 @@ import type {
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from './methodology-tver-solar';
-import { ALL_METHODOLOGIES } from './methodologies';
+import {
+  ALL_METHODOLOGIES,
+  TVER_WIND_METHODOLOGY, TVER_BIOMASS_METHODOLOGY, TVER_BIOGAS_METHODOLOGY,
+  TVER_FORESTRY_METHODOLOGY, TVER_WASTE_LFG_METHODOLOGY,
+  VERRA_VM0042_METHODOLOGY, CDM_ARACM0003_METHODOLOGY,
+} from './methodologies';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 
@@ -34,6 +39,13 @@ export const seedProjects: Project[] = [
   { id: 'prj-0002', organization_id: seedOrg.id, name: 'Bangkok Industrial Park', location: 'Bangkok, Thailand', capacity_kwp: 820, commission_date: '2024-11-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2024-11-01T00:00:00Z', updated_at: '2024-11-01T00:00:00Z' },
   { id: 'prj-0003', organization_id: seedOrg.id, name: 'Hanoi Warehouse Cluster', location: 'Hanoi, Vietnam',    capacity_kwp: 510, commission_date: '2026-02-10', status: 'draft',  lifecycle_stage: 'under_validation', created_at: '2026-02-10T00:00:00Z', updated_at: '2026-02-10T00:00:00Z' },
   { id: 'prj-0004', organization_id: seedOrg.id, name: 'Chiang Mai Community Solar', location: 'Chiang Mai, Thailand', capacity_kwp: 300, commission_date: '2026-05-01', status: 'draft', lifecycle_stage: 'pdd_draft', created_at: '2026-05-01T00:00:00Z', updated_at: '2026-05-01T00:00:00Z' },
+  { id: 'prj-1001', organization_id: seedOrg.id, name: 'Korat Wind Farm',          location: 'Nakhon Ratchasima, Thailand', capacity_kwp: 45000, commission_date: '2025-06-01', status: 'active', lifecycle_stage: 'registered', created_at: '2025-06-01T00:00:00Z', updated_at: '2025-06-01T00:00:00Z' },
+  { id: 'prj-1002', organization_id: seedOrg.id, name: 'Surin Rice-Husk Power',     location: 'Surin, Thailand',             capacity_kwp: 9900,  commission_date: '2025-02-01', status: 'active', lifecycle_stage: 'registered', created_at: '2025-02-01T00:00:00Z', updated_at: '2025-02-01T00:00:00Z' },
+  { id: 'prj-1003', organization_id: seedOrg.id, name: 'Chonburi Pig-Farm Biogas',  location: 'Chonburi, Thailand',          capacity_kwp: 1200,  commission_date: '2025-04-01', status: 'active', lifecycle_stage: 'registered', created_at: '2025-04-01T00:00:00Z', updated_at: '2025-04-01T00:00:00Z' },
+  { id: 'prj-1004', organization_id: seedOrg.id, name: 'Nan Watershed Reforestation', location: 'Nan, Thailand',             capacity_kwp: 0,     commission_date: '2024-07-01', status: 'active', lifecycle_stage: 'registered', created_at: '2024-07-01T00:00:00Z', updated_at: '2024-07-01T00:00:00Z' },
+  { id: 'prj-1005', organization_id: seedOrg.id, name: 'Rayong Landfill Gas',       location: 'Rayong, Thailand',            capacity_kwp: 0,     commission_date: '2025-01-15', status: 'active', lifecycle_stage: 'registered', created_at: '2025-01-15T00:00:00Z', updated_at: '2025-01-15T00:00:00Z' },
+  { id: 'prj-1006', organization_id: seedOrg.id, name: 'Ubon Regenerative Rice',    location: 'Ubon Ratchathani, Thailand',  capacity_kwp: 0,     commission_date: '2025-05-01', status: 'active', lifecycle_stage: 'registered', created_at: '2025-05-01T00:00:00Z', updated_at: '2025-05-01T00:00:00Z' },
+  { id: 'prj-1007', organization_id: seedOrg.id, name: 'Loei Reforestation (CDM)',  location: 'Loei, Thailand',              capacity_kwp: 0,     commission_date: '2024-03-01', status: 'active', lifecycle_stage: 'registered', created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z' },
 ];
 
 export const seedMethodologies: Methodology[] = ALL_METHODOLOGIES;
@@ -81,6 +93,48 @@ export const seedPdds: ProjectDesignDocument[] = [
     submitted_at: '2026-06-10T09:00:00Z', validated_at: null, content_hash: null,
     rejection_reason: 'Additionality section incomplete; attach commissioning report.',
   },
+  {
+    id: 'PDD-2100', project_id: 'prj-1001', methodology_id: TVER_WIND_METHODOLOGY.id,
+    methodology_snapshot: `${TVER_WIND_METHODOLOGY.code} ${TVER_WIND_METHODOLOGY.version}`, state: 'registered',
+    section_data: { turbine_count: 15, rated_capacity_mw: 45, grid_connection: 'Grid-connected', baseline_scenario: 'Grid electricity displaced by wind generation', barrier_type: 'Investment', investment_metric: 'IRR', barrier_explanation: 'Wind IRR without carbon revenue below hurdle rate.', common_practice: true, capacity_factor: 0.32, annual_er_estimate: 64000, monitored_parameter: 'EG_PJ', measurement_method: 'Revenue-grade bi-directional meter', monitoring_frequency: 'Monthly', qaqc_procedure: 'Monthly meter reads cross-checked with grid operator settlement.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2025-06-02T00:00:00Z', validated_at: '2025-06-08T00:00:00Z', content_hash: shortHash('PDD-2100-registered'),
+  },
+  {
+    id: 'PDD-2101', project_id: 'prj-1002', methodology_id: TVER_BIOMASS_METHODOLOGY.id,
+    methodology_snapshot: `${TVER_BIOMASS_METHODOLOGY.code} ${TVER_BIOMASS_METHODOLOGY.version}`, state: 'registered',
+    section_data: { feedstock_type: 'Rice husk', sustainable_sourcing: true, grid_connection: 'Grid-connected', baseline_scenario: 'Grid electricity displaced by biomass generation', barrier_type: 'Investment', investment_metric: 'NPV', barrier_explanation: 'Fuel logistics raise costs above grid parity.', common_practice: false, plant_load_factor: 0.75, annual_er_estimate: 38000, monitored_parameter: 'EG_PJ', measurement_method: 'Revenue-grade bi-directional meter', monitoring_frequency: 'Monthly', qaqc_procedure: 'Meter reads reconciled with weighbridge fuel logs.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2025-02-03T00:00:00Z', validated_at: '2025-02-10T00:00:00Z', content_hash: shortHash('PDD-2101-registered'),
+  },
+  {
+    id: 'PDD-2102', project_id: 'prj-1003', methodology_id: TVER_BIOGAS_METHODOLOGY.id,
+    methodology_snapshot: `${TVER_BIOGAS_METHODOLOGY.code} ${TVER_BIOGAS_METHODOLOGY.version}`, state: 'registered',
+    section_data: { substrate: 'Livestock manure', digester_type: 'Covered lagoon', grid_connection: 'Grid-connected', baseline_scenario: 'Fossil fuel displaced by biogas', barrier_type: 'Technological', barrier_explanation: 'Digester tech uncommon among regional farms.', common_practice: false, capture_efficiency: 0.85, annual_er_estimate: 9000, monitored_parameter: 'EG_PJ', measurement_method: 'Revenue-grade bi-directional meter', monitoring_frequency: 'Monthly', qaqc_procedure: 'Gas flow cross-checked with generator output.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2025-04-02T00:00:00Z', validated_at: '2025-04-09T00:00:00Z', content_hash: shortHash('PDD-2102-registered'),
+  },
+  {
+    id: 'PDD-2103', project_id: 'prj-1004', methodology_id: TVER_FORESTRY_METHODOLOGY.id,
+    methodology_snapshot: `${TVER_FORESTRY_METHODOLOGY.code} ${TVER_FORESTRY_METHODOLOGY.version}`, state: 'registered',
+    section_data: { area_hectares: 1200, species: 'Dipterocarpus alatus', land_eligibility: true, baseline_scenario: 'Degraded / non-forest land with no regeneration', barrier_type: 'Institutional', barrier_explanation: 'No funding pathway absent carbon finance.', common_practice: false, growth_rate: 8, annual_er_estimate: 9600, monitored_parameter: 'dC_tree', measurement_method: 'Sample plot survey + allometric equations', monitoring_frequency: 'Annually', qaqc_procedure: 'Independent re-measurement of 10% of plots.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2024-07-02T00:00:00Z', validated_at: '2024-07-20T00:00:00Z', content_hash: shortHash('PDD-2103-registered'),
+  },
+  {
+    id: 'PDD-2104', project_id: 'prj-1005', methodology_id: TVER_WASTE_LFG_METHODOLOGY.id,
+    methodology_snapshot: `${TVER_WASTE_LFG_METHODOLOGY.code} ${TVER_WASTE_LFG_METHODOLOGY.version}`, state: 'registered',
+    section_data: { destruction_device: 'Enclosed flare', site_type: 'Municipal landfill', baseline_flaring: true, baseline_scenario: 'Uncontrolled methane emission to atmosphere', barrier_type: 'Investment', investment_metric: 'IRR', barrier_explanation: 'Capture infrastructure not viable on tipping fees alone.', common_practice: false, collection_efficiency: 0.75, annual_er_estimate: 42000, monitored_parameter: 'M_CH4', measurement_method: 'Flow meter × CH₄ fraction × density', monitoring_frequency: 'Continuous', qaqc_procedure: 'Analyzer calibrated monthly; flare uptime logged.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2025-01-16T00:00:00Z', validated_at: '2025-01-25T00:00:00Z', content_hash: shortHash('PDD-2104-registered'),
+  },
+  {
+    id: 'PDD-2105', project_id: 'prj-1006', methodology_id: VERRA_VM0042_METHODOLOGY.id,
+    methodology_snapshot: `${VERRA_VM0042_METHODOLOGY.code} ${VERRA_VM0042_METHODOLOGY.version}`, state: 'registered',
+    section_data: { practice_change: 'Cover cropping', crop_type: 'Rice', quantification_approach: 'Hybrid', baseline_scenario: 'Conventional land management (business-as-usual practice)', barrier_type: 'Institutional', barrier_explanation: 'Smallholder coordination barrier to practice change.', common_practice: false, soc_uncertainty: 15, annual_er_estimate: 5200, monitored_parameter: 'ER_soc', measurement_method: 'Soil sampling + model per VM0042', monitoring_frequency: 'Annually', qaqc_procedure: 'Lab duplicates on 10% of soil cores.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2025-05-02T00:00:00Z', validated_at: '2025-05-15T00:00:00Z', content_hash: shortHash('PDD-2105-registered'),
+  },
+  {
+    id: 'PDD-2106', project_id: 'prj-1007', methodology_id: CDM_ARACM0003_METHODOLOGY.id,
+    methodology_snapshot: `${CDM_ARACM0003_METHODOLOGY.code} ${CDM_ARACM0003_METHODOLOGY.version}`, state: 'registered',
+    section_data: { area_hectares: 800, strata_count: 4, land_eligibility: true, baseline_scenario: 'Pre-project degraded land with negligible woody biomass', barrier_type: 'Investment', investment_metric: 'NPV', barrier_explanation: 'Long rotation makes NPV negative without credits.', common_practice: false, leakage_estimate: 300, annual_er_estimate: 7200, monitored_parameter: 'dC_actual', measurement_method: 'Permanent sample plots + allometric models', monitoring_frequency: 'Annually', qaqc_procedure: 'Strata re-survey audited by third party.' },
+    evidence_ids: [], assigned_validator_name: VALIDATOR, submitted_at: '2024-03-02T00:00:00Z', validated_at: '2024-03-20T00:00:00Z', content_hash: shortHash('PDD-2106-registered'),
+  },
 ];
 
 function generationFor(kwp: number, dateIso: string, seed: number): number {
@@ -106,7 +160,8 @@ function rangeDates(fromIso: string, days: number): string[] {
 function buildRecords(): MonitoringRecord[] {
   const out: MonitoringRecord[] = [];
   let counter = 0;
-  for (const p of seedProjects.filter((x) => x.status === 'active')) {
+  // Original solar projects only; the prj-1xxx samples get explicit driver records below.
+  for (const p of seedProjects.filter((x) => x.status === 'active' && !x.id.startsWith('prj-1'))) {
     const dates = rangeDates('2025-12-01', 180);
     for (const date of dates) {
       counter++;
@@ -123,7 +178,41 @@ function buildRecords(): MonitoringRecord[] {
   return out;
 }
 
-export const seedRecords: MonitoringRecord[] = buildRecords();
+// Explicit monthly driver records for the non-solar sample projects.
+// generation_kwh holds the period driver value in the methodology's input_unit.
+const EXTRA_RECORDS: Array<{ project_id: string; unit_hint: string; monthly: number; count: number; start: string }> = [
+  { project_id: 'prj-1001', unit_hint: 'kWh',    monthly: 5_400_000, count: 6, start: '2026-01-01' }, // wind → grid_displacement
+  { project_id: 'prj-1002', unit_hint: 'kWh',    monthly: 3_200_000, count: 6, start: '2026-01-01' }, // biomass
+  { project_id: 'prj-1003', unit_hint: 'kWh',    monthly: 720_000,   count: 6, start: '2026-01-01' }, // biogas
+  { project_id: 'prj-1004', unit_hint: 'tCO2e',  monthly: 800,       count: 4, start: '2025-01-01' }, // forestry → biomass_stock_change
+  { project_id: 'prj-1005', unit_hint: 't CH4',  monthly: 125,       count: 6, start: '2026-01-01' }, // LFG → ch4_avoidance
+  { project_id: 'prj-1006', unit_hint: 'tCO2e',  monthly: 430,       count: 4, start: '2025-01-01' }, // VM0042 → direct_entry
+  { project_id: 'prj-1007', unit_hint: 'tCO2e',  monthly: 600,       count: 4, start: '2025-01-01' }, // CDM A/R → biomass_stock_change
+];
+
+function buildExtraRecords(): MonitoringRecord[] {
+  const out: MonitoringRecord[] = [];
+  let counter = 100000;
+  for (const spec of EXTRA_RECORDS) {
+    const start = new Date(spec.start);
+    for (let i = 0; i < spec.count; i++) {
+      counter++;
+      const d = new Date(start);
+      d.setMonth(d.getMonth() + i);
+      out.push({
+        id: uid('mon', counter),
+        project_id: spec.project_id,
+        record_date: d.toISOString().slice(0, 10),
+        generation_kwh: spec.monthly,
+        source: 'seed_direct',
+        uploaded_at: '2026-06-30T00:00:00Z',
+      });
+    }
+  }
+  return out;
+}
+
+export const seedRecords: MonitoringRecord[] = [...buildRecords(), ...buildExtraRecords()];
 
 // ============================================================
 // Sprint 2 — Evidence
