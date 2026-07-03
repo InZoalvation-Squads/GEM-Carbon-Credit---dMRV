@@ -10,6 +10,7 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
   version: 'v3.0',
   sectoral_scope: 'Energy industries (renewable/non-renewable sources)',
   status: 'active',
+  calculation: { formula: 'grid_displacement', input_param: 'EG_PJ', input_unit: 'kWh' },
   required_evidence: ['commissioning_report', 'site_photo', 'supporting_evidence'],
   monitoring_params: [
     { key: 'EG_PJ', label: 'Net electricity supplied to the grid', unit: 'kWh', method: 'Revenue-grade bi-directional meter', frequency: 'Monthly' },

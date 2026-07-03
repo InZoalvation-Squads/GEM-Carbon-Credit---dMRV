@@ -5,6 +5,7 @@ import type { Methodology, Project, EmissionFactor } from '../types';
 const METH: Methodology = {
   id: 'meth-1', code: 'T-VER-S-01', name: 'Solar', standard: 'T-VER',
   version: 'v1.0', sectoral_scope: 'Energy', status: 'active',
+  calculation: { formula: 'grid_displacement', input_param: 'EG_PJ', input_unit: 'kWh' },
   required_evidence: ['commissioning_report'], monitoring_params: [],
   pdd_sections: [
     { key: 'a', title: 'A', fields: [
