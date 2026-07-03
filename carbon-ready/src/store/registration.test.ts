@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from './index';
+import { validatePdd } from '../lib/pdd';
 
 function reset() { useStore.getState().resetToSeed(); }
 
@@ -74,5 +75,24 @@ describe('registration store', () => {
     const after = useStore.getState();
     expect(after.pdds.find((p) => p.id === pdd.id)?.state).toBe('rejected');
     expect(after.projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('rejected');
+  });
+
+  it('loads all 8 methodologies across T-VER / Verra / CDM', () => {
+    const ms = useStore.getState().methodologies;
+    expect(ms).toHaveLength(8);
+    expect(new Set(ms.map((m) => m.standard))).toEqual(new Set(['T-VER', 'Verra', 'CDM']));
+    // every methodology declares a calculation formula
+    expect(ms.every((m) => !!m.calculation?.formula)).toBe(true);
+  });
+
+  it('every registered seed PDD satisfies its methodology validation', () => {
+    const s = useStore.getState();
+    const registered = s.pdds.filter((p) => p.state === 'registered');
+    expect(registered.length).toBeGreaterThanOrEqual(8);
+    for (const pdd of registered) {
+      const m = s.methodologies.find((x) => x.id === pdd.methodology_id)!;
+      const check = validatePdd(m, pdd.section_data);
+      expect(check.missing, `PDD ${pdd.id} missing: ${check.missing.map((x) => x.field).join(', ')}`).toEqual([]);
+    }
   });
 });
