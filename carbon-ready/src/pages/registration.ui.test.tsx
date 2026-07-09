@@ -1,11 +1,13 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { RegistrationGate } from '../components/RegistrationGate';
 import { PddDocument } from '../pages/PddDocument';
-import { useStore } from '../store';
+import { Registration } from '../pages/Registration';
+import { VERRA_VM0042_METHODOLOGY } from '../data/methodologies';
+import { seedDemo } from '../test/demoFixtures';
 
-beforeEach(() => useStore.getState().resetToSeed());
+beforeEach(() => seedDemo());
 
 function renderPdd(pddId: string) {
   return render(
@@ -19,8 +21,8 @@ function renderPdd(pddId: string) {
 
 describe('PDD form renders per-methodology schema', () => {
   it('renders a forestry methodology PDD with its own fields, not Solar fields', () => {
-    // PDD-2103 (Nan Watershed Reforestation) uses the forestry methodology.
-    renderPdd('PDD-2103');
+    // PDD-2005 (Nan Watershed Reforestation) uses the forestry methodology.
+    renderPdd('PDD-2005');
     expect(screen.getByText(/Project area/i)).toBeInTheDocument();     // forestry projectField
     expect(screen.getByText(/Dominant species/i)).toBeInTheDocument(); // forestry projectField
     expect(screen.queryByText(/Installed capacity/i)).toBeNull();      // Solar-only field absent
@@ -32,6 +34,30 @@ describe('PDD form renders per-methodology schema', () => {
     renderPdd('PDD-2000');
     expect(screen.getByText(/Installed capacity/i)).toBeInTheDocument(); // Solar computed field
     expect(screen.queryByText(/Dominant species/i)).toBeNull();         // forestry field absent
+  });
+});
+
+describe('Registration entry — project list scoped to selected methodology', () => {
+  function renderEntry() {
+    return render(
+      <MemoryRouter initialEntries={['/registration']}>
+        <Routes>
+          <Route path="/registration" element={<Registration />} />
+          <Route path="/registration/:pddId" element={<Registration />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('lists a draft project only under its own methodology', () => {
+    // prj-0004 (Ubon Regenerative Rice) is a pdd_draft under the VM0042 methodology.
+    // The default selection is Solar, so the draft must be hidden.
+    renderEntry();
+    expect(screen.queryByRole('option', { name: 'Ubon Regenerative Rice' })).toBeNull();
+
+    // Switching to VM0042 (its own methodology) must reveal it.
+    fireEvent.change(screen.getByLabelText('Methodology'), { target: { value: VERRA_VM0042_METHODOLOGY.id } });
+    expect(screen.getByRole('option', { name: 'Ubon Regenerative Rice' })).toBeInTheDocument();
   });
 });
 

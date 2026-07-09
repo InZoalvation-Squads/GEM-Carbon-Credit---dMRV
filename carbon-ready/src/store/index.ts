@@ -89,6 +89,8 @@ export const useStore = create<AppState>()(
       currentUser: seedUser,
       setRole: (role) => set((s) => ({ currentUser: { ...s.currentUser, role } })),
       organization: seedOrg,
+      // App boots with only the imported real solar fleet. Emission factors and the
+      // methodology library are kept as reference data; everything else is empty.
       projects: seedProjects,
       records: seedRecords,
       factors: seedFactors,
@@ -389,6 +391,6 @@ export const useStore = create<AppState>()(
         methodologies: seedMethodologies, pdds: seedPdds,
       }),
     }),
-    { name: 'carbon-ready-store-v5' }
+    { name: 'carbon-ready-store-v12' }
   )
 );

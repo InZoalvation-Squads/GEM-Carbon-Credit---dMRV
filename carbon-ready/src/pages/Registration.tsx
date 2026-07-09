@@ -26,7 +26,13 @@ export function Registration() {
   // ---- Entry screen: no pdd yet → choose methodology + project ----
   const [methId, setMethId] = useState(methodologies[0]?.id ?? '');
   const [projId, setProjId] = useState('');
-  const candidateProjects = projects.filter((p) => EDITABLE_STAGES.includes(p.lifecycle_stage));
+  // A project belongs to at most one methodology (via its PDD). Once a draft PDD exists it may
+  // only be registered under that methodology; projects with no PDD yet are open to any.
+  const candidateProjects = projects.filter((p) => {
+    if (!EDITABLE_STAGES.includes(p.lifecycle_stage)) return false;
+    const existing = pdds.find((d) => d.project_id === p.id);
+    return !existing || existing.methodology_id === methId;
+  });
 
   async function startRegistration() {
     if (!methId || !projId) return;
@@ -39,7 +45,7 @@ export function Registration() {
       <div>
         <PageHeader title="Register a project" subtitle="Step 1 — choose a methodology, then the project it applies to" />
         <Card className="max-w-xl space-y-4 p-6">
-          <Select label="Methodology" value={methId} onChange={(e) => setMethId(e.target.value)}>
+          <Select label="Methodology" value={methId} onChange={(e) => { setMethId(e.target.value); setProjId(''); }}>
             {methodologies.map((m) => <option key={m.id} value={m.id}>{m.code} — {m.name}</option>)}
           </Select>
           <Select label="Project" value={projId} onChange={(e) => setProjId(e.target.value)}>

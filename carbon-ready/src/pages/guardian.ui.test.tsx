@@ -4,10 +4,11 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { Guardian } from './Guardian';
 import { ReviewDetail } from './ReviewDetail';
 import { useStore } from '../store';
+import { seedDemo } from '../test/demoFixtures';
 
 beforeEach(() => {
   localStorage.clear();
-  useStore.getState().resetToSeed();
+  seedDemo();
 });
 
 describe('Guardian page', () => {

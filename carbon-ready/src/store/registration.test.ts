@@ -1,15 +1,17 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from './index';
 import { validatePdd } from '../lib/pdd';
+import { seedDemo } from '../test/demoFixtures';
 
-function reset() { useStore.getState().resetToSeed(); }
+function reset() { seedDemo(); }
 
 describe('registration store', () => {
   beforeEach(reset);
 
   it('selectMethodology creates a draft PDD and moves project to pdd_draft', () => {
     const s = useStore.getState();
-    // prj-0004 already has a revision_required PDD; use a project with none by first clearing via a fresh select on prj-0003 is registered-path.
+    // prj-0004 (Ubon Regenerative Rice) already has a revision_required PDD; re-selecting a
+    // methodology on an editable draft keeps it in pdd_draft.
     const pdd = s.selectMethodology('prj-0004', 'meth-tver-solar');
     expect(pdd.state).toMatch(/draft|revision_required/);
     expect(useStore.getState().projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('pdd_draft');
@@ -17,6 +19,8 @@ describe('registration store', () => {
 
   it('submit → startValidation → register unlocks the project and freezes a hash', () => {
     const s = useStore.getState();
+    // Re-point the editable draft to Solar so the Solar section payload below validates.
+    s.selectMethodology('prj-0004', 'meth-tver-solar');
     const pdd = s.pddByProject('prj-0004')!;
     s.savePddDraft(pdd.id, {
       technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
@@ -77,9 +81,9 @@ describe('registration store', () => {
     expect(after.projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('rejected');
   });
 
-  it('loads all 8 methodologies across T-VER / Verra / CDM', () => {
+  it('loads all 9 methodologies across T-VER / Verra / CDM', () => {
     const ms = useStore.getState().methodologies;
-    expect(ms).toHaveLength(8);
+    expect(ms).toHaveLength(9);
     expect(new Set(ms.map((m) => m.standard))).toEqual(new Set(['T-VER', 'Verra', 'CDM']));
     // every methodology declares a calculation formula
     expect(ms.every((m) => !!m.calculation?.formula)).toBe(true);
@@ -88,7 +92,7 @@ describe('registration store', () => {
   it('every registered seed PDD satisfies its methodology validation', () => {
     const s = useStore.getState();
     const registered = s.pdds.filter((p) => p.state === 'registered');
-    expect(registered.length).toBeGreaterThanOrEqual(8);
+    expect(registered.length).toBeGreaterThanOrEqual(6);
     for (const pdd of registered) {
       const m = s.methodologies.find((x) => x.id === pdd.methodology_id)!;
       const check = validatePdd(m, pdd.section_data);

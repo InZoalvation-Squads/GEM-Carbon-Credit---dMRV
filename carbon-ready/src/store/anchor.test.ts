@@ -1,10 +1,11 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from './index';
+import { seedDemo } from '../test/demoFixtures';
 
 describe('anchorVerification', () => {
   beforeEach(() => {
     localStorage.clear();
-    useStore.getState().resetToSeed();
+    seedDemo();
   });
 
   it('anchors an approved, unanchored package and appends a VERIFICATION_ANCHORED audit row', () => {
