@@ -7,9 +7,11 @@ import { PddStatusBadge } from '../components/StatusBadge';
 import { EmptyState } from '../components/EmptyState';
 import { isFieldVisible, resolveComputed } from '../lib/pdd';
 import type { PddComputedSource } from '../types';
+import clsx from 'clsx';
 
-export function PddDocument() {
-  const { pddId } = useParams();
+export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: string; embedded?: boolean } = {}) {
+  const params = useParams();
+  const pddId = pddIdProp ?? params.pddId;
   const pdd = useStore((s) => s.pdds.find((p) => p.id === pddId));
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
@@ -27,9 +29,9 @@ export function PddDocument() {
   }
 
   return (
-    <div className="mx-auto max-w-3xl">
-      <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>
+    <div className={embedded ? '' : 'mx-auto max-w-3xl'}>
+      <div className={clsx('mb-4 flex items-center print:hidden', embedded ? 'justify-end' : 'justify-between')}>
+        {!embedded && <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>}
         <Button onClick={() => window.print()}><Printer size={16} /> Print / Export</Button>
       </div>
 

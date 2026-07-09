@@ -1,5 +1,9 @@
-import type { CredentialSchema, EvidenceFile, GuardianConfig, VerifiableCredential, VerificationRequest } from '../types';
+import type { CredentialSchema, EvidenceFile, GuardianConfig, GuardianToken, UserRole, VerifiableCredential, VerificationRequest } from '../types';
 import { shortHash } from './hash';
+
+// The VCU token collection on Hedera. In a live deployment this is the token id
+// created when the policy is imported; here it is a fixed stand-in.
+export const GUARDIAN_TOKEN_ID = '0.0.480200';
 
 // Stand-in for a Hedera Guardian deployment. Each function here is the exact seam
 // a real implementation would replace (Guardian REST + @hashgraph/sdk). No network.
@@ -49,6 +53,35 @@ export function issueCredential(
       sequence_number: sequenceNumber,
       consensus_timestamp: issuedAt,
       explorer_url: `https://hashscan.io/${config.network}/topic/${config.topic_id}/message/${sequenceNumber}`,
+    },
+  };
+}
+
+// Mints a VCU token for an already-issued credential. Guardian treats this as a
+// distinct step performed by the Standard Registry after the VC exists.
+export function mintGuardianToken(
+  credential: VerifiableCredential,
+  serialNumber: number,
+  role: UserRole,
+  config: GuardianConfig,
+  mintedAt: string,
+): GuardianToken {
+  const subject = credential.subject;
+  return {
+    id: `token:${GUARDIAN_TOKEN_ID}:${serialNumber}`,
+    token_id: GUARDIAN_TOKEN_ID,
+    serial_number: serialNumber,
+    project_id: String(subject.project_id),
+    credential_id: credential.id,
+    amount_tco2e: Number(subject.reduction_tco2e),
+    monitoring_period_start: String(subject.monitoring_period_start),
+    monitoring_period_end: String(subject.monitoring_period_end),
+    minted_at: mintedAt,
+    minted_by_role: role,
+    hcs: {
+      topic_id: config.topic_id,
+      sequence_number: serialNumber,
+      explorer_url: `https://hashscan.io/${config.network}/token/${GUARDIAN_TOKEN_ID}`,
     },
   };
 }

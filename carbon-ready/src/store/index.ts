@@ -4,7 +4,7 @@ import type {
   Project, MonitoringRecord, EmissionFactor, CalculationResult,
   AuditLog, User, UserRole, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
-  VerifiableCredential, GuardianConfig,
+  VerifiableCredential, GuardianConfig, GuardianToken,
   Methodology, ProjectDesignDocument,
 } from '../types';
 import {
@@ -15,7 +15,7 @@ import {
 import { validatePdd, pddContentHash } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
-import { buildApprovalSubject, issueCredential, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { buildApprovalSubject, issueCredential, mintGuardianToken, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
@@ -31,6 +31,7 @@ interface AppState {
   verifications: VerificationRequest[];
   comments: VerificationComment[];
   credentials: VerifiableCredential[];
+  tokens: GuardianToken[];
   guardianConfig: GuardianConfig;
   methodologies: Methodology[];
   pdds: ProjectDesignDocument[];
@@ -73,6 +74,8 @@ interface AppState {
 
   // Sprint 3 — Hedera Guardian anchoring (simulated)
   anchorVerification: (id: UUID) => void;
+  // Guardian VCU minting — Standard Registry mints a token per anchored credential.
+  mintToken: (credential_id: string) => GuardianToken | null;
 
   resetToSeed: () => void;
 }
@@ -100,6 +103,7 @@ export const useStore = create<AppState>()(
       verifications: seedVerifications,
       comments: seedComments,
       credentials: seedCredentials,
+      tokens: [],
       guardianConfig: DEFAULT_GUARDIAN_CONFIG,
       methodologies: seedMethodologies,
       pdds: seedPdds,
@@ -273,6 +277,24 @@ export const useStore = create<AppState>()(
           { previous_value: { anchored: false }, new_value: { credential_id: vc.id, hcs_topic_id: vc.hcs.topic_id, hcs_sequence_number: vc.hcs.sequence_number } });
       },
 
+      mintToken: (credential_id) => {
+        const state = get();
+        // Only the Standard Registry mints, and only once per anchored credential.
+        if (state.currentUser.role !== 'admin') return null;
+        const credential = state.credentials.find((c) => c.id === credential_id);
+        if (!credential) return null;
+        if (state.tokens.some((t) => t.credential_id === credential_id)) return null;
+
+        const mintedAt = new Date().toISOString();
+        const serialNumber = state.tokens.length + 1;
+        const token = mintGuardianToken(credential, serialNumber, state.currentUser.role, state.guardianConfig, mintedAt);
+        set((s) => ({ tokens: [token, ...s.tokens] }));
+        get().audit_write('TOKEN_MINTED', 'token', token.id,
+          { token_id: token.token_id, serial_number: token.serial_number, amount_tco2e: token.amount_tco2e, credential_id },
+          { new_value: { serial_number: token.serial_number, amount_tco2e: token.amount_tco2e } });
+        return token;
+      },
+
       // ---------------- Registration: Gate 1 (PDD validation) ----------------
       pddByProject: (project_id) => get().pdds.find((p) => p.project_id === project_id),
 
@@ -387,10 +409,10 @@ export const useStore = create<AppState>()(
       resetToSeed: () => set({
         projects: seedProjects, records: seedRecords, factors: seedFactors, calculations: [], audit: seedAudit,
         evidence: seedEvidence, verifications: seedVerifications, comments: seedComments,
-        credentials: seedCredentials, guardianConfig: DEFAULT_GUARDIAN_CONFIG,
+        credentials: seedCredentials, tokens: [], guardianConfig: DEFAULT_GUARDIAN_CONFIG,
         methodologies: seedMethodologies, pdds: seedPdds,
       }),
     }),
-    { name: 'carbon-ready-store-v12' }
+    { name: 'carbon-ready-store-v13' }
   )
 );

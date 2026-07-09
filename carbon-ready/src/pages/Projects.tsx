@@ -108,8 +108,9 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = 'Required';
     if (!form.location.trim()) errs.location = 'Required';
+    // Capacity is 0 for land-based projects (forestry / ARR), which have no kWp.
     const cap = Number(form.capacity_kwp);
-    if (!form.capacity_kwp || Number.isNaN(cap) || cap <= 0) errs.capacity_kwp = 'Must be > 0';
+    if (form.capacity_kwp === '' || Number.isNaN(cap) || cap < 0) errs.capacity_kwp = 'Must be ≥ 0';
     if (Object.keys(errs).length) { setErrors(errs); return; }
     await api.createProject({
       name: form.name.trim(), location: form.location.trim(), capacity_kwp: cap,
@@ -123,6 +124,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         <Input label="Project Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} />
         <Input label="Location" placeholder="e.g. Pune, India" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} error={errors.location} />
         <Input label="Capacity (kWp)" type="number" inputMode="decimal" value={form.capacity_kwp} onChange={(e) => setForm({ ...form, capacity_kwp: e.target.value })} error={errors.capacity_kwp} />
+        <p className="-mt-2 text-xs text-ink-400">Use 0 for land-based projects (forestry, ARR) with no installed capacity.</p>
         <Input label="Commission Date" type="date" value={form.commission_date} onChange={(e) => setForm({ ...form, commission_date: e.target.value })} />
         <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}>
           {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}

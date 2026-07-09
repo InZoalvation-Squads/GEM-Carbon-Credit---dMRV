@@ -2,14 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useStore } from '../store';
 import { Menu, Bell, Moon, Globe, Check, ChevronDown, ShieldCheck, FolderKanban, Gauge, Settings } from 'lucide-react';
 import type { UserRole } from '../types';
+import { ROLE_LABEL } from '../lib/labels';
 import { toast } from './Toast';
 import clsx from 'clsx';
 
+// Labels come from ROLE_LABEL (Guardian VM0047 terminology) so the switcher stays
+// in sync with the rest of the app; only desc/icon are local to the switcher.
 const ROLES: { value: UserRole; label: string; desc: string; icon: typeof ShieldCheck }[] = [
-  { value: 'project_owner', label: 'Project Owner', desc: 'Create projects, upload data & evidence', icon: FolderKanban },
-  { value: 'esg_manager',   label: 'ESG Manager',   desc: 'Emission factors & carbon calculation', icon: Gauge },
-  { value: 'verifier',      label: 'Verifier',      desc: 'Review, approve & anchor packages',    icon: ShieldCheck },
-  { value: 'admin',         label: 'Admin',         desc: 'Full platform access',                 icon: Settings },
+  { value: 'project_owner', label: ROLE_LABEL.project_owner, desc: 'Create projects, submit PDD, data & evidence', icon: FolderKanban },
+  { value: 'esg_manager',   label: ROLE_LABEL.esg_manager,   desc: 'Emission factors & carbon calculation',        icon: Gauge },
+  { value: 'verifier',      label: ROLE_LABEL.verifier,      desc: 'Validate & verify, approve & anchor packages', icon: ShieldCheck },
+  { value: 'admin',         label: ROLE_LABEL.admin,         desc: 'Registry: pipeline, issuance & minting',       icon: Settings },
 ];
 
 export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {

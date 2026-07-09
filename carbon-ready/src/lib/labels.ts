@@ -19,11 +19,13 @@ export const STATE_LABEL: Record<VerificationState, string> = {
   rejected: 'Rejected',
 };
 
+// Display labels follow the Hedera Guardian VM0047 actor triad
+// (Project Proponent / Standard Registry / VVB). Enum values are unchanged.
 export const ROLE_LABEL: Record<UserRole, string> = {
-  admin: 'Admin',
-  project_owner: 'Project Owner',
+  admin: 'Standard Registry',
+  project_owner: 'Project Proponent',
   esg_manager: 'ESG Manager',
-  verifier: 'Verifier',
+  verifier: 'VVB (Validation & Verification Body)',
 };
 
 export const EVIDENCE_CATEGORIES = Object.keys(CATEGORY_LABEL) as EvidenceCategory[];

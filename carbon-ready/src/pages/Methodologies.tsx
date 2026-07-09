@@ -37,37 +37,37 @@ export function Methodologies() {
 
       <Drawer open={!!selected} onClose={() => setSelected(null)} title={selected?.code ?? ''} size="lg">
         {selected && (
-          <div className="space-y-8 p-1">
+          <div className="space-y-5 p-1">
             <div>
-              <h3 className="text-2xl font-semibold leading-snug text-ink-900">{selected.name}</h3>
-              <p className="mt-2 text-base text-ink-500">{selected.sectoral_scope} · {selected.standard} {selected.version}</p>
+              <h3 className="text-lg font-semibold leading-snug text-ink-900">{selected.name}</h3>
+              <p className="mt-1 text-sm text-ink-500">{selected.sectoral_scope} · {selected.standard} {selected.version}</p>
             </div>
             <div>
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">PDD sections</div>
-              <ul className="grid grid-cols-1 gap-2 text-base text-ink-700 sm:grid-cols-2">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">PDD sections</div>
+              <div className="flex flex-wrap gap-1.5">
                 {selected.pdd_sections.map((s) => (
-                  <li key={s.key} className="rounded-lg bg-ink-50 px-3 py-2 ring-1 ring-ink-100">
-                    {s.title} <span className="text-ink-400">({s.fields.length} fields)</span>
-                  </li>
+                  <span key={s.key} className="inline-flex items-baseline gap-1 rounded-md bg-ink-50 px-2 py-1 text-xs text-ink-700 ring-1 ring-ink-100">
+                    {s.title.split(' / ')[0]}<span className="text-ink-400">· {s.fields.length}</span>
+                  </span>
                 ))}
-              </ul>
+              </div>
             </div>
             <div>
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Required evidence</div>
-              <div className="flex flex-wrap gap-2">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Required evidence</div>
+              <div className="flex flex-wrap gap-1.5">
                 {selected.required_evidence.map((c) => (
                   <Badge key={c} tone="blue">{CATEGORY_LABEL[c] ?? c}</Badge>
                 ))}
               </div>
             </div>
             <div>
-              <div className="mb-3 text-xs font-semibold uppercase tracking-wide text-ink-400">Monitoring parameters</div>
-              <ul className="space-y-2 text-base text-ink-700">
+              <div className="mb-2 text-[11px] font-semibold uppercase tracking-wide text-ink-400">Monitoring parameters</div>
+              <ul className="space-y-1.5 text-sm text-ink-700">
                 {selected.monitoring_params.map((p) => (
-                  <li key={p.key} className="flex flex-wrap items-baseline gap-x-2 rounded-lg bg-ink-50 px-3 py-2 ring-1 ring-ink-100">
-                    <span className="font-mono text-sm text-ink-900">{p.key}</span>
-                    <span>— {p.label}</span>
-                    <span className="text-ink-400">({p.unit}, {p.frequency})</span>
+                  <li key={p.key} className="flex flex-wrap items-baseline gap-x-2 rounded-md bg-ink-50 px-2.5 py-1.5 ring-1 ring-ink-100">
+                    <span className="font-mono text-xs text-ink-900">{p.key}</span>
+                    <span className="text-ink-700">— {p.label}</span>
+                    <span className="text-xs text-ink-400">({p.unit}, {p.frequency})</span>
                   </li>
                 ))}
               </ul>

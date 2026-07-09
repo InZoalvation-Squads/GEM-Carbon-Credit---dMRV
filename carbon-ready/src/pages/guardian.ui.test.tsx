@@ -26,6 +26,49 @@ describe('Guardian page', () => {
   });
 });
 
+describe('Guardian VCU minting', () => {
+  function renderGuardian() {
+    return render(<MemoryRouter><Guardian /></MemoryRouter>);
+  }
+
+  it('shows a Mint button for the Standard Registry on an un-minted credential', () => {
+    useStore.getState().setRole('admin'); // Standard Registry
+    renderGuardian();
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    expect(screen.getByRole('button', { name: /^Mint/i })).toBeInTheDocument();
+  });
+
+  it('hides the Mint button for a non-Registry role', () => {
+    useStore.getState().setRole('project_owner'); // Project Proponent
+    renderGuardian();
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    expect(screen.queryByRole('button', { name: /^Mint/i })).toBeNull();
+  });
+
+  it('mints a token and lists it in the Token History tab', () => {
+    useStore.getState().setRole('admin');
+    renderGuardian();
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('button', { name: /^Mint/i }));
+
+    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    expect(screen.getByText('24.55 tCO₂e')).toBeInTheDocument();
+    expect(screen.getByText(/0\.0\.480200/)).toBeInTheDocument(); // token id
+  });
+
+  it('renders the full Trust Chain for a minted token', () => {
+    useStore.getState().setRole('admin');
+    useStore.getState().mintToken('urn:vc:vr1000seed');
+    renderGuardian();
+    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+
+    expect(screen.getByText(/PDD registered/i)).toBeInTheDocument();
+    expect(screen.getByText(/Verification approved/i)).toBeInTheDocument();
+    expect(screen.getByText(/Credential issued/i)).toBeInTheDocument();
+    expect(screen.getByText(/Token minted/i)).toBeInTheDocument();
+  });
+});
+
 describe('ReviewDetail anchoring', () => {
   function renderReview(id: string) {
     return render(

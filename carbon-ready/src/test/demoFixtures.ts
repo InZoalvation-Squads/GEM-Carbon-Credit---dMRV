@@ -382,6 +382,7 @@ export function seedDemo() {
     verifications: demoVerifications,
     comments: demoComments,
     credentials: demoCredentials,
+    tokens: [],
     guardianConfig: DEFAULT_GUARDIAN_CONFIG,
     methodologies: seedMethodologies,
     pdds: demoPdds,

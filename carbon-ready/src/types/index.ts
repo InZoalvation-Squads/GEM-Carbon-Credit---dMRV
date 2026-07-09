@@ -24,11 +24,13 @@ export type AuditAction =
   | 'VALIDATION_STARTED'
   | 'PDD_REVISION_REQUESTED'
   | 'PROJECT_REGISTERED'
-  | 'PDD_REJECTED';
+  | 'PDD_REJECTED'
+  // Guardian issuance
+  | 'TOKEN_MINTED';
 
 export type EntityType =
   | 'project' | 'monitoring' | 'factor' | 'calculation'
-  | 'evidence' | 'verification' | 'methodology' | 'pdd';
+  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
 export interface Organization {
@@ -251,6 +253,26 @@ export interface VerifiableCredential {
     topic_id: string;
     sequence_number: number;
     consensus_timestamp: string;
+    explorer_url: string;
+  };
+}
+
+// A minted VCU token. In Guardian this is a separate step after the VC is issued:
+// the Standard Registry mints one token per anchored credential.
+export interface GuardianToken {
+  id: string;
+  token_id: string;             // Hedera token id, e.g. '0.0.480200'
+  serial_number: number;
+  project_id: UUID;
+  credential_id: string;        // the VerifiableCredential this token certifies
+  amount_tco2e: number;
+  monitoring_period_start: string;
+  monitoring_period_end: string;
+  minted_at: string;
+  minted_by_role: UserRole;     // 'admin' = Standard Registry
+  hcs: {
+    topic_id: string;
+    sequence_number: number;
     explorer_url: string;
   };
 }

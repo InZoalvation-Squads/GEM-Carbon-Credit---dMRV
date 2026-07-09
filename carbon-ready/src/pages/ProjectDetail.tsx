@@ -7,13 +7,15 @@ import { Table, THead, TR, TH, TD } from '../components/Table';
 import { PageHeader } from '../components/PageHeader';
 import { Button } from '../components/Button';
 import { ProjectEvidenceTab } from '../components/ProjectEvidenceTab';
+import { PddDocument } from './PddDocument';
+import { EmptyState } from '../components/EmptyState';
 import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
-import { ChevronLeft, Upload as UploadIcon } from 'lucide-react';
+import { ChevronLeft, Upload as UploadIcon, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { RegistrationGate } from '../components/RegistrationGate';
 
-type Tab = 'overview' | 'evidence';
+type Tab = 'overview' | 'evidence' | 'pdd';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -22,6 +24,7 @@ export function ProjectDetail() {
     s.records.filter((r) => r.project_id === id).sort((a, b) => b.record_date.localeCompare(a.record_date))
   );
   const evidenceCount = useStore((s) => s.evidence.filter((e) => e.project_id === id && e.status === 'active').length);
+  const pdd = useStore((s) => s.pdds.find((p) => p.project_id === id));
   const [tab, setTab] = useState<Tab>('overview');
 
   if (!project) return <div className="text-sm text-ink-500">Project not found. <Link to="/projects" className="text-brand-700 underline">Back to list</Link></div>;
@@ -60,7 +63,7 @@ export function ProjectDetail() {
 
       {/* Tabs */}
       <div className="mb-4 flex items-center gap-1 border-b border-ink-200">
-        {([['overview', 'Monitoring'], ['evidence', 'Evidence']] as [Tab, string][]).map(([key, label]) => (
+        {([['overview', 'Monitoring'], ['evidence', 'Evidence'], ['pdd', 'PDD Document']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -78,33 +81,45 @@ export function ProjectDetail() {
         ))}
       </div>
 
-      <RegistrationGate projectId={project.id}>
-        {tab === 'overview' ? (
-          <Card>
-            <CardHeader title="Monitoring Records" />
-            <CardBody className="p-0">
-              {records.length === 0 ? (
-                <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
-              ) : (
-                <Table>
-                  <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
-                  <tbody>
-                    {records.slice(0, 50).map((r) => (
-                      <TR key={r.id}>
-                        <TD>{fmtDate(r.record_date)}</TD>
-                        <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
-                        <TD className="text-ink-500">{r.source}</TD>
-                      </TR>
-                    ))}
-                  </tbody>
-                </Table>
-              )}
-            </CardBody>
-          </Card>
+      {/* PDD Document is available regardless of the registration gate so auditors
+          can review the registered design document as a standalone record. */}
+      {tab === 'pdd' ? (
+        pdd ? (
+          <Card><CardBody className="p-6"><PddDocument pddId={pdd.id} embedded /></CardBody></Card>
         ) : (
-          <ProjectEvidenceTab projectId={project.id} />
-        )}
-      </RegistrationGate>
+          <Card><CardBody className="p-0">
+            <EmptyState icon={<FileText size={32} />} title="No PDD yet" hint="This project has not started registration. Register it under a methodology to generate its Project Design Document." />
+          </CardBody></Card>
+        )
+      ) : (
+        <RegistrationGate projectId={project.id}>
+          {tab === 'overview' ? (
+            <Card>
+              <CardHeader title="Monitoring Records" />
+              <CardBody className="p-0">
+                {records.length === 0 ? (
+                  <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
+                ) : (
+                  <Table>
+                    <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
+                    <tbody>
+                      {records.slice(0, 50).map((r) => (
+                        <TR key={r.id}>
+                          <TD>{fmtDate(r.record_date)}</TD>
+                          <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
+                          <TD className="text-ink-500">{r.source}</TD>
+                        </TR>
+                      ))}
+                    </tbody>
+                  </Table>
+                )}
+              </CardBody>
+            </Card>
+          ) : (
+            <ProjectEvidenceTab projectId={project.id} />
+          )}
+        </RegistrationGate>
+      )}
     </div>
   );
 }
