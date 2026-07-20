@@ -1,5 +1,6 @@
 import type { CredentialSchema, EvidenceFile, GuardianConfig, GuardianToken, ProjectDesignDocument, UserRole, VerifiableCredential, VerificationRequest } from '../types';
 import { shortHash } from './hash';
+import type { DisclosureSplit } from './pdd';
 
 // The VCU token collection on Hedera. In a live deployment this is the token id
 // created when the policy is imported; here it is a fixed stand-in.
@@ -48,7 +49,7 @@ export function toIpfsCid(contentHash: string): string {
   return `bafkrei${hex.padEnd(20, '0').slice(0, 20)}`;
 }
 
-export function buildPddSubject(pdd: ProjectDesignDocument, evidence: EvidenceFile[], ipfsCid: string): Record<string, unknown> {
+export function buildPddSubject(pdd: ProjectDesignDocument, evidence: EvidenceFile[], ipfsCid: string, disclosure: DisclosureSplit): Record<string, unknown> {
   const linked = evidence
     .filter((e) => pdd.evidence_ids.includes(e.id))
     .map((e) => ({ id: e.id, content_hash: e.content_hash }))
@@ -61,6 +62,8 @@ export function buildPddSubject(pdd: ProjectDesignDocument, evidence: EvidenceFi
     ipfs_cid: ipfsCid,
     evidence: linked,
     registered_at: pdd.validated_at,
+    disclosed: disclosure.disclosed,
+    redacted: disclosure.redacted,
   };
 }
 

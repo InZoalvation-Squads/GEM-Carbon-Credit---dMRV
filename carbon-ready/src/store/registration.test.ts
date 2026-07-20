@@ -117,6 +117,14 @@ describe('registration store', () => {
     expect(vc.subject.ipfs_cid).toBe(regPdd.ipfs_cid);
     expect(vc.hcs.topic_id).toBe(projectTopicId('prj-0004'));
     expect(vc.hcs.sequence_number).toBe(1);   // first credential on this project's topic
+
+    // Selective disclosure: public fields in the clear, sensitive ones hash-only.
+    const disclosed = vc.subject.disclosed as Record<string, unknown>;
+    const redacted = vc.subject.redacted as Array<{ key: string; value_hash: string }>;
+    expect(disclosed.technology).toBe('Solar PV rooftop');
+    expect(disclosed.barrier_explanation).toBeUndefined();
+    expect(redacted.map((r) => r.key)).toContain('barrier_explanation');
+    expect(redacted.every((r) => r.value_hash.startsWith('sha256-'))).toBe(true);
   });
 
   it('a refused registration issues no credential', () => {

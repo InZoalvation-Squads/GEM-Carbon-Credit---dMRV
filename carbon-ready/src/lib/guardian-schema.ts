@@ -36,5 +36,7 @@ export const PDD_REGISTRATION_SCHEMA_V1: CredentialSchema = {
     { key: 'ipfs_cid', type: 'string', description: 'IPFS CID of the published PDD document' },
     { key: 'evidence', type: 'array', description: 'Evidence items as {id, content_hash}' },
     { key: 'registered_at', type: 'date', description: 'Registration timestamp' },
+    { key: 'disclosed', type: 'object', description: 'Public PDD fields (selective disclosure)' },
+    { key: 'redacted', type: 'array', description: 'Sensitive fields as {key, value_hash}' },
   ],
 };

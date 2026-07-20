@@ -66,8 +66,13 @@ describe('buildPddSubject', () => {
     ipfs_cid: null, credential_id: null,
   } as ProjectDesignDocument;
 
-  it('includes only linked evidence sorted by id, plus hash + cid + snapshot', () => {
-    const s = buildPddSubject(pdd, ev, 'bafkreicafe');
+  it('includes only linked evidence sorted by id, plus hash + cid + snapshot + disclosure', () => {
+    const s = buildPddSubject(pdd, ev, 'bafkreicafe', {
+      disclosed: { technology: 'Solar PV' },
+      redacted: [{ key: 'barrier_explanation', value_hash: 'sha256-xyz' }],
+    });
+    expect(s.disclosed).toEqual({ technology: 'Solar PV' });
+    expect(s.redacted).toEqual([{ key: 'barrier_explanation', value_hash: 'sha256-xyz' }]);
     expect(s.pdd_id).toBe('PDD-X1');
     expect(s.project_id).toBe('prj-1');
     expect(s.methodology).toBe('T-VER-S 1.0');

@@ -13,7 +13,7 @@ import {
   seedMethodologies, seedPdds,
 } from '../data/seed';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
-import { validatePdd, pddContentHash } from '../lib/pdd';
+import { validatePdd, pddContentHash, splitDisclosure } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
@@ -419,7 +419,7 @@ export const useStore = create<AppState>()(
         const topic_id = projectTopicId(pdd.project_id);
         const sequenceNumber = get().credentials.filter((c) => c.hcs.topic_id === topic_id).length + 1;
         const vc = issueCredential(
-          buildPddSubject(frozen, get().evidence, ipfs_cid),
+          buildPddSubject(frozen, get().evidence, ipfs_cid, splitDisclosure(m, pdd.section_data)),
           content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at,
         );
         set((s) => ({
