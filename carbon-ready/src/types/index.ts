@@ -298,6 +298,7 @@ export interface PddFieldSchema {
   help?: string;
   showIf?: { field: string; equals: string };   // conditional visibility
   source?: PddComputedSource;  // for 'computed'
+  sensitive?: boolean;         // selective disclosure: published only as a hash
 }
 
 export interface PddSectionSchema {

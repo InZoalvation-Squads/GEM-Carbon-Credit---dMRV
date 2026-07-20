@@ -42,8 +42,8 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
       title: 'C. Additionality / ความเพิ่มเติม',
       fields: [
         { key: 'barrier_type', label: 'Primary barrier', type: 'select', options: ['Investment', 'Technological', 'Institutional'], required: true },
-        { key: 'investment_metric', label: 'Investment metric used', type: 'select', options: ['IRR', 'NPV', 'LCOE'], required: true, showIf: { field: 'barrier_type', equals: 'Investment' } },
-        { key: 'barrier_explanation', label: 'Barrier analysis', type: 'textarea', required: true, help: 'Explain why the project is not the baseline / business-as-usual.' },
+        { key: 'investment_metric', label: 'Investment metric used', type: 'select', options: ['IRR', 'NPV', 'LCOE'], required: true, sensitive: true, showIf: { field: 'barrier_type', equals: 'Investment' } },
+        { key: 'barrier_explanation', label: 'Barrier analysis', type: 'textarea', required: true, sensitive: true, help: 'Explain why the project is not the baseline / business-as-usual.' },
         { key: 'common_practice', label: 'Not common practice in the region', type: 'boolean', required: true },
       ],
     },

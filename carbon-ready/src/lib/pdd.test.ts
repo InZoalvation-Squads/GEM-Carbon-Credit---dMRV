@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash } from './pdd';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure } from './pdd';
+import { canonical, shortHash } from './hash';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -87,5 +88,40 @@ describe('pddContentHash', () => {
     const a = pddContentHash({ methodology_snapshot: 'm', section_data: { a: 1 }, evidence_ids: ['e2', 'e1'] });
     const b = pddContentHash({ methodology_snapshot: 'm', section_data: { a: 1 }, evidence_ids: ['e1', 'e2'] });
     expect(a).toBe(b);
+  });
+});
+
+describe('splitDisclosure', () => {
+  const dm = {
+    pdd_sections: [{
+      key: 's1', title: 'S1',
+      fields: [
+        { key: 'technology', label: 'Tech', type: 'text', required: true },
+        { key: 'barrier_explanation', label: 'Barrier', type: 'textarea', required: true, sensitive: true },
+        { key: 'investment_metric', label: 'Metric', type: 'select', required: true, sensitive: true, showIf: { field: 'barrier_type', equals: 'Investment' } },
+        { key: 'grid_factor', label: 'GF', type: 'computed', source: 'grid_factor', required: false },
+      ],
+    }],
+  } as unknown as Methodology;
+
+  it('discloses public fields and redacts sensitive ones with a deterministic hash', () => {
+    const data = { technology: 'Solar PV', barrier_explanation: 'IRR below hurdle rate', barrier_type: 'Technological' };
+    const r = splitDisclosure(dm, data);
+    expect(r.disclosed.technology).toBe('Solar PV');
+    expect(r.disclosed.barrier_explanation).toBeUndefined();
+    expect(r.redacted).toEqual([{ key: 'barrier_explanation', value_hash: shortHash(canonical('IRR below hurdle rate')) }]);
+  });
+
+  it('a sensitive field hidden by showIf appears in neither list', () => {
+    const data = { technology: 'Solar PV', barrier_explanation: 'x', barrier_type: 'Technological', investment_metric: 'IRR' };
+    const r = splitDisclosure(dm, data);
+    expect(r.redacted.map((x) => x.key)).toEqual(['barrier_explanation']);
+    expect(r.disclosed.investment_metric).toBeUndefined();
+  });
+
+  it('skips computed and empty fields', () => {
+    const r = splitDisclosure(dm, { technology: '', barrier_explanation: 'x' });
+    expect(r.disclosed.technology).toBeUndefined();
+    expect(r.disclosed.grid_factor).toBeUndefined();
   });
 });

@@ -67,6 +67,29 @@ export function resolveComputed(source: PddComputedSource, ctx: ComputeContext):
   }
 }
 
+export interface DisclosureSplit {
+  disclosed: Record<string, unknown>;
+  redacted: Array<{ key: string; value_hash: string }>;
+}
+
+/** Guardian-style selective disclosure: sensitive fields leave only a content hash. */
+export function splitDisclosure(m: Methodology, data: Record<string, unknown>): DisclosureSplit {
+  const disclosed: Record<string, unknown> = {};
+  const redacted: DisclosureSplit['redacted'] = [];
+  for (const section of m.pdd_sections) {
+    for (const field of section.fields) {
+      if (field.type === 'computed') continue;
+      if (!isFieldVisible(field, data)) continue;
+      const v = data[field.key];
+      if (v === undefined || v === null || v === '') continue;
+      if (field.sensitive) redacted.push({ key: field.key, value_hash: shortHash(canonical(v)) });
+      else disclosed[field.key] = v;
+    }
+  }
+  redacted.sort((a, b) => a.key.localeCompare(b.key));
+  return { disclosed, redacted };
+}
+
 /** Deterministic content hash of the frozen PDD payload (for register + audit chain). */
 export function pddContentHash(input: {
   methodology_snapshot: string;
