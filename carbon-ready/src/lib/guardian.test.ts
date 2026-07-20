@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { buildApprovalSubject, buildPddSubject, issueCredential, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from './guardian';
+import { buildApprovalSubject, buildPddSubject, issueCredential, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from './guardian';
 import { MRV_APPROVAL_SCHEMA_V1 } from './guardian-schema';
 import type { EvidenceFile, ProjectDesignDocument, VerificationRequest } from '../types';
 
@@ -78,5 +78,16 @@ describe('buildPddSubject', () => {
       { id: 'ev-a', content_hash: 'sha256-aaa' },
       { id: 'ev-b', content_hash: 'sha256-bbb' },
     ]);
+  });
+});
+
+describe('projectTopicId', () => {
+  it('is deterministic and shaped like a Hedera topic id', () => {
+    expect(projectTopicId('prj-0001')).toBe(projectTopicId('prj-0001'));
+    expect(projectTopicId('prj-0001')).toMatch(/^0\.0\.481\d{3}$/);
+  });
+
+  it('differs across projects', () => {
+    expect(projectTopicId('prj-0001')).not.toBe(projectTopicId('prj-0002'));
   });
 });
