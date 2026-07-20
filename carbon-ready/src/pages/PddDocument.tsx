@@ -13,6 +13,7 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
   const params = useParams();
   const pddId = pddIdProp ?? params.pddId;
   const pdd = useStore((s) => s.pdds.find((p) => p.id === pddId));
+  const credential = useStore((s) => s.credentials.find((c) => c.id === pdd?.credential_id));
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
   const factors = useStore((s) => s.factors);
@@ -43,6 +44,15 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
           </div>
           <p className="mt-1 text-sm text-ink-500">{project.name} · {methodology.code} {methodology.version}</p>
           {pdd.content_hash && <p className="mt-1 font-mono text-xs text-ink-400">hash: {pdd.content_hash}</p>}
+          {pdd.ipfs_cid && <p className="font-mono text-xs text-ink-400">ipfs: {pdd.ipfs_cid}</p>}
+          {credential && (
+            <p className="font-mono text-xs text-ink-400">
+              vc: {credential.id} ·{' '}
+              <a href={credential.hcs.explorer_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                HCS message #{credential.hcs.sequence_number}
+              </a>
+            </p>
+          )}
         </header>
 
         {methodology.pdd_sections.map((section) => (
