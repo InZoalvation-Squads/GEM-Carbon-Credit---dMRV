@@ -12,6 +12,7 @@ import {
   seedEvidence, seedVerifications, seedComments, seedCredentials,
   seedMethodologies, seedPdds,
 } from '../data/seed';
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
 import { validatePdd, pddContentHash } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
@@ -21,6 +22,12 @@ import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 interface AppState {
   currentUser: User;
   setRole: (role: UserRole) => void;
+  // Mock auth (no backend) — demo accounts mapped to Guardian roles.
+  isAuthenticated: boolean;
+  login: (email: string, password: string) => { ok: boolean; error?: string };
+  logout: () => void;
+  registeredAccounts: Array<User & { password: string }>;
+  register: (input: { name: string; email: string; role: UserRole; password: string }) => { ok: boolean; error?: string };
   organization: Organization;
   projects: Project[];
   records: MonitoringRecord[];
@@ -91,6 +98,33 @@ export const useStore = create<AppState>()(
     (set, get) => ({
       currentUser: seedUser,
       setRole: (role) => set((s) => ({ currentUser: { ...s.currentUser, role } })),
+      isAuthenticated: false,
+      login: (email, password) => {
+        const normalized = email.trim().toLowerCase();
+        const demo = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === normalized);
+        if (demo) {
+          if (password !== DEMO_PASSWORD) return { ok: false, error: 'Incorrect password.' };
+          set({ currentUser: demo, isAuthenticated: true });
+          return { ok: true };
+        }
+        const registered = get().registeredAccounts.find((a) => a.email.toLowerCase() === normalized);
+        if (!registered) return { ok: false, error: 'No account found for that email.' };
+        if (password !== registered.password) return { ok: false, error: 'Incorrect password.' };
+        const { password: _pw, ...user } = registered;
+        set({ currentUser: user, isAuthenticated: true });
+        return { ok: true };
+      },
+      logout: () => set({ isAuthenticated: false }),
+      registeredAccounts: [],
+      register: ({ name, email, role, password }) => {
+        const normalized = email.trim().toLowerCase();
+        const taken = DEMO_ACCOUNTS.some((a) => a.email.toLowerCase() === normalized)
+          || get().registeredAccounts.some((a) => a.email.toLowerCase() === normalized);
+        if (taken) return { ok: false, error: 'An account with that email already exists.' };
+        const user: User = { id: uid('usr'), email: normalized, name: name.trim(), role, created_at: new Date().toISOString() };
+        set((s) => ({ registeredAccounts: [...s.registeredAccounts, { ...user, password }], currentUser: user, isAuthenticated: true }));
+        return { ok: true };
+      },
       organization: seedOrg,
       // App boots with only the imported real solar fleet. Emission factors and the
       // methodology library are kept as reference data; everything else is empty.
@@ -413,6 +447,6 @@ export const useStore = create<AppState>()(
         methodologies: seedMethodologies, pdds: seedPdds,
       }),
     }),
-    { name: 'carbon-ready-store-v13' }
+    { name: 'carbon-ready-store-v14' }
   )
 );
