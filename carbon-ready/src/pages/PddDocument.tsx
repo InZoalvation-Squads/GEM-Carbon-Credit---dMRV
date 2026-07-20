@@ -1,5 +1,6 @@
+import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Printer, ArrowLeft } from 'lucide-react';
+import { Printer, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
 import { useStore } from '../store';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -17,6 +18,8 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
   const factors = useStore((s) => s.factors);
+  // Renders the document as the public VP would: sensitive values masked.
+  const [publicView, setPublicView] = useState(false);
 
   if (!pdd || !methodology || !project) return <EmptyState title="PDD not found" hint="This document does not exist." />;
   const ctx = { project, factors, sectionData: pdd.section_data };
@@ -33,7 +36,12 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
     <div className={embedded ? '' : 'mx-auto max-w-3xl'}>
       <div className={clsx('mb-4 flex items-center print:hidden', embedded ? 'justify-end' : 'justify-between')}>
         {!embedded && <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>}
-        <Button onClick={() => window.print()}><Printer size={16} /> Print / Export</Button>
+        <div className="flex items-center gap-2">
+          <Button variant="ghost" onClick={() => setPublicView((v) => !v)}>
+            {publicView ? <EyeOff size={16} /> : <Eye size={16} />} Public view
+          </Button>
+          <Button onClick={() => window.print()}><Printer size={16} /> Print / Export</Button>
+        </div>
       </div>
 
       <Card className="space-y-8 p-8">
@@ -61,8 +69,15 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {section.fields.filter((f) => isFieldVisible(f, pdd.section_data)).map((f) => (
                 <div key={f.key}>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-ink-400">{f.label}{f.unit ? ` (${f.unit})` : ''}</dt>
-                  <dd className="mt-0.5 text-sm text-ink-800">{display(f.key, f.source)}</dd>
+                  <dt className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                    {f.label}{f.unit ? ` (${f.unit})` : ''}
+                    {f.sensitive && (
+                      <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-medium normal-case tracking-normal text-amber-700">
+                        <Lock size={10} /> Restricted
+                      </span>
+                    )}
+                  </dt>
+                  <dd className="mt-0.5 text-sm text-ink-800">{f.sensitive && publicView ? '•••' : display(f.key, f.source)}</dd>
                 </div>
               ))}
             </dl>
