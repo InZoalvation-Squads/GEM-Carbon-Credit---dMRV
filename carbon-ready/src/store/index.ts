@@ -16,8 +16,8 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
 import { validatePdd, pddContentHash } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
-import { buildApprovalSubject, issueCredential, mintGuardianToken, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
-import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
+import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
   currentUser: User;
@@ -412,12 +412,22 @@ export const useStore = create<AppState>()(
         const snapshot = pdd.methodology_snapshot || `${m.code} ${m.version}`;
         const content_hash = pddContentHash({ methodology_snapshot: snapshot, section_data: pdd.section_data, evidence_ids: pdd.evidence_ids });
         const validated_at = new Date().toISOString();
+        // Guardian publish step: full PDD stays off-chain; the VC carries hash + CID.
+        const ipfs_cid = toIpfsCid(content_hash);
+        const frozen = { ...pdd, methodology_snapshot: snapshot, validated_at, content_hash };
+        const sequenceNumber = get().credentials.length + 1;
+        const vc = issueCredential(
+          buildPddSubject(frozen, get().evidence, ipfs_cid),
+          content_hash, sequenceNumber, get().guardianConfig, PDD_REGISTRATION_SCHEMA_V1, validated_at,
+        );
         set((s) => ({
-          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash } : p)),
+          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash, ipfs_cid, credential_id: vc.id } : p)),
           projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'registered' as const } : p)),
+          credentials: [vc, ...s.credentials],
         }));
-        get().audit_write('PROJECT_REGISTERED', 'pdd', pdd_id, { methodology: snapshot },
-          { previous_value: { state: pdd.state }, new_value: { state: 'registered', content_hash } });
+        get().audit_write('PROJECT_REGISTERED', 'pdd', pdd_id,
+          { methodology: snapshot, credential_id: vc.id, ipfs_cid, topic_id: vc.hcs.topic_id, sequence_number: vc.hcs.sequence_number },
+          { previous_value: { state: pdd.state }, new_value: { state: 'registered', content_hash, ipfs_cid, credential_id: vc.id } });
         return true;
       },
 

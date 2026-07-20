@@ -89,6 +89,44 @@ describe('registration store', () => {
     expect(ms.every((m) => !!m.calculation?.formula)).toBe(true);
   });
 
+  it('registerProject anchors the PDD: credential + ipfs_cid + hcs reference', () => {
+    const s = useStore.getState();
+    s.selectMethodology('prj-0004', 'meth-tver-solar');
+    const pdd = s.pddByProject('prj-0004')!;
+    s.savePddDraft(pdd.id, {
+      technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
+      baseline_scenario: 'Grid electricity displaced by solar generation',
+      barrier_type: 'Technological', barrier_explanation: 'x', common_practice: true,
+      performance_ratio: 0.8, monitored_parameter: 'EG_PJ', measurement_method: 'meter',
+      monitoring_frequency: 'Monthly', qaqc_procedure: 'checks',
+    }, []);
+    s.submitPdd(pdd.id);
+    s.startValidation(pdd.id);
+    const credsBefore = useStore.getState().credentials.length;
+    s.registerProject(pdd.id);
+
+    const after = useStore.getState();
+    const regPdd = after.pdds.find((p) => p.id === pdd.id)!;
+    expect(regPdd.ipfs_cid).toMatch(/^bafkrei/);
+    expect(regPdd.credential_id).toBeTruthy();
+    expect(after.credentials.length).toBe(credsBefore + 1);
+    const vc = after.credentials.find((c) => c.id === regPdd.credential_id)!;
+    expect(vc.schema_id).toBe('pdd-registration-v1');
+    expect(vc.subject.content_hash).toBe(regPdd.content_hash);
+    expect(vc.subject.ipfs_cid).toBe(regPdd.ipfs_cid);
+    expect(vc.hcs.topic_id).toBe(after.guardianConfig.topic_id);
+  });
+
+  it('a refused registration issues no credential', () => {
+    const s = useStore.getState();
+    const pdd = s.pddByProject('prj-0004')!;   // seed draft is incomplete
+    s.submitPdd(pdd.id);
+    s.startValidation(pdd.id);
+    const credsBefore = useStore.getState().credentials.length;
+    s.registerProject(pdd.id);
+    expect(useStore.getState().credentials.length).toBe(credsBefore);
+  });
+
   it('every registered seed PDD satisfies its methodology validation', () => {
     const s = useStore.getState();
     const registered = s.pdds.filter((p) => p.state === 'registered');
