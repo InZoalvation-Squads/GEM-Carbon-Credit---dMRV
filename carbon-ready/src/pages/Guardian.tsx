@@ -193,10 +193,13 @@ function TrustChainTab() {
   const credential = credentials.find((c) => c.id === token.credential_id);
   const verification = verifications.find((v) => v.id === (credential?.subject.verification_id as string));
   const pdd = pdds.find((p) => p.project_id === token.project_id);
+  const pddCredential = credentials.find((c) => c.id === pdd?.credential_id);
 
   // Chronological lifecycle: PDD registered → verification approved → credential issued → token minted.
   const steps: ChainStep[] = [
-    { label: 'PDD registered', detail: pdd ? `${pdd.id} · ${pdd.methodology_snapshot}` : '—', at: pdd?.validated_at ?? null },
+    { label: 'PDD registered', detail: pdd
+        ? `${pdd.id} · ${pdd.methodology_snapshot}${pddCredential ? ` · VC ${pddCredential.id} · HCS ${pddCredential.hcs.topic_id} #${pddCredential.hcs.sequence_number}` : ''}${pdd.ipfs_cid ? ` · ipfs ${pdd.ipfs_cid}` : ''}`
+        : '—', at: pdd?.validated_at ?? null },
     { label: 'Verification approved', detail: verification ? `${verification.id} · ${verification.monitoring_period_start} → ${verification.monitoring_period_end}` : '—', at: verification?.locked_at ?? null },
     { label: 'Credential issued', detail: credential ? `${credential.id} · HCS ${credential.hcs.topic_id} #${credential.hcs.sequence_number}` : '—', at: credential?.issued_at ?? null },
     { label: 'Token minted', detail: `${token.token_id} · serial #${token.serial_number} · ${formatNumber(token.amount_tco2e, 2)} tCO₂e`, at: token.minted_at },

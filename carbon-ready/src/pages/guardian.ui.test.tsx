@@ -67,6 +67,21 @@ describe('Guardian VCU minting', () => {
     expect(screen.getByText(/Credential issued/i)).toBeInTheDocument();
     expect(screen.getByText(/Token minted/i)).toBeInTheDocument();
   });
+
+  it('trust chain shows the PDD credential reference when the PDD is anchored', () => {
+    // Anchor the seeded PDD by stamping its credential id + cid directly.
+    useStore.setState((s) => ({
+      pdds: s.pdds.map((p) => (p.id === 'PDD-2000'
+        ? { ...p, ipfs_cid: 'bafkreitestcid000000000', credential_id: 'urn:vc:vr1000seed' }
+        : p)),
+    }));
+    useStore.getState().setRole('admin');
+    useStore.getState().mintToken('urn:vc:vr1000seed');
+    renderGuardian();
+    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+    expect(screen.getByText(/ipfs bafkreitestcid000000000/i)).toBeInTheDocument();
+    expect(screen.getByText(/VC urn:vc:vr1000seed/i)).toBeInTheDocument();
+  });
 });
 
 describe('ReviewDetail anchoring', () => {
