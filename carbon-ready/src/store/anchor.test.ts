@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from './index';
+import { projectTopicId } from '../lib/guardian';
 import { seedDemo } from '../test/demoFixtures';
 
 describe('anchorVerification', () => {
@@ -26,7 +27,7 @@ describe('anchorVerification', () => {
     const v = useStore.getState().verifications.find((x) => x.id === 'VR-1001')!;
     expect(v.credential_id).not.toBeNull();
     expect(v.anchored_at).not.toBeNull();
-    expect(v.hcs_topic_id).not.toBeNull();
+    expect(v.hcs_topic_id).toBe(projectTopicId('prj-0001'));   // VR-1001 belongs to prj-0001
     expect(useStore.getState().credentials.length).toBe(credsBefore + 1);
     expect(useStore.getState().audit.length).toBe(auditBefore + 1);
     expect(useStore.getState().audit[0].action).toBe('VERIFICATION_ANCHORED');

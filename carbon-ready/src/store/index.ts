@@ -16,7 +16,7 @@ import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
 import { validatePdd, pddContentHash } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash } from '../lib/hash';
-import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
@@ -296,9 +296,10 @@ export const useStore = create<AppState>()(
         const v = get().verifications.find((x) => x.id === id);
         if (!v || v.state !== 'approved' || v.credential_id || !v.hash_value) return;
         const issuedAt = new Date().toISOString();
-        const sequenceNumber = get().credentials.length + 1;
+        const topic_id = projectTopicId(v.project_id);
+        const sequenceNumber = get().credentials.filter((c) => c.hcs.topic_id === topic_id).length + 1;
         const subject = buildApprovalSubject(v, get().evidence);
-        const vc = issueCredential(subject, v.hash_value, sequenceNumber, get().guardianConfig, MRV_APPROVAL_SCHEMA_V1, issuedAt);
+        const vc = issueCredential(subject, v.hash_value, sequenceNumber, { ...get().guardianConfig, topic_id }, MRV_APPROVAL_SCHEMA_V1, issuedAt);
         set((s) => ({
           credentials: [vc, ...s.credentials],
           verifications: s.verifications.map((x) =>
@@ -415,10 +416,11 @@ export const useStore = create<AppState>()(
         // Guardian publish step: full PDD stays off-chain; the VC carries hash + CID.
         const ipfs_cid = toIpfsCid(content_hash);
         const frozen = { ...pdd, methodology_snapshot: snapshot, validated_at, content_hash };
-        const sequenceNumber = get().credentials.length + 1;
+        const topic_id = projectTopicId(pdd.project_id);
+        const sequenceNumber = get().credentials.filter((c) => c.hcs.topic_id === topic_id).length + 1;
         const vc = issueCredential(
           buildPddSubject(frozen, get().evidence, ipfs_cid),
-          content_hash, sequenceNumber, get().guardianConfig, PDD_REGISTRATION_SCHEMA_V1, validated_at,
+          content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at,
         );
         set((s) => ({
           pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash, ipfs_cid, credential_id: vc.id } : p)),

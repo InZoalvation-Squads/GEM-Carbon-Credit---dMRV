@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { useStore } from './index';
+import { projectTopicId } from '../lib/guardian';
 import { validatePdd } from '../lib/pdd';
 import { seedDemo } from '../test/demoFixtures';
 
@@ -114,7 +115,8 @@ describe('registration store', () => {
     expect(vc.schema_id).toBe('pdd-registration-v1');
     expect(vc.subject.content_hash).toBe(regPdd.content_hash);
     expect(vc.subject.ipfs_cid).toBe(regPdd.ipfs_cid);
-    expect(vc.hcs.topic_id).toBe(after.guardianConfig.topic_id);
+    expect(vc.hcs.topic_id).toBe(projectTopicId('prj-0004'));
+    expect(vc.hcs.sequence_number).toBe(1);   // first credential on this project's topic
   });
 
   it('a refused registration issues no credential', () => {
