@@ -1,5 +1,8 @@
-import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { useStore } from './store';
 import { AppShell } from './layouts/AppShell';
+import { Login } from './pages/Login';
+import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
 import { Projects } from './pages/Projects';
 import { ProjectDetail } from './pages/ProjectDetail';
@@ -16,10 +19,19 @@ import { PddDocument } from './pages/PddDocument';
 import { ValidationQueue } from './pages/ValidationQueue';
 import { ValidationDetail } from './pages/ValidationDetail';
 
+// Redirects to /login until a demo account is signed in.
+function RequireAuth() {
+  const isAuthenticated = useStore((s) => s.isAuthenticated);
+  return isAuthenticated ? <Outlet /> : <Navigate to="/login" replace />;
+}
+
 export default function App() {
   return (
     <BrowserRouter>
       <Routes>
+        <Route path="/login" element={<Login />} />
+        <Route path="/register" element={<Register />} />
+        <Route element={<RequireAuth />}>
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
@@ -40,6 +52,7 @@ export default function App() {
           <Route path="/guardian" element={<Guardian />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
+        </Route>
         </Route>
       </Routes>
     </BrowserRouter>
