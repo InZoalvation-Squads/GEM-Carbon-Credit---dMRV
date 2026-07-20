@@ -360,5 +360,7 @@ export interface ProjectDesignDocument {
   submitted_at: string | null;
   validated_at: string | null;    // = registered timestamp
   content_hash: string | null;    // frozen at register
+  ipfs_cid: string | null;        // simulated IPFS CID of the published PDD, frozen at register
+  credential_id: string | null;   // PDD Registration VC id
   rejection_reason?: string;
 }

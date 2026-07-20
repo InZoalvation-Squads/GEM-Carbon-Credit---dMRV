@@ -72,7 +72,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_SOLAR_METHODOLOGY), state: 'registered',
     section_data: SOLAR_SECTION_DATA, evidence_ids: ['ev-0003'],
     assigned_validator_name: VALIDATOR, submitted_at: '2025-03-16T00:00:00Z',
-    validated_at: '2025-03-20T00:00:00Z', content_hash: shortHash('PDD-2000-registered'),
+    validated_at: '2025-03-20T00:00:00Z', content_hash: shortHash('PDD-2000-registered'), ipfs_cid: null, credential_id: null,
   },
   // Wind — registered.
   {
@@ -80,7 +80,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_WIND_METHODOLOGY), state: 'registered',
     section_data: WIND_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2025-06-02T00:00:00Z',
-    validated_at: '2025-06-08T00:00:00Z', content_hash: shortHash('PDD-2001-registered'),
+    validated_at: '2025-06-08T00:00:00Z', content_hash: shortHash('PDD-2001-registered'), ipfs_cid: null, credential_id: null,
   },
   // Biomass — submitted and awaiting a validator (project is under_validation).
   {
@@ -88,7 +88,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_BIOMASS_METHODOLOGY), state: 'submitted',
     section_data: BIOMASS_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2026-06-20T09:00:00Z',
-    validated_at: null, content_hash: null,
+    validated_at: null, content_hash: null, ipfs_cid: null, credential_id: null,
   },
   // VM0042 — editable draft bounced back for revision; drives the registration flow.
   {
@@ -96,7 +96,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(VERRA_VM0042_METHODOLOGY), state: 'revision_required',
     section_data: { practice_change: 'Cover cropping', crop_type: 'Rice', quantification_approach: 'Hybrid' },
     evidence_ids: [], assigned_validator_name: VALIDATOR,
-    submitted_at: '2026-06-10T09:00:00Z', validated_at: null, content_hash: null,
+    submitted_at: '2026-06-10T09:00:00Z', validated_at: null, content_hash: null, ipfs_cid: null, credential_id: null,
     rejection_reason: 'Additionality and monitoring sections incomplete; attach soil sampling plan.',
   },
   // Biogas — registered.
@@ -105,7 +105,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_BIOGAS_METHODOLOGY), state: 'registered',
     section_data: BIOGAS_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2025-04-02T00:00:00Z',
-    validated_at: '2025-04-09T00:00:00Z', content_hash: shortHash('PDD-2004-registered'),
+    validated_at: '2025-04-09T00:00:00Z', content_hash: shortHash('PDD-2004-registered'), ipfs_cid: null, credential_id: null,
   },
   // Forestry — registered.
   {
@@ -113,7 +113,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_FORESTRY_METHODOLOGY), state: 'registered',
     section_data: FORESTRY_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2024-07-02T00:00:00Z',
-    validated_at: '2024-07-20T00:00:00Z', content_hash: shortHash('PDD-2005-registered'),
+    validated_at: '2024-07-20T00:00:00Z', content_hash: shortHash('PDD-2005-registered'), ipfs_cid: null, credential_id: null,
   },
   // Waste / LFG — registered.
   {
@@ -121,7 +121,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(TVER_WASTE_LFG_METHODOLOGY), state: 'registered',
     section_data: WASTE_LFG_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2025-01-16T00:00:00Z',
-    validated_at: '2025-01-25T00:00:00Z', content_hash: shortHash('PDD-2006-registered'),
+    validated_at: '2025-01-25T00:00:00Z', content_hash: shortHash('PDD-2006-registered'), ipfs_cid: null, credential_id: null,
   },
   // CDM A/R — registered.
   {
@@ -129,7 +129,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(CDM_ARACM0003_METHODOLOGY), state: 'registered',
     section_data: CDM_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2024-03-02T00:00:00Z',
-    validated_at: '2024-03-20T00:00:00Z', content_hash: shortHash('PDD-2007-registered'),
+    validated_at: '2024-03-20T00:00:00Z', content_hash: shortHash('PDD-2007-registered'), ipfs_cid: null, credential_id: null,
   },
   // Verra VM0047 ARR (census-based agroforestry) — registered.
   {
@@ -137,7 +137,7 @@ export const demoPdds: ProjectDesignDocument[] = [
     methodology_snapshot: snap(VERRA_VM0047_METHODOLOGY), state: 'registered',
     section_data: VM0047_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2024-09-02T00:00:00Z',
-    validated_at: '2024-09-22T00:00:00Z', content_hash: shortHash('PDD-2008-registered'),
+    validated_at: '2024-09-22T00:00:00Z', content_hash: shortHash('PDD-2008-registered'), ipfs_cid: null, credential_id: null,
   },
 ];
 

@@ -352,6 +352,7 @@ export const useStore = create<AppState>()(
           methodology_snapshot: '', state: 'draft', section_data: {}, evidence_ids: [],
           assigned_validator_name: 'Daniel Okoye', // seeded reviewer; reassignment out of scope
           submitted_at: null, validated_at: null, content_hash: null,
+          ipfs_cid: null, credential_id: null,
         };
         set((s) => ({
           pdds: [pdd, ...s.pdds],

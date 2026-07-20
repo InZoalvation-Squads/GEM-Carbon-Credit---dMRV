@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { buildApprovalSubject, issueCredential, DEFAULT_GUARDIAN_CONFIG } from './guardian';
+import { buildApprovalSubject, buildPddSubject, issueCredential, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from './guardian';
 import { MRV_APPROVAL_SCHEMA_V1 } from './guardian-schema';
-import type { EvidenceFile, VerificationRequest } from '../types';
+import type { EvidenceFile, ProjectDesignDocument, VerificationRequest } from '../types';
 
 const v: VerificationRequest = {
   id: 'VR-T1', project_id: 'prj-x', created_by: 'u1', owner_name: 'O', assigned_verifier_name: 'V',
@@ -41,5 +41,42 @@ describe('issueCredential', () => {
     expect(a.hcs.topic_id).toBe(DEFAULT_GUARDIAN_CONFIG.topic_id);
     expect(a.hcs.sequence_number).toBe(7);
     expect(a.hcs.explorer_url).toContain('/topic/' + DEFAULT_GUARDIAN_CONFIG.topic_id + '/message/7');
+  });
+});
+
+describe('toIpfsCid', () => {
+  it('is deterministic and CIDv1-shaped', () => {
+    const a = toIpfsCid('sha256-0a1b2c3d4e5f…');
+    expect(a).toBe(toIpfsCid('sha256-0a1b2c3d4e5f…'));
+    expect(a).toMatch(/^bafkrei[0-9a-z]{20}$/);
+  });
+
+  it('differs for different hashes', () => {
+    expect(toIpfsCid('sha256-aaaaaaaaaaaa…')).not.toBe(toIpfsCid('sha256-bbbbbbbbbbbb…'));
+  });
+});
+
+describe('buildPddSubject', () => {
+  const pdd = {
+    id: 'PDD-X1', project_id: 'prj-1', methodology_id: 'meth-1',
+    methodology_snapshot: 'T-VER-S 1.0', state: 'registered',
+    section_data: {}, evidence_ids: ['ev-b', 'ev-a'],
+    assigned_validator_name: 'V', submitted_at: null,
+    validated_at: '2026-07-20T00:00:00Z', content_hash: 'sha256-cafe00000000…',
+    ipfs_cid: null, credential_id: null,
+  } as ProjectDesignDocument;
+
+  it('includes only linked evidence sorted by id, plus hash + cid + snapshot', () => {
+    const s = buildPddSubject(pdd, ev, 'bafkreicafe');
+    expect(s.pdd_id).toBe('PDD-X1');
+    expect(s.project_id).toBe('prj-1');
+    expect(s.methodology).toBe('T-VER-S 1.0');
+    expect(s.content_hash).toBe('sha256-cafe00000000…');
+    expect(s.ipfs_cid).toBe('bafkreicafe');
+    expect(s.registered_at).toBe('2026-07-20T00:00:00Z');
+    expect(s.evidence).toEqual([
+      { id: 'ev-a', content_hash: 'sha256-aaa' },
+      { id: 'ev-b', content_hash: 'sha256-bbb' },
+    ]);
   });
 });

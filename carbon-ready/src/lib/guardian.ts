@@ -1,4 +1,4 @@
-import type { CredentialSchema, EvidenceFile, GuardianConfig, GuardianToken, UserRole, VerifiableCredential, VerificationRequest } from '../types';
+import type { CredentialSchema, EvidenceFile, GuardianConfig, GuardianToken, ProjectDesignDocument, UserRole, VerifiableCredential, VerificationRequest } from '../types';
 import { shortHash } from './hash';
 
 // The VCU token collection on Hedera. In a live deployment this is the token id
@@ -29,6 +29,30 @@ export function buildApprovalSubject(v: VerificationRequest, evidence: EvidenceF
     approval_role: 'verifier',
     approved_at: v.locked_at,
     package_hash: v.hash_value,
+  };
+}
+
+// Deterministic stand-in for the IPFS CID Guardian records after uploading the
+// signed PDD document. Derived from the content hash so re-registration of the
+// same frozen payload yields the same CID.
+export function toIpfsCid(contentHash: string): string {
+  const hex = contentHash.replace('sha256-', '').replace('…', '');
+  return `bafkrei${hex.padEnd(20, '0').slice(0, 20)}`;
+}
+
+export function buildPddSubject(pdd: ProjectDesignDocument, evidence: EvidenceFile[], ipfsCid: string): Record<string, unknown> {
+  const linked = evidence
+    .filter((e) => pdd.evidence_ids.includes(e.id))
+    .map((e) => ({ id: e.id, content_hash: e.content_hash }))
+    .sort((a, b) => a.id.localeCompare(b.id));
+  return {
+    pdd_id: pdd.id,
+    project_id: pdd.project_id,
+    methodology: pdd.methodology_snapshot,
+    content_hash: pdd.content_hash,
+    ipfs_cid: ipfsCid,
+    evidence: linked,
+    registered_at: pdd.validated_at,
   };
 }
 

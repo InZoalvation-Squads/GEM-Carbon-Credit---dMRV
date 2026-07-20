@@ -20,3 +20,21 @@ export const MRV_APPROVAL_SCHEMA_V1: CredentialSchema = {
     { key: 'package_hash', type: 'string', description: 'Hash of the approved package' },
   ],
 };
+
+// Schema for the credential issued when a PDD passes validation and the project
+// is registered. The full PDD stays off-chain; this VC carries hash + CID.
+export const PDD_REGISTRATION_SCHEMA_V1: CredentialSchema = {
+  id: 'pdd-registration-v1',
+  name: 'PDD Project Registration',
+  version: '1.0.0',
+  type: 'VerifiableCredential',
+  properties: [
+    { key: 'pdd_id', type: 'string', description: 'Project Design Document id' },
+    { key: 'project_id', type: 'string', description: 'Project id' },
+    { key: 'methodology', type: 'string', description: 'Methodology code + version snapshot' },
+    { key: 'content_hash', type: 'string', description: 'Hash of the frozen PDD payload' },
+    { key: 'ipfs_cid', type: 'string', description: 'IPFS CID of the published PDD document' },
+    { key: 'evidence', type: 'array', description: 'Evidence items as {id, content_hash}' },
+    { key: 'registered_at', type: 'date', description: 'Registration timestamp' },
+  ],
+};

@@ -115,6 +115,7 @@ export const seedPdds: ProjectDesignDocument[] = [
     assigned_validator_name: VALIDATOR,
     submitted_at: CSV_CREATED_AT, validated_at: p.updated_at ?? CSV_CREATED_AT,
     content_hash: shortHash(`${p.id}-registered`),
+    ipfs_cid: null, credential_id: null,
   })),
   {
     id: 'PDD-VM0047-01', project_id: VM0047_PROJECT_ID, methodology_id: VERRA_VM0047_METHODOLOGY.id,
@@ -123,6 +124,7 @@ export const seedPdds: ProjectDesignDocument[] = [
     assigned_validator_name: VALIDATOR,
     submitted_at: '2024-09-02T00:00:00Z', validated_at: '2024-09-22T00:00:00Z',
     content_hash: shortHash(`${VM0047_PROJECT_ID}-registered`),
+    ipfs_cid: null, credential_id: null,
   },
 ];
 
