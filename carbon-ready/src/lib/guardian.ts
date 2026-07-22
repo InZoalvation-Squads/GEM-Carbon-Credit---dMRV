@@ -75,7 +75,7 @@ export function issueCredential(
   schema: CredentialSchema,
   issuedAt: string,
 ): VerifiableCredential {
-  const id = `urn:vc:${shortHash(`${packageHash}|${sequenceNumber}`).replace('sha256-', '').slice(0, 24)}`;
+  const id = `urn:vc:${shortHash(`${packageHash}|${sequenceNumber}`).replace('sha256-', '').slice(0, 24)}`; // 24 hex chars keeps urn:vc ids short and collision-safe for display
   return {
     id,
     schema_id: schema.id,

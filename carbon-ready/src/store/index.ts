@@ -460,6 +460,6 @@ export const useStore = create<AppState>()(
         methodologies: seedMethodologies, pdds: seedPdds,
       }),
     }),
-    { name: 'carbon-ready-store-v14' }
+    { name: 'carbon-ready-store-v15' }
   )
 );
