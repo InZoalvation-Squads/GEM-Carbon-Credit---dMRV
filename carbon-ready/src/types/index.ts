@@ -76,6 +76,8 @@ export interface MonitoringRecord {
   generation_kwh: number;
   source: string;
   uploaded_at: string;
+  param_key?: string;   // methodology monitoring_params key; absent = legacy default driver
+  unit?: string;        // frozen at upload from the methodology definition
 }
 
 export interface EmissionFactor {

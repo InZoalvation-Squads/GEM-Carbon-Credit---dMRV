@@ -144,6 +144,17 @@ describe('calculateCarbon — formula dispatch', () => {
     expect(out.totals.reduction_tco2e).toBe(84);
   });
 
+  it('sums only the driver param and treats legacy rows (no param_key) as the driver', () => {
+    const recs: MonitoringRecord[] = [
+      { id: '1', project_id: 'p', record_date: '2026-01-01', generation_kwh: 100, source: 's', uploaded_at: 't', param_key: 'generation_kwh', unit: 'kWh' },
+      { id: '2', project_id: 'p', record_date: '2026-01-02', generation_kwh: 50,  source: 's', uploaded_at: 't' },                        // legacy row
+      { id: '3', project_id: 'p', record_date: '2026-01-03', generation_kwh: 999, source: 's', uploaded_at: 't', param_key: 'aux_temp', unit: 'C' }, // ignored
+    ];
+    const out = calculateCarbon(recs, [ef({})], undefined,
+      { formula: 'grid_displacement', input_param: 'generation_kwh', input_unit: 'kWh' });
+    expect(out.totals.generation_kwh).toBe(150);
+  });
+
   it('grid_displacement (default, no calc arg) is unchanged', () => {
     const factors = [{ id: 'ef1', country: 'TH', source: 'EGAT', factor_kgco2e_per_kwh: 0.5, effective_date: '2025-01-01', version: 1, is_current: true, created_at: '2025-01-01T00:00:00Z' }];
     const out = calculateCarbon([rec('2026-01-01', 1000)], factors, undefined);

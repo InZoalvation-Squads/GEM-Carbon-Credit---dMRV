@@ -26,6 +26,11 @@ export function calculateCarbon(
   range?: { from?: string; to?: string },
   calculation?: MethodologyCalculation
 ): CalculationOutput {
+  // Only the methodology's driver param feeds the calculation; rows without a
+  // param_key are legacy records that predate param stamping and count as the driver.
+  if (calculation) {
+    records = records.filter((r) => !r.param_key || r.param_key === calculation.input_param);
+  }
   const formula = calculation?.formula ?? 'grid_displacement';
   if (formula === 'grid_displacement') return calculateGrid(records, factors, range);
   return calculateDirect(records, range, formula, calculation);

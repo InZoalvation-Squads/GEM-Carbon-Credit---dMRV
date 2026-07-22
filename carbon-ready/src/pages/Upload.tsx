@@ -16,7 +16,15 @@ import { CheckCircle2, AlertTriangle } from 'lucide-react';
 export function UploadPage() {
   const projects = useStore((s) => s.projects);
   const records = useStore((s) => s.records);
+  const pdds = useStore((s) => s.pdds);
+  const methodologies = useStore((s) => s.methodologies);
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
+
+  // Labels track the selected project's methodology driver (fallback: legacy kWh).
+  const pdd = pdds.find((p) => p.project_id === projectId);
+  const methodology = pdd ? methodologies.find((m) => m.id === pdd.methodology_id) : undefined;
+  const driverUnit = methodology?.calculation.input_unit ?? 'kWh';
+  const driverHeader = methodology ? methodology.calculation.input_param : 'Generation_kWh';
   const [preview, setPreview] = useState<CsvValidationResult | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ accepted: number; rejected: number } | null>(null);
@@ -41,7 +49,7 @@ export function UploadPage() {
 
   return (
     <div>
-      <PageHeader title="Upload Monitoring Data" subtitle="Drop a CSV with daily generation; we'll validate row-by-row before saving." />
+      <PageHeader title="Upload Monitoring Data" subtitle={`Drop a CSV with daily values in ${driverUnit}; we'll validate row-by-row before saving.`} />
 
       <Card className="mb-4 p-4">
         <Select label="Project" value={projectId} onChange={(e) => { setProjectId(e.target.value); reset(); }}>
@@ -52,7 +60,7 @@ export function UploadPage() {
       <RegistrationGate projectId={projectId}>
         {!preview && !submitted && (
           <Card className="mb-4">
-            <CardBody><FileDrop onFile={onFile} /></CardBody>
+            <CardBody><FileDrop onFile={onFile} columnsHint={`Date, ${driverHeader}`} /></CardBody>
           </Card>
         )}
 
@@ -101,10 +109,10 @@ export function UploadPage() {
         <Card>
           <CardHeader title="CSV Format" />
           <CardBody>
-            <pre className="bg-ink-50 text-xs p-3 rounded-md overflow-x-auto">{`Date,Generation_kWh
+            <pre className="bg-ink-50 text-xs p-3 rounded-md overflow-x-auto">{`Date,${driverHeader}
 2026-01-01,1234.5
 2026-01-02,1180.2`}</pre>
-            <p className="mt-3 text-sm text-ink-500">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Generation must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
+            <p className="mt-3 text-sm text-ink-500">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Values are in {driverUnit} and must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
           </CardBody>
         </Card>
       </RegistrationGate>

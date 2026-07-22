@@ -184,8 +184,13 @@ export const useStore = create<AppState>()(
 
       addMonitoringRecords: (project_id, rows) => {
         const uploaded_at = new Date().toISOString();
+        // Stamp each record with the project's methodology driver param + unit
+        // (resolved via its PDD). Projects without a methodology stay unstamped (legacy shape).
+        const pdd = get().pddByProject(project_id);
+        const m = pdd ? get().methodologies.find((x) => x.id === pdd.methodology_id) : undefined;
+        const stamp = m ? { param_key: m.calculation.input_param, unit: m.calculation.input_unit } : {};
         const recs: MonitoringRecord[] = rows.map((r) => ({
-          id: uid('mon'), project_id, source: 'csv_upload', uploaded_at, ...r,
+          id: uid('mon'), project_id, source: 'csv_upload', uploaded_at, ...stamp, ...r,
         }));
         set((s) => ({ records: [...s.records, ...recs] }));
         return recs.length;
