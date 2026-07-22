@@ -63,9 +63,10 @@ JSON contract, with these additions:
 
 - **Export**: button on the Methodologies page → downloads the JSON document
   for any methodology in the library.
-- **Import**: upload JSON → zod validation → preview (name, sections, params,
-  formula) → add to library as `status: active`. Duplicate `code+version` is
-  rejected. Import is registry-role (`admin`) only and audit-logged
+- **Import**: upload JSON → zod validation → add to library, preserving the
+  document's own `status` (a success toast echoes code/version/status; a
+  richer preview step is deferred). Duplicate `code+version` is rejected.
+  Import is registry-role (`admin`) only and audit-logged
   (`METHODOLOGY_SELECTED` stays; add `METHODOLOGY_IMPORTED`).
 - The nine bundled methodologies stay as seed data but are emitted through
   the same schema (`buildStandardMethodology` output must pass the zod
@@ -91,8 +92,9 @@ interface MonitoringRecord {
 - `calc.ts` filters records to `calculation.input_param` (records with no
   `param_key` count as the default driver) — the "everything is
   generation_kwh" ambiguity ends at the calculation boundary.
-- UI labels (Upload, Calculations, Verifications) read the unit from the
-  methodology rather than hardcoding kWh.
+- UI labels read the unit from the methodology rather than hardcoding kWh.
+  Shipped for the Upload page (labels derive only from a *registered* PDD's
+  methodology); Calculations/Verifications label updates are a follow-up.
 
 ### 4. Guardian `.policy` mapping (documented path, not built now)
 

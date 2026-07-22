@@ -57,7 +57,7 @@ change transport, not data shapes:
 
 1. Real SHA-256 (`@noble/hashes`, sync drop-in for `shortHash`).
 2. Salted selective disclosure (random 128-bit salt per sensitive field;
-   salt kept private, publish `sha256(salt ‖ canonical(value))`).
+   salt kept private, publish `sha256(salt ‖ '|' ‖ canonical(value))`).
 3. Evidence content hash from actual file bytes.
 4. W3C-shaped VCs: `@context`, `type`, `credentialSubject`, and a real
    `proof` (Ed25519 via `@noble/curves`), verifiable offline; per-account
