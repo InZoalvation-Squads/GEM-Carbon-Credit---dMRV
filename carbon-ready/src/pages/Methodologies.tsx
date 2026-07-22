@@ -18,7 +18,9 @@ function exportMethodology(m: Methodology) {
   const a = document.createElement('a');
   a.href = url;
   a.download = `${m.code}-v${m.version.replace(/^v/i, '')}.json`;
+  document.body.appendChild(a);
   a.click();
+  document.body.removeChild(a);
   URL.revokeObjectURL(url);
 }
 
@@ -31,11 +33,20 @@ export function Methodologies() {
 
   const onImportFile = async (file: File | undefined) => {
     if (!file) return;
-    const text = await file.text();
-    const r = importMethodology(text);
-    if (r.ok) toast.success('Methodology imported', 'Added to the library as an active methodology.');
-    else toast.error('Import failed', r.error);
-    if (fileRef.current) fileRef.current.value = '';
+    try {
+      const text = await file.text();
+      const r = importMethodology(text);
+      if (r.ok && r.methodology) {
+        const m = r.methodology;
+        toast.success('Methodology imported', `${m.code} ${m.version} (${m.status}) added to the library.`);
+      } else {
+        toast.error('Import failed', r.error);
+      }
+    } catch (e) {
+      toast.error('Import failed', `Could not read the file: ${e instanceof Error ? e.message : String(e)}`);
+    } finally {
+      if (fileRef.current) fileRef.current.value = '';
+    }
   };
 
   return (

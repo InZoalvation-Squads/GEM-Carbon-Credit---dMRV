@@ -35,6 +35,19 @@ describe('methodology JSON schema v2', () => {
     expect(parseMethodologyJson(JSON.stringify(bad)).ok).toBe(false);
   });
 
+  it('requires gwp_ch4 for ch4_avoidance and rejects it on other formulas', () => {
+    // T-VER-W-01 (landfill gas) is the bundled ch4_avoidance methodology.
+    const lfg = seedMethodologies.find((m) => m.calculation.formula === 'ch4_avoidance')!;
+    const missing = JSON.parse(methodologyToJson(lfg));
+    delete missing.calculation.gwp_ch4;
+    expect(parseMethodologyJson(JSON.stringify(missing)).ok).toBe(false);
+
+    // seedMethodologies[0] is grid_displacement — gwp_ch4 must not ride along.
+    const stray = JSON.parse(methodologyToJson(seedMethodologies[0]));
+    stray.calculation.gwp_ch4 = 28;
+    expect(parseMethodologyJson(JSON.stringify(stray)).ok).toBe(false);
+  });
+
   it('rejects wrong schema_version', () => {
     const bad = JSON.parse(methodologyToJson(seedMethodologies[0]));
     bad.schema_version = 1;

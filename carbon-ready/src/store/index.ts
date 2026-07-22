@@ -46,7 +46,7 @@ interface AppState {
   pdds: ProjectDesignDocument[];
 
   // Methodology-as-data: import a validated JSON document into the library.
-  importMethodology: (json: string) => { ok: boolean; error?: string };
+  importMethodology: (json: string) => { ok: boolean; error?: string; methodology?: Methodology };
 
   // Registration (Gate 1)
   selectMethodology: (project_id: UUID, methodology_id: UUID) => ProjectDesignDocument;
@@ -346,7 +346,12 @@ export const useStore = create<AppState>()(
           return { ok: false, error: 'Only the Standard Registry can import methodologies.' };
         }
         const parsed = parseMethodologyJson(json);
-        if (!parsed.ok) return { ok: false, error: parsed.errors.join('; ') };
+        if (!parsed.ok) {
+          // Cap the message at the first few issues — a malformed document can carry dozens.
+          const shown = parsed.errors.slice(0, 3);
+          const extra = parsed.errors.length - shown.length;
+          return { ok: false, error: shown.join('; ') + (extra > 0 ? ` … and ${extra} more issue(s)` : '') };
+        }
         const doc = parsed.methodology;
         if (get().methodologies.some((x) => x.code === doc.code && x.version === doc.version)) {
           return { ok: false, error: `Methodology ${doc.code} ${doc.version} is already in the library.` };
@@ -356,7 +361,7 @@ export const useStore = create<AppState>()(
         get().audit_write('METHODOLOGY_IMPORTED', 'methodology', m.id,
           { code: m.code, version: m.version },
           { new_value: { code: m.code, version: m.version } });
-        return { ok: true };
+        return { ok: true, methodology: m };
       },
 
       // ---------------- Registration: Gate 1 (PDD validation) ----------------

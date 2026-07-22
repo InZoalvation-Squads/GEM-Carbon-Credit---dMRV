@@ -173,6 +173,17 @@ export function parseMethodologyJson(text: string): ParseResult {
   } catch (e) {
     return { ok: false, errors: [`Invalid JSON: ${e instanceof Error ? e.message : String(e)}`] };
   }
+  // Friendly version gate before zod — a mismatched schema_version would otherwise
+  // surface as an opaque literal-mismatch issue.
+  if (typeof raw === 'object' && raw !== null && !Array.isArray(raw)) {
+    const v = (raw as Record<string, unknown>).schema_version;
+    if (v !== METHODOLOGY_SCHEMA_VERSION) {
+      return {
+        ok: false,
+        errors: [`This file uses methodology format version ${v ?? 'unknown'}; this app requires version ${METHODOLOGY_SCHEMA_VERSION}.`],
+      };
+    }
+  }
   const result = MethodologyDocSchema.safeParse(raw);
   if (!result.success) {
     const errors = result.error.issues.map((i) => {
