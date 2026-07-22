@@ -61,6 +61,7 @@ export function EvidenceUploadModal({
   const [staged, setStaged] = useState<Staged[]>([]);
   const [desc, setDesc] = useState('');
   const [hover, setHover] = useState(false);
+  const [busy, setBusy] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
   const add = (files: { name: string; size: number; file?: File }[]) =>
@@ -73,20 +74,28 @@ export function EvidenceUploadModal({
       })),
     ]);
 
-  const reset = () => { setStaged([]); setDesc(''); };
+  const reset = () => { setStaged([]); setDesc(''); setBusy(false); };
   const close = () => { reset(); onClose(); };
   const valid = staged.filter((s) => !s.tooBig);
 
   const submit = async () => {
-    for (const s of valid) {
-      // Hash the real bytes when we hold an actual File; demo samples fall back
-      // to the store's metadata hash.
-      const content_hash = s.file ? await hashFileBytes(s.file) : undefined;
+    if (busy) return;
+    setBusy(true);
+    // Hash every real File first, then commit the uploads, so a hashing failure
+    // can never leave the batch half-uploaded. Demo samples (no File) and files
+    // whose bytes cannot be read fall back to the store's metadata hash.
+    const hashes = await Promise.all(
+      valid.map(async (s) => {
+        if (!s.file) return undefined;
+        try { return await hashFileBytes(s.file); } catch { return undefined; }
+      })
+    );
+    valid.forEach((s, i) =>
       uploadEvidence(projectId, {
         file_name: s.file_name, kind: s.kind, file_size: s.file_size,
-        category: s.category, description: desc || undefined, content_hash,
-      });
-    }
+        category: s.category, description: desc || undefined, content_hash: hashes[i],
+      })
+    );
     onUploaded(valid.length);
     close();
   };
@@ -166,9 +175,9 @@ export function EvidenceUploadModal({
         )}
 
         <div className="flex justify-end gap-2 pt-1">
-          <Button variant="ghost" onClick={close}>Cancel</Button>
-          <Button onClick={submit} disabled={valid.length === 0}>
-            Upload {valid.length > 0 ? `${valid.length} file${valid.length > 1 ? 's' : ''}` : 'files'}
+          <Button variant="ghost" onClick={close} disabled={busy}>Cancel</Button>
+          <Button onClick={submit} disabled={valid.length === 0 || busy}>
+            {busy ? 'Uploading…' : `Upload ${valid.length > 0 ? `${valid.length} file${valid.length > 1 ? 's' : ''}` : 'files'}`}
           </Button>
         </div>
       </div>

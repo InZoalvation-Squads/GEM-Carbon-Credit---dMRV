@@ -117,14 +117,13 @@ export function splitDisclosure(
 ): DisclosureSplit {
   const disclosed: Record<string, unknown> = {};
   const redacted: DisclosureSplit['redacted'] = [];
-  const sensitive = new Set(sensitiveFieldKeys(m, data));
   for (const section of m.pdd_sections) {
     for (const field of section.fields) {
       if (field.type === 'computed') continue;
       if (!isFieldVisible(field, data)) continue;
       const v = data[field.key];
       if (v === undefined || v === null || v === '') continue;
-      if (sensitive.has(field.key)) redacted.push({ key: field.key, value_hash: saltedValueHash(salts[field.key] ?? '', v) });
+      if (field.sensitive) redacted.push({ key: field.key, value_hash: saltedValueHash(salts[field.key] ?? '', v) });
       else disclosed[field.key] = v;
     }
   }
