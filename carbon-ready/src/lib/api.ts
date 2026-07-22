@@ -92,13 +92,13 @@ export const api = {
   },
   async uploadEvidence(
     project_id: UUID,
-    input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string }
+    input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string; content_hash?: string }
   ): Promise<EvidenceFile> {
     const file = useStore.getState().uploadEvidence(project_id, input);
     toast.success('Evidence uploaded', file.file_name);
     return tick(file);
   },
-  async replaceEvidence(evidence_id: UUID, input: { file_name?: string; file_size: number }): Promise<EvidenceFile | undefined> {
+  async replaceEvidence(evidence_id: UUID, input: { file_name?: string; file_size: number; content_hash?: string }): Promise<EvidenceFile | undefined> {
     const file = useStore.getState().replaceEvidence(evidence_id, input);
     toast.success('New version uploaded', file ? `${file.file_name} · v${file.version_number}` : undefined);
     return tick(file);

@@ -130,7 +130,8 @@ describe('splitDisclosure', () => {
     it('redacts with a per-field salt so equal values hash differently across salts', () => {
       const a = splitDisclosure(dm, data, { investment_metric: 'aa'.repeat(16) });
       const b = splitDisclosure(dm, data, { investment_metric: 'bb'.repeat(16) });
-      expect(a.redacted[0].value_hash).not.toBe(b.redacted[0].value_hash);
+      const hashOf = (r: typeof a) => r.redacted.find((x) => x.key === 'investment_metric')!.value_hash;
+      expect(hashOf(a)).not.toBe(hashOf(b));
     });
 
     it('verifies a disclosed value against hash+salt, and rejects a tampered value', () => {

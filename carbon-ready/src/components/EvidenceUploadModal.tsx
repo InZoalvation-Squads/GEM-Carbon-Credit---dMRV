@@ -7,6 +7,7 @@ import { Textarea } from './Textarea';
 import { FileKindIcon } from './StatusBadge';
 import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../lib/labels';
 import { formatBytes } from '../lib/format';
+import { hashFileBytes } from '../lib/hash';
 import { useStore } from '../store';
 import type { EvidenceCategory, FileKind, UUID } from '../types';
 
@@ -19,6 +20,8 @@ interface Staged {
   kind: FileKind;
   category: EvidenceCategory;
   tooBig: boolean;
+  /** Real browser File when the user dropped/browsed one; absent for demo samples. */
+  file?: File;
 }
 
 function kindFromName(name: string): FileKind {
@@ -60,13 +63,13 @@ export function EvidenceUploadModal({
   const [hover, setHover] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  const add = (files: { name: string; size: number }[]) =>
+  const add = (files: { name: string; size: number; file?: File }[]) =>
     setStaged((prev) => [
       ...prev,
       ...files.map((f) => ({
         key: Math.random().toString(36).slice(2),
         file_name: f.name, file_size: f.size, kind: kindFromName(f.name),
-        category: guessCategory(f.name), tooBig: f.size > MAX_SIZE,
+        category: guessCategory(f.name), tooBig: f.size > MAX_SIZE, file: f.file,
       })),
     ]);
 
@@ -74,13 +77,16 @@ export function EvidenceUploadModal({
   const close = () => { reset(); onClose(); };
   const valid = staged.filter((s) => !s.tooBig);
 
-  const submit = () => {
-    valid.forEach((s) =>
+  const submit = async () => {
+    for (const s of valid) {
+      // Hash the real bytes when we hold an actual File; demo samples fall back
+      // to the store's metadata hash.
+      const content_hash = s.file ? await hashFileBytes(s.file) : undefined;
       uploadEvidence(projectId, {
         file_name: s.file_name, kind: s.kind, file_size: s.file_size,
-        category: s.category, description: desc || undefined,
-      })
-    );
+        category: s.category, description: desc || undefined, content_hash,
+      });
+    }
     onUploaded(valid.length);
     close();
   };
@@ -96,7 +102,7 @@ export function EvidenceUploadModal({
           onDragLeave={() => setHover(false)}
           onDrop={(e) => {
             e.preventDefault(); setHover(false);
-            add(Array.from(e.dataTransfer.files).map((f) => ({ name: f.name, size: f.size })));
+            add(Array.from(e.dataTransfer.files).map((f) => ({ name: f.name, size: f.size, file: f })));
           }}
           className={clsx(
             'cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
@@ -109,7 +115,7 @@ export function EvidenceUploadModal({
         </div>
         <input
           ref={inputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx" className="hidden"
-          onChange={(e) => { add(Array.from(e.target.files ?? []).map((f) => ({ name: f.name, size: f.size }))); e.target.value = ''; }}
+          onChange={(e) => { add(Array.from(e.target.files ?? []).map((f) => ({ name: f.name, size: f.size, file: f }))); e.target.value = ''; }}
         />
 
         {staged.length === 0 && (

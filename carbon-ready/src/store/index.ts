@@ -13,7 +13,7 @@ import {
   seedMethodologies, seedPdds,
 } from '../data/seed';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
-import { validatePdd, pddContentHash, splitDisclosure, isFieldVisible } from '../lib/pdd';
+import { validatePdd, pddContentHash, splitDisclosure, sensitiveFieldKeys } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
@@ -67,8 +67,8 @@ interface AppState {
   recordCalculation: (project_id: UUID, emission_factor_id: UUID, totals: { generation_kwh: number; reduction_kgco2e: number }) => void;
 
   // Sprint 2 — Evidence
-  uploadEvidence: (project_id: UUID, input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string }) => EvidenceFile;
-  replaceEvidence: (evidence_id: UUID, input: { file_name?: string; file_size: number }) => EvidenceFile | undefined;
+  uploadEvidence: (project_id: UUID, input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string; content_hash?: string }) => EvidenceFile;
+  replaceEvidence: (evidence_id: UUID, input: { file_name?: string; file_size: number; content_hash?: string }) => EvidenceFile | undefined;
   archiveEvidence: (evidence_id: UUID) => void;
 
   // Sprint 2 — Verification workflow
@@ -215,7 +215,10 @@ export const useStore = create<AppState>()(
           id: uid('ev'), project_id, parent_id: null,
           category: input.category, file_name: input.file_name, kind: input.kind,
           file_size: input.file_size, version_number: 1, status: 'active',
-          description: input.description, content_hash: shortHash(input.file_name + input.file_size),
+          description: input.description,
+          // Prefer a real SHA-256 of the file bytes (computed in the UI); fall
+          // back to a metadata hash when no byte digest was supplied.
+          content_hash: input.content_hash ?? shortHash(input.file_name + input.file_size),
           uploaded_by: get().currentUser.id, uploaded_by_name: get().currentUser.name,
           uploaded_at: new Date().toISOString(),
         };
@@ -231,7 +234,7 @@ export const useStore = create<AppState>()(
           ...prev, id: uid('ev'), parent_id: prev.id,
           file_name: input.file_name ?? prev.file_name, file_size: input.file_size,
           version_number: prev.version_number + 1, status: 'active',
-          content_hash: shortHash((input.file_name ?? prev.file_name) + input.file_size + Date.now()),
+          content_hash: input.content_hash ?? shortHash((input.file_name ?? prev.file_name) + input.file_size + Date.now()),
           uploaded_by: get().currentUser.id, uploaded_by_name: get().currentUser.name,
           uploaded_at: new Date().toISOString(),
         };
@@ -421,15 +424,7 @@ export const useStore = create<AppState>()(
         // One private salt per sensitive published field, so value hashes are non-guessable.
         // Salts stay on the owner's PDD record; value + salt verify offline against the VC.
         const salts: Record<string, string> = {};
-        for (const section of m.pdd_sections) {
-          for (const field of section.fields) {
-            if (!field.sensitive || field.type === 'computed') continue;
-            if (!isFieldVisible(field, pdd.section_data)) continue;
-            const v = pdd.section_data[field.key];
-            if (v === undefined || v === null || v === '') continue;
-            salts[field.key] = randomSaltHex();
-          }
-        }
+        for (const key of sensitiveFieldKeys(m, pdd.section_data)) salts[key] = randomSaltHex();
         const vc = issueCredential(
           buildPddSubject(frozen, get().evidence, ipfs_cid, splitDisclosure(m, pdd.section_data, salts)),
           content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at,

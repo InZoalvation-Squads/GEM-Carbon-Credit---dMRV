@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { shortHash, sha256Hex, sha256HexBytes, canonical, randomSaltHex } from './hash';
+import { shortHash, sha256Hex, sha256HexBytes, hashFileBytes, canonical, randomSaltHex } from './hash';
 
 describe('sha256', () => {
   it('matches the NIST vector for "abc"', () => {
@@ -22,6 +22,11 @@ describe('sha256', () => {
     expect(a).toMatch(/^[0-9a-f]{32}$/);
     expect(b).toMatch(/^[0-9a-f]{32}$/);
     expect(a).not.toBe(b);
+  });
+  it('hashFileBytes digests a File\'s actual bytes, not its metadata', async () => {
+    const file = new File([new TextEncoder().encode('abc')], 'anything.pdf', { type: 'application/pdf' });
+    expect(await hashFileBytes(file)).toBe(
+      'sha256-ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad');
   });
   it('canonical is stable across key order', () => {
     expect(canonical({ b: 1, a: [2, { d: 3, c: 4 }] }))

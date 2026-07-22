@@ -88,22 +88,43 @@ export function verifyDisclosedValue(value: unknown, salt: string, value_hash: s
 }
 
 /**
+ * Keys of the sensitive fields that would actually be published for this PDD:
+ * non-computed, currently visible, and holding a non-empty value. Shared by
+ * splitDisclosure (redaction branch) and the store's per-field salt generation.
+ */
+export function sensitiveFieldKeys(m: Methodology, data: Record<string, unknown>): string[] {
+  const keys: string[] = [];
+  for (const section of m.pdd_sections) {
+    for (const field of section.fields) {
+      if (!field.sensitive || field.type === 'computed') continue;
+      if (!isFieldVisible(field, data)) continue;
+      const v = data[field.key];
+      if (v === undefined || v === null || v === '') continue;
+      keys.push(field.key);
+    }
+  }
+  return keys;
+}
+
+/**
  * Guardian-style selective disclosure: sensitive fields leave only a content hash.
  * `salts` maps field.key -> private hex salt; salted hashes are non-guessable while
  * the salt lets the owner prove the original value later (see verifyDisclosedValue).
+ * Fields without an entry in `salts` hash unsalted (legacy behavior).
  */
 export function splitDisclosure(
   m: Methodology, data: Record<string, unknown>, salts: Record<string, string> = {},
 ): DisclosureSplit {
   const disclosed: Record<string, unknown> = {};
   const redacted: DisclosureSplit['redacted'] = [];
+  const sensitive = new Set(sensitiveFieldKeys(m, data));
   for (const section of m.pdd_sections) {
     for (const field of section.fields) {
       if (field.type === 'computed') continue;
       if (!isFieldVisible(field, data)) continue;
       const v = data[field.key];
       if (v === undefined || v === null || v === '') continue;
-      if (field.sensitive) redacted.push({ key: field.key, value_hash: saltedValueHash(salts[field.key] ?? '', v) });
+      if (sensitive.has(field.key)) redacted.push({ key: field.key, value_hash: saltedValueHash(salts[field.key] ?? '', v) });
       else disclosed[field.key] = v;
     }
   }

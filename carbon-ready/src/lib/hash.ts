@@ -12,6 +12,12 @@ export function sha256HexBytes(bytes: Uint8Array): string {
   return bytesToHex(sha256(bytes));
 }
 
+/** SHA-256 of a browser File's actual bytes, in the store's `sha256-<hex>` format. */
+export async function hashFileBytes(file: File): Promise<string> {
+  const bytes = new Uint8Array(await file.arrayBuffer());
+  return `sha256-${sha256HexBytes(bytes)}`;
+}
+
 export function shortHash(input: string): string {
   return `sha256-${sha256Hex(input)}`;
 }
