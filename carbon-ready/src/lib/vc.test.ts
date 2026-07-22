@@ -23,4 +23,16 @@ describe('vc sign/verify', () => {
   it('reports unsigned for seed-era credentials', () => {
     expect(verifyCredential(base)).toBe('unsigned');
   });
+  it('flags an issuer_did that does not match the proof key', () => {
+    const issuer = getOrCreateIdentity('registry');
+    const other = getOrCreateIdentity('someone-else');
+    const vc = signCredential({ ...base, issuer_did: issuer.did }, issuer);
+    expect(verifyCredential({ ...vc, issuer_did: other.did })).toBe('invalid');
+  });
+  it('flags a malformed (non-did:key) verificationMethod', () => {
+    const issuer = getOrCreateIdentity('registry');
+    const vc = signCredential({ ...base, issuer_did: issuer.did }, issuer);
+    const bad = 'did:hedera:testnet:NotAKey';
+    expect(verifyCredential({ ...vc, issuer_did: bad, proof: { ...vc.proof!, verificationMethod: bad } })).toBe('invalid');
+  });
 });

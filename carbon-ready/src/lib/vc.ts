@@ -34,6 +34,8 @@ export function signCredential(vc: VerifiableCredential, issuer: LocalIdentity):
 
 export function verifyCredential(vc: VerifiableCredential): VcVerdict {
   if (!vc.proof) return 'unsigned';
+  // Issuer binding: prevents re-signing under a different key while claiming another issuer.
+  if (vc.issuer_did !== vc.proof.verificationMethod) return 'invalid';
   const pub = publicKeyFromDidKey(vc.proof.verificationMethod);
   if (!pub) return 'invalid';
   return verifyBytes(signingInput(vc), vc.proof.proofValue, pub) ? 'valid' : 'invalid';

@@ -9,6 +9,7 @@ import { EmptyState } from '../components/EmptyState';
 import { useStore } from '../store';
 import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 import { verifyCredential, type VcVerdict } from '../lib/vc';
+import { issuerIdentity } from '../lib/identity';
 import { fmtDateTime } from '../lib/date';
 import { formatNumber } from '../lib/format';
 import type { GuardianToken, VerifiableCredential } from '../types';
@@ -20,6 +21,7 @@ export function Guardian() {
   const credentials = useStore((s) => s.credentials);
   const tokens = useStore((s) => s.tokens);
   const config = useStore((s) => s.guardianConfig);
+  const organization = useStore((s) => s.organization);
   const verifications = useStore((s) => s.verifications);
   const role = useStore((s) => s.currentUser.role);
   const mintToken = useStore((s) => s.mintToken);
@@ -44,7 +46,7 @@ export function Guardian() {
           <span className="flex items-center gap-2 font-medium text-brand-800"><ShieldCheck size={16} /> Guardian (mock)</span>
           <span className="text-brand-700">Network: <strong>{config.network}</strong></span>
           <span className="text-brand-700 font-mono text-xs">Topic {config.topic_id}</span>
-          <span className="text-brand-700 font-mono text-xs truncate">{config.issuer_did}</span>
+          <span className="text-brand-700 font-mono text-xs truncate">{issuerIdentity(organization.id).did}</span>
         </CardBody>
       </Card>
 

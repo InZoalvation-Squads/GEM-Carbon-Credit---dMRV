@@ -82,7 +82,7 @@ export function issueCredential(
   return signCredential({
     id,
     schema_id: schema.id,
-    issuer_did: config.issuer_did,
+    issuer_did: issuer.did,
     issued_at: issuedAt,
     subject,
     package_hash: packageHash,
