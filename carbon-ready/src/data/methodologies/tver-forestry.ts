@@ -7,7 +7,7 @@ export const TVER_FORESTRY_METHODOLOGY = buildStandardMethodology({
   standard: 'T-VER',
   version: 'v1.0', // ⚠︎ verify
   sectoral_scope: 'Agriculture, Forestry and Other Land Use (AFOLU)',
-  calculation: { formula: 'biomass_stock_change', input_param: 'dC_tree', input_unit: 'tCO2e' },
+  calculation: { formula: 'biomass_stock_change', input_param: 'dC_tree', input_unit: 'tCO₂e' },
   required_evidence: ['site_photo', 'supporting_evidence', 'commissioning_report'],
   monitoring_params: [
     { key: 'dC_tree', label: 'Change in tree carbon stock', unit: 'tCO₂e', method: 'Sample plot biomass survey + allometric equations', frequency: 'Annually' },

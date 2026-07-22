@@ -10,7 +10,7 @@ export const VERRA_VM0047_METHODOLOGY = buildStandardMethodology({
   standard: 'Verra',
   version: 'v1.1', // active 2025-05-14
   sectoral_scope: 'Agriculture, Forestry and Other Land Use (AFOLU)',
-  calculation: { formula: 'biomass_stock_change', input_param: 'dCO2_removals', input_unit: 'tCO2e' },
+  calculation: { formula: 'biomass_stock_change', input_param: 'dCO2_removals', input_unit: 'tCO₂e' },
   required_evidence: ['site_photo', 'supporting_evidence', 'commissioning_report'],
   monitoring_params: [
     { key: 'dCO2_removals', label: 'Net GHG removals (net of dynamic benchmark)', unit: 'tCO₂e', method: 'Remote sensing + plot sampling (area-based) or census, vs matched control plots', frequency: 'Annually' },

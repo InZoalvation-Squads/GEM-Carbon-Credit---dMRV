@@ -7,7 +7,7 @@ export const VERRA_VM0042_METHODOLOGY = buildStandardMethodology({
   standard: 'Verra',
   version: 'v2.1', // ⚠︎ verify
   sectoral_scope: 'Agriculture, Forestry and Other Land Use (AFOLU)',
-  calculation: { formula: 'direct_entry', input_param: 'ER_soc', input_unit: 'tCO2e' },
+  calculation: { formula: 'direct_entry', input_param: 'ER_soc', input_unit: 'tCO₂e' },
   required_evidence: ['supporting_evidence', 'site_photo', 'commissioning_report'],
   monitoring_params: [
     { key: 'ER_soc', label: 'Net emission reduction (SOC + N₂O + CH₄)', unit: 'tCO₂e', method: 'Soil sampling + model per VM0042', frequency: 'Annually' },
