@@ -46,13 +46,14 @@ describe('issueCredential', () => {
 
 describe('toIpfsCid', () => {
   it('is deterministic and CIDv1-shaped', () => {
-    const a = toIpfsCid('sha256-0a1b2c3d4e5f…');
-    expect(a).toBe(toIpfsCid('sha256-0a1b2c3d4e5f…'));
+    const hash = 'sha256-' + '0a1b2c3d4e5f'.repeat(6).slice(0, 64).padEnd(64, '0');
+    const a = toIpfsCid(hash);
+    expect(a).toBe(toIpfsCid(hash));
     expect(a).toMatch(/^bafkrei[0-9a-z]{20}$/);
   });
 
   it('differs for different hashes', () => {
-    expect(toIpfsCid('sha256-aaaaaaaaaaaa…')).not.toBe(toIpfsCid('sha256-bbbbbbbbbbbb…'));
+    expect(toIpfsCid('sha256-' + 'a'.repeat(64))).not.toBe(toIpfsCid('sha256-' + 'b'.repeat(64)));
   });
 });
 
@@ -62,7 +63,7 @@ describe('buildPddSubject', () => {
     methodology_snapshot: 'T-VER-S 1.0', state: 'registered',
     section_data: {}, evidence_ids: ['ev-b', 'ev-a'],
     assigned_validator_name: 'V', submitted_at: null,
-    validated_at: '2026-07-20T00:00:00Z', content_hash: 'sha256-cafe00000000…',
+    validated_at: '2026-07-20T00:00:00Z', content_hash: 'sha256-' + 'cafe'.repeat(16),
     ipfs_cid: null, credential_id: null,
   } as ProjectDesignDocument;
 
@@ -76,7 +77,7 @@ describe('buildPddSubject', () => {
     expect(s.pdd_id).toBe('PDD-X1');
     expect(s.project_id).toBe('prj-1');
     expect(s.methodology).toBe('T-VER-S 1.0');
-    expect(s.content_hash).toBe('sha256-cafe00000000…');
+    expect(s.content_hash).toBe('sha256-' + 'cafe'.repeat(16));
     expect(s.ipfs_cid).toBe('bafkreicafe');
     expect(s.registered_at).toBe('2026-07-20T00:00:00Z');
     expect(s.evidence).toEqual([

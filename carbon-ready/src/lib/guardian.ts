@@ -45,7 +45,7 @@ export function projectTopicId(projectId: string): string {
 // signed PDD document. Derived from the content hash so re-registration of the
 // same frozen payload yields the same CID.
 export function toIpfsCid(contentHash: string): string {
-  const hex = contentHash.replace('sha256-', '').replace('…', '');
+  const hex = contentHash.replace('sha256-', '');
   return `bafkrei${hex.padEnd(20, '0').slice(0, 20)}`;
 }
 
@@ -75,7 +75,7 @@ export function issueCredential(
   schema: CredentialSchema,
   issuedAt: string,
 ): VerifiableCredential {
-  const id = `urn:vc:${shortHash(`${packageHash}|${sequenceNumber}`).replace('sha256-', '').replace('…', '')}`;
+  const id = `urn:vc:${shortHash(`${packageHash}|${sequenceNumber}`).replace('sha256-', '').slice(0, 24)}`;
   return {
     id,
     schema_id: schema.id,
