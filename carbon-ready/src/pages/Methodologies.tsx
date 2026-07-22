@@ -1,24 +1,64 @@
-import { useState } from 'react';
+import { useRef, useState } from 'react';
+import { Download, Upload } from 'lucide-react';
 import { useStore } from '../store';
 import { PageHeader } from '../components/PageHeader';
 import { Card } from '../components/Card';
 import { Table, THead, TR, TH, TD } from '../components/Table';
 import { Badge } from '../components/Badge';
+import { Button } from '../components/Button';
 import { Drawer } from '../components/Drawer';
+import { toast } from '../components/Toast';
 import { CATEGORY_LABEL } from '../lib/labels';
+import { methodologyToJson } from '../lib/methodology-schema';
 import type { Methodology } from '../types';
+
+function exportMethodology(m: Methodology) {
+  const blob = new Blob([methodologyToJson(m)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${m.code}-v${m.version.replace(/^v/i, '')}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+}
 
 export function Methodologies() {
   const methodologies = useStore((s) => s.methodologies);
+  const role = useStore((s) => s.currentUser.role);
+  const importMethodology = useStore((s) => s.importMethodology);
   const [selected, setSelected] = useState<Methodology | null>(null);
+  const fileRef = useRef<HTMLInputElement>(null);
+
+  const onImportFile = async (file: File | undefined) => {
+    if (!file) return;
+    const text = await file.text();
+    const r = importMethodology(text);
+    if (r.ok) toast.success('Methodology imported', 'Added to the library as an active methodology.');
+    else toast.error('Import failed', r.error);
+    if (fileRef.current) fileRef.current.value = '';
+  };
 
   return (
     <div>
-      <PageHeader title="Methodologies" subtitle="Approved carbon methodologies (Guardian policies) that drive project registration" />
+      <PageHeader
+        title="Methodologies"
+        subtitle="Approved carbon methodologies (Guardian policies) that drive project registration"
+        action={role === 'admin' ? (
+          <>
+            <input
+              ref={fileRef} type="file" accept=".json,application/json" className="hidden"
+              onChange={(e) => onImportFile(e.target.files?.[0])}
+            />
+            <Button variant="secondary" onClick={() => fileRef.current?.click()}>
+              <Upload size={16} aria-hidden /> Import methodology
+            </Button>
+          </>
+        ) : undefined}
+      />
       <Card>
         <Table>
           <THead>
-            <TR><TH>Code</TH><TH>Name</TH><TH>Standard</TH><TH>Version</TH><TH>Sections</TH><TH>Status</TH></TR>
+            <TR><TH>Code</TH><TH>Name</TH><TH>Standard</TH><TH>Version</TH><TH>Sections</TH><TH>Status</TH><TH><span className="sr-only">Actions</span></TH></TR>
           </THead>
           <tbody>
             {methodologies.map((m) => (
@@ -29,6 +69,11 @@ export function Methodologies() {
                 <TD>{m.version}</TD>
                 <TD>{m.pdd_sections.length}</TD>
                 <TD><Badge tone={m.status === 'active' ? 'green' : 'gray'}>{m.status}</Badge></TD>
+                <TD className="text-right">
+                  <Button variant="ghost" size="sm" onClick={() => exportMethodology(m)} title={`Download ${m.code} as JSON`}>
+                    <Download size={14} aria-hidden /> Export JSON
+                  </Button>
+                </TD>
               </TR>
             ))}
           </tbody>

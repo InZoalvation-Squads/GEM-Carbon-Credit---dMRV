@@ -20,6 +20,7 @@ export type AuditAction =
   | 'VERIFICATION_ANCHORED'
   // Registration (Gate 1 — PDD validation)
   | 'METHODOLOGY_SELECTED'
+  | 'METHODOLOGY_IMPORTED'
   | 'PDD_SUBMITTED'
   | 'VALIDATION_STARTED'
   | 'PDD_REVISION_REQUESTED'
@@ -336,7 +337,7 @@ export type CalcFormula =
 export interface MethodologyCalculation {
   formula: CalcFormula;
   input_param: string;   // monitoring_params key carrying the driver value
-  input_unit: string;    // 'kWh' | 'tCO2e' | 't CH4'
+  input_unit: string;    // must equal the driver param's unit: 'kWh' | 'tCO₂e' | 't CH4'
   gwp_ch4?: number;      // required for ch4_avoidance (e.g. 28)
 }
 

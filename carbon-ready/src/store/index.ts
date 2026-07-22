@@ -14,6 +14,7 @@ import {
 } from '../data/seed';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
 import { validatePdd, pddContentHash, splitDisclosure, sensitiveFieldKeys } from '../lib/pdd';
+import { parseMethodologyJson } from '../lib/methodology-schema';
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
@@ -43,6 +44,9 @@ interface AppState {
   guardianConfig: GuardianConfig;
   methodologies: Methodology[];
   pdds: ProjectDesignDocument[];
+
+  // Methodology-as-data: import a validated JSON document into the library.
+  importMethodology: (json: string) => { ok: boolean; error?: string };
 
   // Registration (Gate 1)
   selectMethodology: (project_id: UUID, methodology_id: UUID) => ProjectDesignDocument;
@@ -333,6 +337,26 @@ export const useStore = create<AppState>()(
           { token_id: token.token_id, serial_number: token.serial_number, amount_tco2e: token.amount_tco2e, credential_id },
           { new_value: { serial_number: token.serial_number, amount_tco2e: token.amount_tco2e } });
         return token;
+      },
+
+      // ---------------- Methodology-as-data: JSON import ----------------
+      importMethodology: (json) => {
+        // Only the Standard Registry curates the methodology library.
+        if (get().currentUser.role !== 'admin') {
+          return { ok: false, error: 'Only the Standard Registry can import methodologies.' };
+        }
+        const parsed = parseMethodologyJson(json);
+        if (!parsed.ok) return { ok: false, error: parsed.errors.join('; ') };
+        const doc = parsed.methodology;
+        if (get().methodologies.some((x) => x.code === doc.code && x.version === doc.version)) {
+          return { ok: false, error: `Methodology ${doc.code} ${doc.version} is already in the library.` };
+        }
+        const m: Methodology = { id: uid('mth'), ...doc };
+        set((s) => ({ methodologies: [...s.methodologies, m] }));
+        get().audit_write('METHODOLOGY_IMPORTED', 'methodology', m.id,
+          { code: m.code, version: m.version },
+          { new_value: { code: m.code, version: m.version } });
+        return { ok: true };
       },
 
       // ---------------- Registration: Gate 1 (PDD validation) ----------------
