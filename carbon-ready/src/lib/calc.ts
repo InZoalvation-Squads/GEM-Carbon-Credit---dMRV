@@ -28,6 +28,7 @@ export function calculateCarbon(
 ): CalculationOutput {
   // Only the methodology's driver param feeds the calculation; rows without a
   // param_key are legacy records that predate param stamping and count as the driver.
+  // Without a calculation (dashboard selectors) all records are intentionally summed unfiltered.
   if (calculation) {
     records = records.filter((r) => !r.param_key || r.param_key === calculation.input_param);
   }

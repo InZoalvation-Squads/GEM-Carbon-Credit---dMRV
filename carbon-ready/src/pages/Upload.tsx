@@ -21,10 +21,11 @@ export function UploadPage() {
   const [projectId, setProjectId] = useState(projects[0]?.id ?? '');
 
   // Labels track the selected project's methodology driver (fallback: legacy kWh).
+  // Registered PDDs only — a draft's methodology can still change (mirrors the store's stamping rule).
   const pdd = pdds.find((p) => p.project_id === projectId);
-  const methodology = pdd ? methodologies.find((m) => m.id === pdd.methodology_id) : undefined;
+  const methodology = pdd?.state === 'registered' ? methodologies.find((m) => m.id === pdd.methodology_id) : undefined;
   const driverUnit = methodology?.calculation.input_unit ?? 'kWh';
-  const driverHeader = methodology ? methodology.calculation.input_param : 'Generation_kWh';
+  const driverHeader = methodology?.calculation.input_param ?? 'Generation_kWh';
   const [preview, setPreview] = useState<CsvValidationResult | null>(null);
   const [pendingText, setPendingText] = useState<string | null>(null);
   const [submitted, setSubmitted] = useState<{ accepted: number; rejected: number } | null>(null);
