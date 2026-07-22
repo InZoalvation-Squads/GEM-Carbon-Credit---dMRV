@@ -1,6 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure } from './pdd';
-import { canonical, shortHash } from './hash';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue } from './pdd';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -109,7 +108,7 @@ describe('splitDisclosure', () => {
     const r = splitDisclosure(dm, data);
     expect(r.disclosed.technology).toBe('Solar PV');
     expect(r.disclosed.barrier_explanation).toBeUndefined();
-    expect(r.redacted).toEqual([{ key: 'barrier_explanation', value_hash: shortHash(canonical('IRR below hurdle rate')) }]);
+    expect(r.redacted).toEqual([{ key: 'barrier_explanation', value_hash: saltedValueHash('', 'IRR below hurdle rate') }]);
   });
 
   it('a sensitive field hidden by showIf appears in neither list', () => {
@@ -123,5 +122,23 @@ describe('splitDisclosure', () => {
     const r = splitDisclosure(dm, { technology: '', barrier_explanation: 'x' });
     expect(r.disclosed.technology).toBeUndefined();
     expect(r.disclosed.grid_factor).toBeUndefined();
+  });
+
+  describe('salted selective disclosure', () => {
+    const data = { technology: 'Solar PV', barrier_type: 'Investment', investment_metric: 'IRR 4.2%' };
+
+    it('redacts with a per-field salt so equal values hash differently across salts', () => {
+      const a = splitDisclosure(dm, data, { investment_metric: 'aa'.repeat(16) });
+      const b = splitDisclosure(dm, data, { investment_metric: 'bb'.repeat(16) });
+      expect(a.redacted[0].value_hash).not.toBe(b.redacted[0].value_hash);
+    });
+
+    it('verifies a disclosed value against hash+salt, and rejects a tampered value', () => {
+      const salts = { investment_metric: 'ab'.repeat(16) };
+      const split = splitDisclosure(dm, data, salts);
+      const r = split.redacted.find((x) => x.key === 'investment_metric')!;
+      expect(verifyDisclosedValue('IRR 4.2%', salts.investment_metric, r.value_hash)).toBe(true);
+      expect(verifyDisclosedValue('IRR 9.9%', salts.investment_metric, r.value_hash)).toBe(false);
+    });
   });
 });

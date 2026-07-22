@@ -363,5 +363,6 @@ export interface ProjectDesignDocument {
   content_hash: string | null;    // frozen at register
   ipfs_cid: string | null;        // simulated IPFS CID of the published PDD, frozen at register
   credential_id: string | null;   // PDD Registration VC id
+  disclosure_salts?: Record<string, string>; // hex salt per sensitive field, private side of selective disclosure
   rejection_reason?: string;
 }

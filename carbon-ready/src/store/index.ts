@@ -13,9 +13,9 @@ import {
   seedMethodologies, seedPdds,
 } from '../data/seed';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
-import { validatePdd, pddContentHash, splitDisclosure } from '../lib/pdd';
+import { validatePdd, pddContentHash, splitDisclosure, isFieldVisible } from '../lib/pdd';
 import { newAudit, type AuditExtra } from './audit';
-import { shortHash } from '../lib/hash';
+import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
 
@@ -418,12 +418,24 @@ export const useStore = create<AppState>()(
         const frozen = { ...pdd, methodology_snapshot: snapshot, validated_at, content_hash };
         const topic_id = projectTopicId(pdd.project_id);
         const sequenceNumber = get().credentials.filter((c) => c.hcs.topic_id === topic_id).length + 1;
+        // One private salt per sensitive published field, so value hashes are non-guessable.
+        // Salts stay on the owner's PDD record; value + salt verify offline against the VC.
+        const salts: Record<string, string> = {};
+        for (const section of m.pdd_sections) {
+          for (const field of section.fields) {
+            if (!field.sensitive || field.type === 'computed') continue;
+            if (!isFieldVisible(field, pdd.section_data)) continue;
+            const v = pdd.section_data[field.key];
+            if (v === undefined || v === null || v === '') continue;
+            salts[field.key] = randomSaltHex();
+          }
+        }
         const vc = issueCredential(
-          buildPddSubject(frozen, get().evidence, ipfs_cid, splitDisclosure(m, pdd.section_data)),
+          buildPddSubject(frozen, get().evidence, ipfs_cid, splitDisclosure(m, pdd.section_data, salts)),
           content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at,
         );
         set((s) => ({
-          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash, ipfs_cid, credential_id: vc.id } : p)),
+          pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash, ipfs_cid, credential_id: vc.id, disclosure_salts: salts } : p)),
           projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'registered' as const } : p)),
           credentials: [vc, ...s.credentials],
         }));
