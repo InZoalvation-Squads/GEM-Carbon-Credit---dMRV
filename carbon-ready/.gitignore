@@ -22,3 +22,8 @@ dist-ssr
 *.njsproj
 *.sln
 *.sw?
+
+# env files (real credentials live in .env — never commit)
+.env
+.env.*
+!.env.example
