@@ -1,6 +1,8 @@
 import type { CredentialSchema, EvidenceFile, GuardianConfig, GuardianToken, ProjectDesignDocument, UserRole, VerifiableCredential, VerificationRequest } from '../types';
 import { shortHash } from './hash';
+import type { LocalIdentity } from './identity';
 import type { DisclosureSplit } from './pdd';
+import { signCredential } from './vc';
 
 // The VCU token collection on Hedera. In a live deployment this is the token id
 // created when the policy is imported; here it is a fixed stand-in.
@@ -74,9 +76,10 @@ export function issueCredential(
   config: GuardianConfig,
   schema: CredentialSchema,
   issuedAt: string,
+  issuer: LocalIdentity,
 ): VerifiableCredential {
   const id = `urn:vc:${shortHash(`${packageHash}|${sequenceNumber}`).replace('sha256-', '').slice(0, 24)}`; // 24 hex chars keeps urn:vc ids short and collision-safe for display
-  return {
+  return signCredential({
     id,
     schema_id: schema.id,
     issuer_did: config.issuer_did,
@@ -89,7 +92,8 @@ export function issueCredential(
       consensus_timestamp: issuedAt,
       explorer_url: `https://hashscan.io/${config.network}/topic/${config.topic_id}/message/${sequenceNumber}`,
     },
-  };
+    vc_type: ['VerifiableCredential', schema.type],
+  }, issuer);
 }
 
 // Mints a VCU token for an already-issued credential. Guardian treats this as a

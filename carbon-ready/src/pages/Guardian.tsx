@@ -8,6 +8,7 @@ import { PageHeader } from '../components/PageHeader';
 import { EmptyState } from '../components/EmptyState';
 import { useStore } from '../store';
 import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
+import { verifyCredential, type VcVerdict } from '../lib/vc';
 import { fmtDateTime } from '../lib/date';
 import { formatNumber } from '../lib/format';
 import type { GuardianToken, VerifiableCredential } from '../types';
@@ -103,6 +104,8 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
   mintedFor: (credentialId: string) => GuardianToken | undefined;
   onMint: (credentialId: string) => void;
 }) {
+  // Offline Ed25519 check per credential — verdict appears in place of the button.
+  const [verdicts, setVerdicts] = useState<Record<string, VcVerdict>>({});
   if (credentials.length === 0) {
     return (
       <Card><CardBody className="p-0">
@@ -113,7 +116,7 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
   return (
     <Card><CardBody className="p-0">
       <Table>
-        <THead><TR><TH>Credential</TH><TH>Project</TH><TH className="text-right">Reduction</TH><TH>HCS</TH><TH>Anchored</TH><TH className="text-right">VCU</TH></TR></THead>
+        <THead><TR><TH>Credential</TH><TH>Project</TH><TH className="text-right">Reduction</TH><TH>HCS</TH><TH>Anchored</TH><TH>Signature</TH><TH className="text-right">VCU</TH></TR></THead>
         <tbody>
           {credentials.map((c) => {
             const v = verifications.find((x) => x.id === (c.subject.verification_id as string));
@@ -125,6 +128,19 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
                 <TD className="text-right">{formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e</TD>
                 <TD className="font-mono text-xs text-ink-500">{c.hcs.topic_id} · #{c.hcs.sequence_number}</TD>
                 <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(c.issued_at)}</TD>
+                <TD>
+                  {verdicts[c.id] === 'valid' ? (
+                    <Badge tone="green" dot>Signature valid (Ed25519)</Badge>
+                  ) : verdicts[c.id] === 'invalid' ? (
+                    <Badge tone="red" dot>Signature INVALID</Badge>
+                  ) : verdicts[c.id] === 'unsigned' ? (
+                    <Badge tone="gray">Unsigned (seed data)</Badge>
+                  ) : (
+                    <Button variant="secondary" onClick={() => setVerdicts((m) => ({ ...m, [c.id]: verifyCredential(c) }))}>
+                      <ShieldCheck size={14} /> Verify signature
+                    </Button>
+                  )}
+                </TD>
                 <TD className="text-right">
                   {token ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-700"><Check size={13} /> Minted #{token.serial_number}</span>

@@ -255,6 +255,15 @@ export interface VerifiableCredential {
     consensus_timestamp: string;
     explorer_url: string;
   };
+  // W3C VC shape + Ed25519 proof. Optional: seed-era credentials predate signing.
+  context?: string[];         // ['https://www.w3.org/ns/credentials/v2']
+  vc_type?: string[];         // ['VerifiableCredential', schema.type]
+  proof?: {
+    type: 'Ed25519Signature2020';
+    created: string;
+    verificationMethod: string;   // issuer did:key
+    proofValue: string;           // hex signature over sha256(canonical(vc sans proof))
+  };
 }
 
 // A minted VCU token. In Guardian this is a separate step after the VC is issued:

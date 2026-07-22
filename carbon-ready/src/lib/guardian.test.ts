@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { buildApprovalSubject, buildPddSubject, issueCredential, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from './guardian';
 import { MRV_APPROVAL_SCHEMA_V1 } from './guardian-schema';
+import { getOrCreateIdentity } from './identity';
+import { verifyCredential } from './vc';
 import type { EvidenceFile, ProjectDesignDocument, VerificationRequest } from '../types';
 
 const v: VerificationRequest = {
@@ -32,15 +34,25 @@ describe('buildApprovalSubject', () => {
 
 describe('issueCredential', () => {
   it('is deterministic for the same inputs and embeds mock HCS coordinates', () => {
+    const issuer = getOrCreateIdentity('test-issuer');
     const subject = buildApprovalSubject(v, ev);
-    const a = issueCredential(subject, v.hash_value!, 7, DEFAULT_GUARDIAN_CONFIG, MRV_APPROVAL_SCHEMA_V1, '2026-05-10T00:00:00Z');
-    const b = issueCredential(subject, v.hash_value!, 7, DEFAULT_GUARDIAN_CONFIG, MRV_APPROVAL_SCHEMA_V1, '2026-05-10T00:00:00Z');
+    const a = issueCredential(subject, v.hash_value!, 7, DEFAULT_GUARDIAN_CONFIG, MRV_APPROVAL_SCHEMA_V1, '2026-05-10T00:00:00Z', issuer);
+    const b = issueCredential(subject, v.hash_value!, 7, DEFAULT_GUARDIAN_CONFIG, MRV_APPROVAL_SCHEMA_V1, '2026-05-10T00:00:00Z', issuer);
     expect(a.id).toBe(b.id);
     expect(a.id.startsWith('urn:vc:')).toBe(true);
     expect(a.schema_id).toBe('mrv-approval-v1');
     expect(a.hcs.topic_id).toBe(DEFAULT_GUARDIAN_CONFIG.topic_id);
     expect(a.hcs.sequence_number).toBe(7);
     expect(a.hcs.explorer_url).toContain('/topic/' + DEFAULT_GUARDIAN_CONFIG.topic_id + '/message/7');
+  });
+
+  it('issues a signed W3C credential that verifies offline', () => {
+    const issuer = getOrCreateIdentity('test-issuer');
+    const vc = issueCredential(buildApprovalSubject(v, ev), v.hash_value!, 7, DEFAULT_GUARDIAN_CONFIG, MRV_APPROVAL_SCHEMA_V1, '2026-05-10T00:00:00Z', issuer);
+    expect(vc.issuer_did).toBe(issuer.did);
+    expect(vc.vc_type).toEqual(['VerifiableCredential', MRV_APPROVAL_SCHEMA_V1.type]);
+    expect(vc.proof?.type).toBe('Ed25519Signature2020');
+    expect(verifyCredential(vc)).toBe('valid');
   });
 });
 

@@ -17,6 +17,7 @@ import { validatePdd, pddContentHash, splitDisclosure, sensitiveFieldKeys } from
 import { newAudit, type AuditExtra } from './audit';
 import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { getOrCreateIdentity } from '../lib/identity';
 import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
 
 interface AppState {
@@ -302,7 +303,8 @@ export const useStore = create<AppState>()(
         const topic_id = projectTopicId(v.project_id);
         const sequenceNumber = get().credentials.filter((c) => c.hcs.topic_id === topic_id).length + 1;
         const subject = buildApprovalSubject(v, get().evidence);
-        const vc = issueCredential(subject, v.hash_value, sequenceNumber, { ...get().guardianConfig, topic_id }, MRV_APPROVAL_SCHEMA_V1, issuedAt);
+        const issuer = getOrCreateIdentity(`issuer:${get().organization.id}`);
+        const vc = issueCredential(subject, v.hash_value, sequenceNumber, { ...get().guardianConfig, topic_id }, MRV_APPROVAL_SCHEMA_V1, issuedAt, issuer);
         set((s) => ({
           credentials: [vc, ...s.credentials],
           verifications: s.verifications.map((x) =>
@@ -425,9 +427,10 @@ export const useStore = create<AppState>()(
         // Salts stay on the owner's PDD record; value + salt verify offline against the VC.
         const salts: Record<string, string> = {};
         for (const key of sensitiveFieldKeys(m, pdd.section_data)) salts[key] = randomSaltHex();
+        const issuer = getOrCreateIdentity(`issuer:${get().organization.id}`);
         const vc = issueCredential(
           buildPddSubject(frozen, get().evidence, ipfs_cid, splitDisclosure(m, pdd.section_data, salts)),
-          content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at,
+          content_hash, sequenceNumber, { ...get().guardianConfig, topic_id }, PDD_REGISTRATION_SCHEMA_V1, validated_at, issuer,
         );
         set((s) => ({
           pdds: s.pdds.map((p) => (p.id === pdd_id ? { ...p, state: 'registered', methodology_snapshot: snapshot, validated_at, content_hash, ipfs_cid, credential_id: vc.id, disclosure_salts: salts } : p)),

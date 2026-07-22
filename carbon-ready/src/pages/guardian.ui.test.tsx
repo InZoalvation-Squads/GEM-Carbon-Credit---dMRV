@@ -26,6 +26,31 @@ describe('Guardian page', () => {
   });
 });
 
+describe('Guardian signature verification', () => {
+  it('reports the seed credential as unsigned when Verify signature is clicked', () => {
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('button', { name: /Verify signature/i }));
+    expect(screen.getByText('Unsigned (seed data)')).toBeInTheDocument();
+  });
+
+  it('verifies a freshly anchored credential as Ed25519-valid', () => {
+    // Approve + anchor VR-1001 → the store issues a signed VC (newest first).
+    useStore.setState((s) => ({
+      verifications: s.verifications.map((v) =>
+        v.id === 'VR-1001'
+          ? { ...v, state: 'approved' as const, locked_at: '2026-05-20T00:00:00Z', hash_value: 'sha256-vr1001', credential_id: null, anchored_at: null, hcs_topic_id: null, hcs_sequence_number: null }
+          : v),
+    }));
+    useStore.getState().anchorVerification('VR-1001');
+
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getAllByRole('button', { name: /Verify signature/i })[0]);
+    expect(screen.getByText('Signature valid (Ed25519)')).toBeInTheDocument();
+  });
+});
+
 describe('Guardian VCU minting', () => {
   function renderGuardian() {
     return render(<MemoryRouter><Guardian /></MemoryRouter>);
