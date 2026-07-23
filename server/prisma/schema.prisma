@@ -220,8 +220,7 @@ model VerificationRequest {
   hcs_topic_id            String?
   hcs_sequence_number     Int?
 
-  project  Project               @relation(fields: [project_id], references: [id])
-  comments VerificationComment[]
+  project Project @relation(fields: [project_id], references: [id])
 
   @@index([project_id])
   @@map("verification_requests")
@@ -229,6 +228,10 @@ model VerificationRequest {
 
 model VerificationComment {
   id              String   @id
+  // Deliberately NO foreign key: the SPA reuses VerificationComment for PDD
+  // review threads (verification_id = pdd.id), so this column points at
+  // EITHER a verification_requests row or a pdds row. An FK to one table
+  // would reject the other family; the id prefix disambiguates.
   verification_id String
   evidence_id     String? // null = package-level
   evidence_name   String?
@@ -239,8 +242,6 @@ model VerificationComment {
   body            String
   reply_to        String?
   created_at      DateTime @default(now())
-
-  verification VerificationRequest @relation(fields: [verification_id], references: [id])
 
   @@index([verification_id])
   @@map("verification_comments")
