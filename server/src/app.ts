@@ -12,6 +12,7 @@ import { projectsRoutes } from './modules/projects/routes.js';
 import { factorsRoutes } from './modules/factors/routes.js';
 import { monitoringRoutes } from './modules/monitoring/routes.js';
 import { evidenceRoutes } from './modules/evidence/routes.js';
+import { methodologiesRoutes } from './modules/methodologies/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -110,6 +111,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // Evidence spans /projects/:id/evidence AND /evidence/:id/… — it registers
   // under the bare /api/v1 prefix and declares full sub-paths itself.
   await app.register(evidenceRoutes, { prefix: '/api/v1' });
+  await app.register(methodologiesRoutes, { prefix: '/api/v1/methodologies' });
 
   return app;
 }
