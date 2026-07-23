@@ -1,0 +1,197 @@
+{
+  "schema_version": 2,
+  "code": "T-VER-F-01",
+  "name": "การปลูกป่าและฟื้นฟูป่า (Afforestation / Reforestation)",
+  "standard": "T-VER",
+  "version": "v1.0",
+  "sectoral_scope": "Agriculture, Forestry and Other Land Use (AFOLU)",
+  "status": "active",
+  "calculation": {
+    "formula": "biomass_stock_change",
+    "input_param": "dC_tree",
+    "input_unit": "tCO₂e"
+  },
+  "required_evidence": [
+    "site_photo",
+    "supporting_evidence",
+    "commissioning_report"
+  ],
+  "monitoring_params": [
+    {
+      "key": "dC_tree",
+      "label": "Change in tree carbon stock",
+      "unit": "tCO₂e",
+      "method": "Sample plot biomass survey + allometric equations",
+      "frequency": "Annually"
+    },
+    {
+      "key": "A_planted",
+      "label": "Planted area",
+      "unit": "hectares",
+      "method": "GPS boundary survey",
+      "frequency": "Annually"
+    }
+  ],
+  "pdd_sections": [
+    {
+      "key": "project_info",
+      "title": "A. Project description / ข้อมูลโครงการ",
+      "help": "Core project identity. Location and commissioning date are pulled from the project record.",
+      "fields": [
+        {
+          "key": "project_location",
+          "label": "Location",
+          "type": "computed",
+          "source": "project_location",
+          "required": false
+        },
+        {
+          "key": "commission_date",
+          "label": "Commissioning date",
+          "type": "computed",
+          "source": "commission_date",
+          "required": false
+        },
+        {
+          "key": "area_hectares",
+          "label": "Project area",
+          "type": "number",
+          "unit": "ha",
+          "required": true
+        },
+        {
+          "key": "species",
+          "label": "Dominant species",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "land_eligibility",
+          "label": "Land was non-forest at project start",
+          "type": "boolean",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "baseline",
+      "title": "B. Baseline & methodology / เส้นฐาน",
+      "fields": [
+        {
+          "key": "baseline_scenario",
+          "label": "Baseline scenario",
+          "type": "select",
+          "options": [
+            "Degraded / non-forest land with no regeneration"
+          ],
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "additionality",
+      "title": "C. Additionality / ความเพิ่มเติม",
+      "fields": [
+        {
+          "key": "barrier_type",
+          "label": "Primary barrier",
+          "type": "select",
+          "options": [
+            "Investment",
+            "Technological",
+            "Institutional"
+          ],
+          "required": true
+        },
+        {
+          "key": "investment_metric",
+          "label": "Investment metric used",
+          "type": "select",
+          "options": [
+            "IRR",
+            "NPV",
+            "LCOE"
+          ],
+          "required": true,
+          "sensitive": true,
+          "showIf": {
+            "field": "barrier_type",
+            "equals": "Investment"
+          }
+        },
+        {
+          "key": "barrier_explanation",
+          "label": "Barrier analysis",
+          "type": "textarea",
+          "required": true,
+          "sensitive": true,
+          "help": "Explain why the project is not the baseline / business-as-usual."
+        },
+        {
+          "key": "common_practice",
+          "label": "Not common practice in the region",
+          "type": "boolean",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "ghg_reduction",
+      "title": "D. GHG emission reduction (ex-ante) / การลดก๊าซเรือนกระจก",
+      "help": "Ex-ante estimate entered by the proponent and checked by the validator.",
+      "fields": [
+        {
+          "key": "growth_rate",
+          "label": "Expected annual carbon accumulation",
+          "type": "number",
+          "unit": "tCO₂e/ha/yr",
+          "required": true
+        },
+        {
+          "key": "annual_er_estimate",
+          "label": "Estimated annual reduction",
+          "type": "number",
+          "unit": "tCO₂e/yr",
+          "required": true
+        }
+      ]
+    },
+    {
+      "key": "monitoring_plan",
+      "title": "E. Monitoring plan / แผนการติดตาม",
+      "fields": [
+        {
+          "key": "monitored_parameter",
+          "label": "Monitored parameter",
+          "type": "text",
+          "required": true,
+          "help": "dC_tree — annual change in tree carbon stock (already in tCO₂e)."
+        },
+        {
+          "key": "measurement_method",
+          "label": "Measurement method",
+          "type": "text",
+          "required": true
+        },
+        {
+          "key": "monitoring_frequency",
+          "label": "Frequency",
+          "type": "select",
+          "options": [
+            "Continuous",
+            "Monthly",
+            "Quarterly",
+            "Annually"
+          ],
+          "required": true
+        },
+        {
+          "key": "qaqc_procedure",
+          "label": "QA/QC procedure",
+          "type": "textarea",
+          "required": true
+        }
+      ]
+    }
+  ]
+}

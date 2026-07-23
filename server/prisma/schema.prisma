@@ -1,0 +1,329 @@
+// Prisma schema — mirrors carbon-ready/src/types/index.ts 1:1 in snake_case.
+// IDs are app-generated strings (`prefix-…`, same scheme as the SPA store);
+// no autoincrement anywhere so existing seed/demo identifiers survive cutover.
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// ============================================================
+// Enums (verbatim from carbon-ready/src/types/index.ts unions)
+// ============================================================
+
+enum UserRole {
+  admin
+  project_owner
+  esg_manager
+  verifier
+}
+
+enum ProjectStatus {
+  draft
+  active
+  suspended
+  retired
+}
+
+enum ProjectLifecycle {
+  unregistered
+  pdd_draft
+  under_validation
+  registered
+  rejected
+}
+
+enum EvidenceCategory {
+  meter_reading
+  utility_bill
+  commissioning_report
+  site_photo
+  maintenance_report
+  supporting_evidence
+  verification_report
+}
+
+enum EvidenceStatus {
+  active
+  superseded
+  archived
+}
+
+enum FileKind {
+  pdf
+  image
+  xlsx
+}
+
+enum VerificationState {
+  draft
+  submitted
+  under_review
+  revision_required
+  approved
+  rejected
+}
+
+enum PddState {
+  draft
+  submitted
+  under_validation
+  revision_required
+  registered
+  rejected
+}
+
+enum MethodologyStatus {
+  active
+  deprecated
+}
+
+// ============================================================
+// Models
+// ============================================================
+
+model Organization {
+  id         String   @id
+  name       String
+  country    String
+  created_at DateTime @default(now())
+
+  users    User[]
+  projects Project[]
+
+  @@map("organizations")
+}
+
+model User {
+  id                 String   @id
+  organization_id    String
+  email              String   @unique
+  name               String
+  role               UserRole
+  password_hash      String
+  refresh_token_hash String?
+  created_at         DateTime @default(now())
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("users")
+}
+
+model Project {
+  id              String           @id
+  organization_id String
+  name            String
+  location        String
+  capacity_kwp    Float
+  commission_date String // ISO date
+  status          ProjectStatus
+  lifecycle_stage ProjectLifecycle
+  created_at      DateTime         @default(now())
+  updated_at      DateTime         @updatedAt
+
+  organization       Organization          @relation(fields: [organization_id], references: [id])
+  monitoring_records MonitoringRecord[]
+  evidence_files     EvidenceFile[]
+  verifications      VerificationRequest[]
+  pdds               Pdd[]
+
+  @@map("projects")
+}
+
+model MonitoringRecord {
+  id             String   @id
+  project_id     String
+  record_date    String // ISO date
+  generation_kwh Float
+  source         String
+  uploaded_at    DateTime @default(now())
+  param_key      String? // methodology monitoring_params key; null = legacy default driver
+  unit           String? // frozen at upload from the methodology definition
+
+  project Project @relation(fields: [project_id], references: [id])
+
+  @@index([project_id, record_date])
+  @@map("monitoring_records")
+}
+
+model EmissionFactor {
+  id                     String   @id
+  country                String
+  source                 String
+  factor_kgco2e_per_kwh  Float
+  effective_date         String // ISO date
+  version                Int
+  is_current             Boolean
+  created_at             DateTime @default(now())
+
+  @@map("emission_factors")
+}
+
+model EvidenceFile {
+  id               String           @id
+  project_id       String
+  parent_id        String? // previous version, if any
+  category         EvidenceCategory
+  file_name        String
+  kind             FileKind
+  file_size        Int // bytes
+  version_number   Int
+  status           EvidenceStatus
+  description      String?
+  content_hash     String
+  storage_path     String? // content-addressed path under STORAGE_DIR
+  uploaded_by      String
+  uploaded_by_name String
+  uploaded_at      DateTime         @default(now())
+
+  project  Project        @relation(fields: [project_id], references: [id])
+  parent   EvidenceFile?  @relation("EvidenceVersionChain", fields: [parent_id], references: [id])
+  children EvidenceFile[] @relation("EvidenceVersionChain")
+
+  @@index([project_id])
+  @@map("evidence_files")
+}
+
+model VerificationRequest {
+  id                      String             @id
+  project_id              String
+  created_by              String
+  owner_name              String
+  assigned_verifier_name  String
+  state                   VerificationState
+  monitoring_period_start String // ISO date
+  monitoring_period_end   String // ISO date
+  reduction_kgco2e        Float
+  factors_snapshot        String
+  evidence_ids            String[]
+  required_categories     EvidenceCategory[]
+  submitted_at            DateTime?
+  locked_at               DateTime?
+  sla_target_days         Int
+  rejection_reason        String?
+  // Hedera Guardian readiness — populated by the anchor step
+  hash_value              String?
+  credential_id           String?
+  anchored_at             DateTime?
+  hcs_topic_id            String?
+  hcs_sequence_number     Int?
+
+  project  Project               @relation(fields: [project_id], references: [id])
+  comments VerificationComment[]
+
+  @@index([project_id])
+  @@map("verification_requests")
+}
+
+model VerificationComment {
+  id              String   @id
+  verification_id String
+  evidence_id     String? // null = package-level
+  evidence_name   String?
+  section_key     String? // PDD section a comment is attached to (registration)
+  author_id       String
+  author_name     String
+  author_role     UserRole
+  body            String
+  reply_to        String?
+  created_at      DateTime @default(now())
+
+  verification VerificationRequest @relation(fields: [verification_id], references: [id])
+
+  @@index([verification_id])
+  @@map("verification_comments")
+}
+
+model Methodology {
+  id         String            @id
+  code       String // 'T-VER-S-01'
+  name       String
+  standard   String // 'T-VER' | 'Verra' | 'CDM'
+  version    String
+  status     MethodologyStatus
+  document   Json // the full schema-v2 JSON document (incl. schema_version)
+  created_at DateTime          @default(now())
+
+  pdds Pdd[]
+
+  @@unique([code, version])
+  @@map("methodologies")
+}
+
+model Pdd {
+  id                       String    @id
+  project_id               String
+  methodology_id           String
+  methodology_snapshot     String // code + version, frozen at submit
+  state                    PddState
+  section_data             Json // keyed by field.key
+  disclosure_salts         Json? // hex salt per sensitive field (private side of selective disclosure)
+  evidence_ids             String[]
+  assigned_validator_name  String
+  submitted_at             DateTime?
+  validated_at             DateTime? // = registered timestamp
+  content_hash             String? // frozen at register
+  ipfs_cid                 String? // simulated IPFS CID, frozen at register
+  credential_id            String? // PDD Registration VC id
+  rejection_reason         String?
+
+  project     Project     @relation(fields: [project_id], references: [id])
+  methodology Methodology @relation(fields: [methodology_id], references: [id])
+
+  @@index([project_id])
+  @@map("pdds")
+}
+
+model Credential {
+  id         String   @id
+  schema_id  String
+  payload    Json // the full signed VC object (incl. proof)
+  created_at DateTime @default(now())
+
+  token GuardianToken?
+
+  @@map("credentials")
+}
+
+model GuardianToken {
+  id                      String   @id
+  token_id                String // Hedera token id, e.g. '0.0.480200'
+  serial_number           Int
+  project_id              String
+  credential_id           String   @unique
+  amount_tco2e            Float
+  monitoring_period_start String // ISO date
+  monitoring_period_end   String // ISO date
+  minted_at               DateTime @default(now())
+  minted_by_role          UserRole
+  hcs                     Json // { topic_id, sequence_number, explorer_url }
+
+  credential Credential @relation(fields: [credential_id], references: [id])
+
+  @@map("guardian_tokens")
+}
+
+model AuditLog {
+  id                  String   @id
+  user_id             String
+  user_role           UserRole?
+  ip_address          String?
+  action              String
+  entity_type         String
+  entity_id           String?
+  payload             Json
+  previous_value      Json?
+  new_value           Json?
+  row_hash            String
+  prev_row_hash       String?
+  hcs_topic_id        String?
+  hcs_sequence_number Int?
+  created_at          DateTime @default(now())
+
+  @@index([created_at])
+  @@map("audit_log")
+}
