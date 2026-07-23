@@ -138,6 +138,7 @@ describe('methodologies module', () => {
     });
 
     it('roundtrips an export: changed code imports as a new methodology + audit row', async () => {
+      const countBefore = await prisma.methodology.count();
       const doc = await exportSolarDoc(app, admin.token);
       const res = await app.inject({
         method: 'POST', url: '/api/v1/methodologies/import',
@@ -152,7 +153,7 @@ describe('methodologies module', () => {
       // Stored document is the methodologyToJson shape: schema_version + doc, no id.
       const row = await prisma.methodology.findUniqueOrThrow({ where: { id: m.id as string } });
       expect(row.document).toEqual({ ...doc, code: 'T-VER-S-99' });
-      expect(await prisma.methodology.count()).toBe(10);
+      expect(await prisma.methodology.count()).toBe(countBefore + 1);
 
       const audit = await latestAudit(prisma);
       expect(audit).toMatchObject({
@@ -229,9 +230,16 @@ describe('methodologies module', () => {
       );
     });
 
-    it('rejects the invalid imports without touching the library', async () => {
-      // 9 seeded + the roundtrip import + the string-body import = 11 total.
-      expect(await prisma.methodology.count()).toBe(11);
+    it('rejects an invalid import without touching the library', async () => {
+      // Capture-before / assert-unchanged: no dependence on how many docs
+      // earlier tests happened to import.
+      const countBefore = await prisma.methodology.count();
+      const res = await app.inject({
+        method: 'POST', url: '/api/v1/methodologies/import',
+        headers: auth(admin.token), payload: { schema_version: 2 },
+      });
+      expect(res.statusCode).toBe(422);
+      expect(await prisma.methodology.count()).toBe(countBefore);
     });
   });
 });

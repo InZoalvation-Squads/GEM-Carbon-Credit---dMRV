@@ -11,10 +11,12 @@ import {
 /**
  * Export filename, same convention as the SPA's download link
  * (carbon-ready/src/pages/Methodologies.tsx): a leading "v" in the stored
- * version is stripped so "v3.0" still yields `CODE-v3.0.json`.
+ * version is stripped so "v3.0" still yields `CODE-v3.0.json`. Double quotes
+ * are stripped too — the filename is emitted inside a quoted
+ * content-disposition parameter, and a stray `"` would break the header.
  */
 function exportFileName(code: string, version: string): string {
-  return `${code}-v${version.replace(/^v/i, '')}.json`;
+  return `${code}-v${version.replace(/^v/i, '')}.json`.replace(/"/g, '');
 }
 
 export async function methodologiesRoutes(app: FastifyInstance): Promise<void> {
