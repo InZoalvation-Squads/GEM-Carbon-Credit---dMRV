@@ -62,14 +62,31 @@ export async function saveStream(
 
   const sha256hex = hasher.digest('hex');
   const path = join(dir, sha256hex);
-  let existed = true;
+  let existed: boolean;
   try {
-    await stat(path); // dedupe: same bytes already stored — drop the tmp copy
-    await rm(tmp, { force: true });
-  } catch {
-    existed = false;
-    await rename(tmp, path);
+    try {
+      await stat(path);
+      existed = true;
+    } catch (err) {
+      // Only "no such file" means the blob is new — any other stat failure
+      // (permissions, I/O) is a real error, not a green light to rename.
+      if ((err as NodeJS.ErrnoException).code !== 'ENOENT') throw err;
+      existed = false;
+    }
+    if (existed) {
+      await rm(tmp, { force: true }); // dedupe: same bytes already stored
+    } else {
+      await rename(tmp, path);
+    }
+  } catch (err) {
+    await rm(tmp, { force: true }); // never leave a tmp file behind
+    throw err;
   }
+  // Theoretical race: request A dedupes onto a blob that request B's rejected
+  // upload then discards (removeBlob checks `existed` per-request, not
+  // globally). A's row would point at a missing blob — which degrades
+  // gracefully: GET /evidence/:id/file 404s on a missing blob rather than
+  // corrupting anything, and re-uploading the same bytes restores it.
   return { sha256hex, size, path, existed };
 }
 

@@ -73,7 +73,7 @@ export function kindFromFileName(fileName: string): FileKind {
       throw appError(
         400,
         'BAD_REQUEST',
-        `Unsupported file type ".${ext || fileName}" — allowed: pdf, png, jpg, jpeg, xlsx`,
+        `Unsupported file type for "${fileName}" — allowed: pdf, png, jpg, jpeg, xlsx`,
       );
   }
 }

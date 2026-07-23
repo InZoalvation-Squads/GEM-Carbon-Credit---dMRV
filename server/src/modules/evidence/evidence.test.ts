@@ -178,6 +178,48 @@ describe('evidence module', () => {
       expect(existsSync(join(config.STORAGE_DIR, sha256hex(data)))).toBe(false);
     });
 
+    it('400s when the multipart body carries fields but no file part', async () => {
+      const { payload, contentType } = multipartBody([
+        { name: 'category', value: 'meter_reading' },
+        { name: 'description', value: 'fields only, no file' },
+      ]);
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/evidence`,
+        headers: { ...auth(owner.token), 'content-type': contentType },
+        payload,
+      });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error).toEqual({
+        code: 'BAD_REQUEST',
+        message: 'multipart file field "file" is required',
+      });
+    });
+
+    it('drains and ignores a second file part — the first file wins', async () => {
+      const first = randomBytes(32);
+      const second = randomBytes(32);
+      const { payload, contentType } = multipartBody([
+        { name: 'category', value: 'meter_reading' },
+        { name: 'file', filename: 'first.pdf', data: first },
+        { name: 'file', filename: 'second.pdf', data: second },
+      ]);
+      const res = await app.inject({
+        method: 'POST',
+        url: `/api/v1/projects/${projectId}/evidence`,
+        headers: { ...auth(owner.token), 'content-type': contentType },
+        payload,
+      });
+      expect(res.statusCode).toBe(201);
+      const ev = res.json().evidence;
+      expect(ev.file_name).toBe('first.pdf');
+      expect(ev.file_size).toBe(first.length);
+      expect(ev.content_hash).toBe(`sha256-${sha256hex(first)}`);
+      // The ignored second file's bytes must never reach the blob store.
+      expect(existsSync(join(config.STORAGE_DIR, sha256hex(first)))).toBe(true);
+      expect(existsSync(join(config.STORAGE_DIR, sha256hex(second)))).toBe(false);
+    });
+
     it('400s on a malformed client_hash (format is sha256-<64hex>)', async () => {
       const data = randomBytes(24);
       const res = await upload(owner.token, projectId, {

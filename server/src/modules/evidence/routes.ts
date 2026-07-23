@@ -29,6 +29,8 @@ export const MAX_UPLOAD_BYTES = 25 * 1024 * 1024; // 25MB, same cap as the SPA u
 // framing + text fields, and let busboy's own fileSize limit enforce 25MB.
 const MULTIPART_BODY_LIMIT = MAX_UPLOAD_BYTES + 1024 * 1024;
 
+const FILE_TOO_LARGE = `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`;
+
 const clientHash = z
   .string()
   .regex(/^sha256-[0-9a-f]{64}$/, 'client_hash must be "sha256-" + 64 lowercase hex chars');
@@ -82,14 +84,14 @@ async function consumeUpload(req: FastifyRequest): Promise<ConsumedUpload> {
       blob = await saveStream(part.file);
       if (part.file.truncated) {
         // busboy hit the fileSize limit and cut the stream short.
-        throw appError(413, 'PAYLOAD_TOO_LARGE', `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`);
+        throw appError(413, 'PAYLOAD_TOO_LARGE', FILE_TOO_LARGE);
       }
     }
   } catch (err) {
     await discard();
     // Belt and braces: @fastify/multipart's own limit error is also a 413.
     if ((err as { code?: string }).code === 'FST_REQ_FILE_TOO_LARGE') {
-      throw appError(413, 'PAYLOAD_TOO_LARGE', `File exceeds the ${MAX_UPLOAD_BYTES} byte limit`);
+      throw appError(413, 'PAYLOAD_TOO_LARGE', FILE_TOO_LARGE);
     }
     throw err;
   }
@@ -140,6 +142,20 @@ async function finishUpload<S extends z.ZodType>(
   };
 }
 
+/**
+ * Run the DB half of an upload; on ANY failure (404 race, 409 non-active
+ * replace, …) discard the freshly written blob before rethrowing so a
+ * rejected request can never leak bytes into the store.
+ */
+async function withDiscard<T>(upload: ConsumedUpload, fn: () => Promise<T>): Promise<T> {
+  try {
+    return await fn();
+  } catch (err) {
+    await upload.discard();
+    throw err;
+  }
+}
+
 function contentTypeFor(kind: FileKind, fileName: string): string {
   switch (kind) {
     case 'pdf':
@@ -170,13 +186,10 @@ export async function evidenceRoutes(app: FastifyInstance): Promise<void> {
       await requireProject(app.prisma, req.user.org, id);
       const upload = await consumeUpload(req);
       const { meta, fields } = await finishUpload(upload, UploadFields);
-      try {
-        const row = await createEvidence(app.prisma, actorFromRequest(req), id, meta, fields);
-        return await reply.code(201).send({ evidence: serializeEvidence(row) });
-      } catch (err) {
-        await upload.discard();
-        throw err;
-      }
+      const row = await withDiscard(upload, () =>
+        createEvidence(app.prisma, actorFromRequest(req), id, meta, fields),
+      );
+      return reply.code(201).send({ evidence: serializeEvidence(row) });
     },
   );
 
@@ -188,14 +201,10 @@ export async function evidenceRoutes(app: FastifyInstance): Promise<void> {
       await getEvidence(app.prisma, req.user.org, id); // 404 before draining the body
       const upload = await consumeUpload(req);
       const { meta, fields } = await finishUpload(upload, ReplaceFields);
-      try {
-        const row = await replaceEvidence(app.prisma, actorFromRequest(req), id, meta, fields);
-        return await reply.code(201).send({ evidence: serializeEvidence(row) });
-      } catch (err) {
-        // e.g. 409 on a non-active row — don't leak the just-written blob.
-        await upload.discard();
-        throw err;
-      }
+      const row = await withDiscard(upload, () =>
+        replaceEvidence(app.prisma, actorFromRequest(req), id, meta, fields),
+      );
+      return reply.code(201).send({ evidence: serializeEvidence(row) });
     },
   );
 
