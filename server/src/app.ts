@@ -8,6 +8,9 @@ import { ERROR_CODES } from './lib/errors.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { usersRoutes } from './modules/users/routes.js';
+import { projectsRoutes } from './modules/projects/routes.js';
+import { factorsRoutes } from './modules/factors/routes.js';
+import { monitoringRoutes } from './modules/monitoring/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -96,6 +99,10 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(authPlugin);
   await app.register(authRoutes, { prefix: '/api/v1/auth' });
   await app.register(usersRoutes, { prefix: '/api/v1/users' });
+  await app.register(projectsRoutes, { prefix: '/api/v1/projects' });
+  await app.register(factorsRoutes, { prefix: '/api/v1/factors' });
+  // Monitoring is a project sub-resource (/projects/:id/monitoring).
+  await app.register(monitoringRoutes, { prefix: '/api/v1/projects' });
 
   return app;
 }
