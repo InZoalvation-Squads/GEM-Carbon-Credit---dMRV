@@ -11,7 +11,7 @@ import 'dotenv/config';
 import { readdirSync, readFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 import { fileURLToPath, pathToFileURL } from 'node:url';
-import { PrismaClient, type UserRole } from '@prisma/client';
+import { PrismaClient, type Prisma, type UserRole } from '@prisma/client';
 import argon2 from 'argon2';
 
 const SEED_DATA_DIR = join(dirname(fileURLToPath(import.meta.url)), 'seed-data');
@@ -109,7 +109,7 @@ export async function seed(prisma: PrismaClient, opts: SeedOptions = {}): Promis
       standard: doc.standard,
       version: doc.version,
       status: doc.status,
-      document: doc,
+      document: doc as Prisma.InputJsonValue,
     };
     await prisma.methodology.upsert({
       where: { id },

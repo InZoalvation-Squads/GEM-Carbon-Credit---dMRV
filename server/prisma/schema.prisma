@@ -110,6 +110,7 @@ model User {
 
   organization Organization @relation(fields: [organization_id], references: [id])
 
+  @@index([organization_id])
   @@map("users")
 }
 
@@ -131,6 +132,7 @@ model Project {
   verifications      VerificationRequest[]
   pdds               Pdd[]
 
+  @@index([organization_id])
   @@map("projects")
 }
 
@@ -185,6 +187,7 @@ model EvidenceFile {
   children EvidenceFile[] @relation("EvidenceVersionChain")
 
   @@index([project_id])
+  @@index([parent_id])
   @@map("evidence_files")
 }
 
@@ -275,6 +278,7 @@ model Pdd {
   methodology Methodology @relation(fields: [methodology_id], references: [id])
 
   @@index([project_id])
+  @@index([methodology_id])
   @@map("pdds")
 }
 
@@ -304,6 +308,7 @@ model GuardianToken {
 
   credential Credential @relation(fields: [credential_id], references: [id])
 
+  @@index([project_id])
   @@map("guardian_tokens")
 }
 
