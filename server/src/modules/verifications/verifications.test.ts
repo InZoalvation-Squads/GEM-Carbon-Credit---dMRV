@@ -5,6 +5,7 @@ import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import {
   auth,
   createAdmin,
+  createOrg,
   registerUser,
   expectValidChainTail,
   latestAudit,
@@ -17,12 +18,21 @@ import { uid } from '../../lib/uid.js';
 const FACTORS_SNAPSHOT = 'MoEnCo 2025-v1 · 0.4999 kgCO₂e/kWh';
 const DEFAULT_CATEGORIES = ['meter_reading', 'utility_bill', 'commissioning_report', 'site_photo'];
 
+const VERIFICATION_PUBLIC_KEYS = [
+  'id', 'project_id', 'created_by', 'owner_name', 'assigned_verifier_name', 'state',
+  'monitoring_period_start', 'monitoring_period_end', 'reduction_kgco2e',
+  'factors_snapshot', 'evidence_ids', 'required_categories', 'submitted_at',
+  'locked_at', 'sla_target_days', 'rejection_reason', 'hash_value',
+  'credential_id', 'anchored_at', 'hcs_topic_id', 'hcs_sequence_number',
+];
+
 describe('verifications module', () => {
   let prisma: PrismaClient;
   let app: FastifyInstance;
   let owner: { id: string; token: string };
   let verifier: { id: string; token: string };
   let admin: { id: string; token: string };
+  let otherOrgToken: string;
   let projectId: string;
 
   beforeAll(async () => {
@@ -34,6 +44,21 @@ describe('verifications module', () => {
     owner = await registerUser(app, 'project_owner');
     verifier = await registerUser(app, 'verifier');
     admin = await createAdmin(app, prisma);
+
+    // A second organization to prove org scoping (registration always joins
+    // the first org, so build this user directly).
+    await createOrg(prisma, 'org-0002', 'Other Org');
+    await prisma.user.create({
+      data: {
+        id: 'usr-other-org-vr',
+        organization_id: 'org-0002',
+        email: 'other-vr@example.com',
+        name: 'Other Org Owner',
+        role: 'project_owner',
+        password_hash: 'not-a-real-hash',
+      },
+    });
+    otherOrgToken = app.jwt.sign({ sub: 'usr-other-org-vr', role: 'project_owner', org: 'org-0002' });
 
     const res = await app.inject({
       method: 'POST', url: '/api/v1/projects', headers: auth(owner.token),
@@ -93,6 +118,8 @@ describe('verifications module', () => {
       const res = await createPackage();
       expect(res.statusCode).toBe(201);
       const v = res.json().verification as Record<string, unknown>;
+      // Exact allowlist — nothing beyond PublicVerification ever leaves the API.
+      expect(Object.keys(v).sort()).toEqual([...VERIFICATION_PUBLIC_KEYS].sort());
       expect(v).toMatchObject({
         project_id: projectId,
         created_by: owner.id,
@@ -264,6 +291,23 @@ describe('verifications module', () => {
       await expect409(`/api/v1/verifications/${reviewing}/request-revision`, verifier.token, { summary: 's' });
       await expect409(`/api/v1/verifications/${reviewing}/approve`, verifier.token);
       await expect409(`/api/v1/verifications/${reviewing}/reject`, verifier.token, { reason: 'r' });
+
+      // From revision_required: only submit is legal.
+      const revising = await packageIn('under_review');
+      await post(`/api/v1/verifications/${revising}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/verifications/${revising}/start-review`, verifier.token);
+      await expect409(`/api/v1/verifications/${revising}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/verifications/${revising}/approve`, verifier.token);
+      await expect409(`/api/v1/verifications/${revising}/reject`, verifier.token, { reason: 'r' });
+
+      // Terminal: rejected accepts nothing.
+      const rejected = await packageIn('under_review');
+      await post(`/api/v1/verifications/${rejected}/reject`, verifier.token, { reason: 'r' });
+      await expect409(`/api/v1/verifications/${rejected}/submit`, owner.token);
+      await expect409(`/api/v1/verifications/${rejected}/start-review`, verifier.token);
+      await expect409(`/api/v1/verifications/${rejected}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/verifications/${rejected}/approve`, verifier.token);
+      await expect409(`/api/v1/verifications/${rejected}/reject`, verifier.token, { reason: 'r' });
     });
 
     it('enforces the verifier-side role guards (and admin passes them)', async () => {
@@ -340,6 +384,22 @@ describe('verifications module', () => {
         'Package looks complete.', 'Re-uploaded a clearer scan.',
       ]);
       await expectValidChainTail(prisma);
+    });
+  });
+
+  describe('cross-org isolation', () => {
+    it('a foreign-org user cannot see, transition or comment on our packages (404)', async () => {
+      const id = await packageIn('submitted');
+      // Detail GET — a foreign package is indistinguishable from a missing one.
+      const detail = await app.inject({
+        method: 'GET', url: `/api/v1/verifications/${id}`, headers: auth(otherOrgToken),
+      });
+      expect(detail.statusCode).toBe(404);
+      // Transition (role passes — project_owner — but org scoping 404s first).
+      expect((await post(`/api/v1/verifications/${id}/submit`, otherOrgToken)).statusCode).toBe(404);
+      // Comment create.
+      const comment = await post(`/api/v1/verifications/${id}/comments`, otherOrgToken, { body: 'x' });
+      expect(comment.statusCode).toBe(404);
     });
   });
 

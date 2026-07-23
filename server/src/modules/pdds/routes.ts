@@ -9,6 +9,7 @@ import { idParams } from '../../lib/validation.js';
 import { serializeComment } from '../verifications/service.js';
 import {
   addPddComment,
+  getDisclosure,
   getPdd,
   getPddByProject,
   listPddComments,
@@ -90,19 +91,31 @@ export async function pddsRoutes(app: FastifyInstance): Promise<void> {
     return { pdd: serializePdd(pdd) };
   });
 
-  // registerProject: the ONLY response that ever carries disclosure_salts —
-  // the proponent's browser must retain them privately for later selective-
-  // disclosure proofs and for building the VC subject (Task 8). Every GET
-  // serializes via PublicPdd, which omits them permanently.
+  // registerProject: returns the {disclosed, redacted} split so the caller
+  // sees what the credential will publish — but NO salts: register is a
+  // validator-triggered action, and the server keeps custody of the salts.
+  // The proponent fetches them via GET /pdds/:id/disclosure below.
   app.post('/pdds/:id/register', { preHandler: validator }, async (req) => {
     const { id } = idParams.parse(req.params);
     const result = await registerProject(app.prisma, actorFromRequest(req), id);
     return {
       pdd: serializePdd(result.pdd),
       disclosure: result.disclosure,
-      disclosure_salts: result.disclosure_salts,
     };
   });
+
+  // The ONE endpoint that exposes disclosure_salts — proponent-side roles
+  // only (verifiers see just the published hashes), org-scoped, and only for
+  // a registered PDD. Used to prove redacted values offline and to build the
+  // VC subject (Task 8).
+  app.get(
+    '/pdds/:id/disclosure',
+    { preHandler: [app.authenticate, app.requireRole('project_owner', 'esg_manager', 'admin')] },
+    async (req) => {
+      const { id } = idParams.parse(req.params);
+      return getDisclosure(app.prisma, req.user.org, id);
+    },
+  );
 
   app.post('/pdds/:id/reject', { preHandler: validator }, async (req) => {
     const { id } = idParams.parse(req.params);

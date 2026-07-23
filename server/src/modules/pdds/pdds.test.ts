@@ -5,6 +5,7 @@ import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import {
   auth,
   createAdmin,
+  createOrg,
   registerUser,
   expectValidChainTail,
   latestAudit,
@@ -42,6 +43,7 @@ describe('pdds module', () => {
   let owner: { id: string; token: string };
   let verifier: { id: string; token: string };
   let admin: { id: string; token: string };
+  let otherOrgToken: string;
 
   beforeAll(async () => {
     const url = await setupTestDatabase();
@@ -52,6 +54,21 @@ describe('pdds module', () => {
     owner = await registerUser(app, 'project_owner');
     verifier = await registerUser(app, 'verifier');
     admin = await createAdmin(app, prisma);
+
+    // A second organization to prove org scoping (registration always joins
+    // the first org, so build this user directly).
+    await createOrg(prisma, 'org-0002', 'Other Org');
+    await prisma.user.create({
+      data: {
+        id: 'usr-other-org-pdds',
+        organization_id: 'org-0002',
+        email: 'other-pdds@example.com',
+        name: 'Other Org Owner',
+        role: 'project_owner',
+        password_hash: 'not-a-real-hash',
+      },
+    });
+    otherOrgToken = app.jwt.sign({ sub: 'usr-other-org-pdds', role: 'project_owner', org: 'org-0002' });
   }, 60_000);
 
   afterAll(async () => {
@@ -283,7 +300,6 @@ describe('pdds module', () => {
       const body = registered.json() as {
         pdd: Record<string, unknown>;
         disclosure: { disclosed: Record<string, unknown>; redacted: Array<{ key: string; value_hash: string }> };
-        disclosure_salts: Record<string, string>;
       };
       const expectedHash = pddContentHash({
         methodology_snapshot: 'T-VER-S-01 v3.0',
@@ -305,28 +321,49 @@ describe('pdds module', () => {
       ]);
       expect(body.disclosure.disclosed).not.toHaveProperty('barrier_explanation');
       expect(body.disclosure.disclosed).toMatchObject({ technology: 'Solar PV rooftop' });
-      // … the salts are returned HERE (and only here), one 16-byte hex per field …
-      expect(Object.keys(body.disclosure_salts).sort()).toEqual([
+      // … but register (a validator-triggered action) NEVER returns the salts:
+      // the server keeps custody, and the proponent fetches them separately.
+      expect(registered.body).not.toContain('disclosure_salts');
+      expect(body.pdd).not.toHaveProperty('disclosure_salts');
+
+      // GET /pdds/:id/disclosure — the ONE salt-bearing endpoint, proponent only.
+      const verifierDisclosure = await app.inject({
+        method: 'GET', url: `/api/v1/pdds/${pddId}/disclosure`, headers: auth(verifier.token),
+      });
+      expect(verifierDisclosure.statusCode).toBe(403);
+      expect(verifierDisclosure.json().error.code).toBe('FORBIDDEN');
+
+      const disclosureRes = await app.inject({
+        method: 'GET', url: `/api/v1/pdds/${pddId}/disclosure`, headers: auth(owner.token),
+      });
+      expect(disclosureRes.statusCode).toBe(200);
+      const disclosure = disclosureRes.json() as {
+        disclosed: Record<string, unknown>;
+        redacted: Array<{ key: string; value_hash: string }>;
+        disclosure_salts: Record<string, string>;
+      };
+      // Same frozen split as the register response …
+      expect(disclosure.disclosed).toEqual(body.disclosure.disclosed);
+      expect(disclosure.redacted).toEqual(body.disclosure.redacted);
+      // … plus the salts, one 16-byte hex per sensitive published field …
+      expect(Object.keys(disclosure.disclosure_salts).sort()).toEqual([
         'barrier_explanation', 'investment_metric',
       ]);
-      for (const salt of Object.values(body.disclosure_salts)) {
+      for (const salt of Object.values(disclosure.disclosure_salts)) {
         expect(salt).toMatch(/^[0-9a-f]{32}$/);
       }
       // … and value + salt verify offline against the published hashes.
-      for (const { key, value_hash } of body.disclosure.redacted) {
+      for (const { key, value_hash } of disclosure.redacted) {
         expect(verifyDisclosedValue(
           SOLAR_SECTION_DATA[key as keyof typeof SOLAR_SECTION_DATA],
-          body.disclosure_salts[key]!,
+          disclosure.disclosure_salts[key]!,
           value_hash,
         )).toBe(true);
       }
       expect(verifyDisclosedValue(
-        'wrong value', body.disclosure_salts.investment_metric!,
-        body.disclosure.redacted.find((r) => r.key === 'investment_metric')!.value_hash,
+        'wrong value', disclosure.disclosure_salts.investment_metric!,
+        disclosure.redacted.find((r) => r.key === 'investment_metric')!.value_hash,
       )).toBe(false);
-
-      // The register response's pdd object itself never carries the salts.
-      expect(body.pdd).not.toHaveProperty('disclosure_salts');
 
       expect(await latestAudit(prisma)).toMatchObject({
         user_id: verifier.id,
@@ -341,9 +378,10 @@ describe('pdds module', () => {
       });
       await expectValidChainTail(prisma);
 
-      // disclosure_salts are persisted but NEVER surface in any GET.
+      // disclosure_salts are persisted (server custody) but NEVER surface in
+      // any PDD GET — only /disclosure above exposes them.
       const row = await prisma.pdd.findUniqueOrThrow({ where: { id: pddId } });
-      expect(row.disclosure_salts).toEqual(body.disclosure_salts);
+      expect(row.disclosure_salts).toEqual(disclosure.disclosure_salts);
       for (const url of [
         `/api/v1/pdds/${pddId}`,
         `/api/v1/projects/${projectId}/pdd`,
@@ -352,8 +390,17 @@ describe('pdds module', () => {
         const res = await app.inject({ method: 'GET', url, headers: auth(owner.token) });
         expect(res.statusCode).toBe(200);
         expect(res.body).not.toContain('disclosure_salts');
-        expect(res.body).not.toContain(body.disclosure_salts.investment_metric!);
+        expect(res.body).not.toContain(disclosure.disclosure_salts.investment_metric!);
       }
+    });
+
+    it('409s the disclosure endpoint until the PDD is registered', async () => {
+      const { pddId } = await pddUnderValidation(SOLAR_SECTION_DATA);
+      const res = await app.inject({
+        method: 'GET', url: `/api/v1/pdds/${pddId}/disclosure`, headers: auth(owner.token),
+      });
+      expect(res.statusCode).toBe(409);
+      expect(res.json().error.code).toBe('CONFLICT');
     });
 
     it('register 422s with the missing-field list when validatePdd fails', async () => {
@@ -428,6 +475,23 @@ describe('pdds module', () => {
       await expect409(`/api/v1/pdds/${pddId}/request-revision`, verifier.token, { summary: 's' });
       await expect409(`/api/v1/pdds/${pddId}/register`, verifier.token);
       await expect409(`/api/v1/pdds/${pddId}/reject`, verifier.token, { reason: 'r' });
+
+      // From revision_required: only edits + submit are legal.
+      const rev = await pddUnderValidation(SOLAR_SECTION_DATA);
+      await post(`/api/v1/pdds/${rev.pddId}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/pdds/${rev.pddId}/start-validation`, verifier.token);
+      await expect409(`/api/v1/pdds/${rev.pddId}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/pdds/${rev.pddId}/register`, verifier.token);
+      await expect409(`/api/v1/pdds/${rev.pddId}/reject`, verifier.token, { reason: 'r' });
+
+      // Terminal: rejected accepts nothing.
+      const rej = await pddUnderValidation(SOLAR_SECTION_DATA);
+      await post(`/api/v1/pdds/${rej.pddId}/reject`, verifier.token, { reason: 'r' });
+      await expect409(`/api/v1/pdds/${rej.pddId}/submit`, owner.token);
+      await expect409(`/api/v1/pdds/${rej.pddId}/start-validation`, verifier.token);
+      await expect409(`/api/v1/pdds/${rej.pddId}/request-revision`, verifier.token, { summary: 's' });
+      await expect409(`/api/v1/pdds/${rej.pddId}/register`, verifier.token);
+      await expect409(`/api/v1/pdds/${rej.pddId}/reject`, verifier.token, { reason: 'r' });
     });
 
     it('enforces the validator-side role guards (and admin passes them)', async () => {
@@ -492,6 +556,27 @@ describe('pdds module', () => {
         'PR follows the manufacturer datasheet.',
       ]);
       await expectValidChainTail(prisma);
+    });
+  });
+
+  describe('cross-org isolation', () => {
+    it('a foreign-org user cannot see, transition or comment on our PDDs (404)', async () => {
+      const { pddId } = await pddUnderValidation(SOLAR_SECTION_DATA);
+      // Detail GET — a foreign PDD is indistinguishable from a missing one.
+      const detail = await app.inject({
+        method: 'GET', url: `/api/v1/pdds/${pddId}`, headers: auth(otherOrgToken),
+      });
+      expect(detail.statusCode).toBe(404);
+      // Transition (role passes — project_owner — but org scoping 404s first).
+      expect((await post(`/api/v1/pdds/${pddId}/submit`, otherOrgToken)).statusCode).toBe(404);
+      // Comment create.
+      const comment = await post(`/api/v1/pdds/${pddId}/comments`, otherOrgToken, { body: 'x' });
+      expect(comment.statusCode).toBe(404);
+      // Disclosure endpoint is org-scoped too.
+      const disclosure = await app.inject({
+        method: 'GET', url: `/api/v1/pdds/${pddId}/disclosure`, headers: auth(otherOrgToken),
+      });
+      expect(disclosure.statusCode).toBe(404);
     });
   });
 

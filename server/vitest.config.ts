@@ -20,6 +20,8 @@ export default defineConfig({
     include: ['src/**/*.test.ts'],
     // Test files within a run share that run's database — keep them sequential.
     fileParallelism: false,
+    // The test DB is remote (Tailscale) — the 5s default flakes on slow links.
+    testTimeout: 30_000,
     env: { VITEST_DB_SUFFIX: dbSuffix, STORAGE_DIR: storageDir }, // for test workers
     globalSetup: ['./src/test/global-setup.ts'],
   },

@@ -27,8 +27,10 @@ const ASSIGNED_VALIDATOR = 'Daniel Okoye';
  * ⚠️ SECURITY: `disclosure_salts` is INTENTIONALLY ABSENT and MUST STAY absent.
  * The salts are the private half of selective disclosure — publishing them
  * alongside the salted hashes in the PDD credential would let anyone brute-
- * force the redacted values. They leave the server exactly ONCE, in the
- * register-action response (see registerProject), and never via any GET.
+ * force the redacted values. The SERVER is their custodian (persisted on the
+ * pdd row); they are exposed solely through the proponent-scoped
+ * GET /pdds/:id/disclosure endpoint (getDisclosure) — never in PublicPdd,
+ * lists, or any other response.
  */
 export type PublicPdd = {
   id: string;
@@ -174,16 +176,18 @@ export async function savePddDraft(
   evidenceIds: string[],
 ): Promise<Pdd> {
   const pdd = await requirePdd(prisma, actor.org, pddId);
-  if (pdd.state !== 'draft' && pdd.state !== 'revision_required') {
-    illegalTransition('edit', pdd.state);
-  }
-  return prisma.pdd.update({
-    where: { id: pdd.id },
+  // Guarded update (id AND state) so a save racing a submit/validate can
+  // never touch a PDD that just left the editable states — the loser sees
+  // count 0 and conflicts.
+  const updated = await prisma.pdd.updateMany({
+    where: { id: pdd.id, state: { in: ['draft', 'revision_required'] } },
     data: {
       section_data: sectionData as Prisma.InputJsonValue,
       evidence_ids: evidenceIds,
     },
   });
+  if (updated.count !== 1) illegalTransition('edit', pdd.state);
+  return prisma.pdd.findUniqueOrThrow({ where: { id: pdd.id } });
 }
 
 // ---------------- submitPdd ----------------
@@ -287,13 +291,13 @@ export async function requestPddRevision(
 // ---------------- registerProject ----------------
 export interface RegisterResult {
   pdd: Pdd;
-  disclosure: DisclosureSplit;
   /**
-   * ⚠️ Returned HERE and ONLY here. The proponent's browser must retain the
-   * salts privately to later prove redacted values (verifyDisclosedValue) and
-   * to build the VC subject's salted hashes; no GET endpoint ever returns them.
+   * The {disclosed, redacted} split only — NO salts. Register is a
+   * validator-triggered action; the salts stay in server custody on the pdd
+   * row and are fetched by the PROPONENT via getDisclosure when building
+   * selective-disclosure proofs.
    */
-  disclosure_salts: Record<string, string>;
+  disclosure: DisclosureSplit;
 }
 
 export async function registerProject(
@@ -328,7 +332,8 @@ export async function registerProject(
     const ipfs_cid = toIpfsCid(content_hash);
 
     // One private salt per sensitive published field, so value hashes are
-    // non-guessable. Salts stay on the owner's PDD record; value + salt verify
+    // non-guessable. The server keeps custody of the salts on the pdd row;
+    // the proponent fetches them via getDisclosure, and value + salt verify
     // offline against the VC. (SPA: randomSaltHex — node:crypto here.)
     const salts: Record<string, string> = {};
     for (const key of sensitiveFieldKeys(doc, sectionData)) {
@@ -367,8 +372,38 @@ export async function registerProject(
       previousValue: { state: pdd.state },
       newValue: { state: 'registered', content_hash, ipfs_cid },
     });
-    return { pdd: updated, disclosure, disclosure_salts: salts };
+    return { pdd: updated, disclosure };
   });
+}
+
+// ---------------- getDisclosure ----------------
+export interface DisclosureResult extends DisclosureSplit {
+  /**
+   * ⚠️ The ONLY place salts ever leave the server. This endpoint is
+   * proponent-scoped (project_owner | esg_manager | admin — never verifiers):
+   * the owner fetches value salts to prove redacted fields offline
+   * (verifyDisclosedValue) and to build VC subjects. The server remains the
+   * custodian — PublicPdd, lists and every other response omit them.
+   */
+  disclosure_salts: Record<string, string>;
+}
+
+export async function getDisclosure(
+  prisma: PrismaClient,
+  organizationId: string,
+  pddId: string,
+): Promise<DisclosureResult> {
+  const pdd = await requirePdd(prisma, organizationId, pddId);
+  // Salts (and the frozen split) only exist once registration froze the PDD.
+  if (pdd.state !== 'registered') {
+    throw appError(409, 'CONFLICT', `PDD is not registered yet (state: "${pdd.state}")`);
+  }
+  const m = await prisma.methodology.findUniqueOrThrow({ where: { id: pdd.methodology_id } });
+  const salts = (pdd.disclosure_salts ?? {}) as Record<string, string>;
+  // Deterministic recomputation of the frozen split: same doc, same frozen
+  // section_data, same persisted salts ⇒ bit-identical hashes as at register.
+  const split = splitDisclosure(documentOf(m), (pdd.section_data ?? {}) as Record<string, unknown>, salts);
+  return { ...split, disclosure_salts: salts };
 }
 
 // ---------------- rejectPdd ----------------
