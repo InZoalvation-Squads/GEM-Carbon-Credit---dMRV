@@ -104,9 +104,10 @@ model User {
   email              String   @unique
   name               String
   role               UserRole
-  password_hash      String
-  refresh_token_hash String?
-  created_at         DateTime @default(now())
+  password_hash            String
+  refresh_token_hash       String?
+  refresh_token_expires_at DateTime? // 7-day refresh validity, enforced server-side
+  created_at               DateTime  @default(now())
 
   organization Organization @relation(fields: [organization_id], references: [id])
 

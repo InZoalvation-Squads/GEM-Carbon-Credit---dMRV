@@ -2,7 +2,23 @@ import Fastify, { type FastifyError, type FastifyInstance } from 'fastify';
 import cors from '@fastify/cors';
 import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
+import type { PrismaClient } from '@prisma/client';
 import { config } from './config.js';
+import { authPlugin } from './plugins/auth.js';
+import { authRoutes } from './modules/auth/routes.js';
+import { usersRoutes } from './modules/users/routes.js';
+
+declare module 'fastify' {
+  interface FastifyInstance {
+    /** Database handle used by all modules; injectable for tests. */
+    prisma: PrismaClient;
+  }
+}
+
+export interface BuildAppOptions {
+  /** Override the PrismaClient (route tests point this at the test DB). */
+  prisma?: PrismaClient;
+}
 
 /**
  * Uniform error envelope: every non-2xx response body is
@@ -44,10 +60,19 @@ export function zodIssuesMessage(err: ZodError): string {
   return extra > 0 ? `${shown.join('; ')} (+${extra} more)` : shown.join('; ');
 }
 
-export async function buildApp(): Promise<FastifyInstance> {
+export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInstance> {
   const app = Fastify({
     logger: process.env.NODE_ENV !== 'test' && { level: 'info' },
   });
+
+  if (opts.prisma) {
+    app.decorate('prisma', opts.prisma);
+  } else {
+    // Lazy import so tests that inject their own client never construct the
+    // default (real-DB) singleton.
+    const { prisma } = await import('./lib/db.js');
+    app.decorate('prisma', prisma);
+  }
 
   await app.register(cors, { origin: config.CORS_ORIGIN });
   // Registered globally but disabled by default; auth routes opt in with
@@ -75,6 +100,10 @@ export async function buildApp(): Promise<FastifyInstance> {
   });
 
   app.get('/health', async () => ({ ok: true }));
+
+  await app.register(authPlugin);
+  await app.register(authRoutes, { prefix: '/api/v1/auth' });
+  await app.register(usersRoutes, { prefix: '/api/v1/users' });
 
   return app;
 }
