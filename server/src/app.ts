@@ -4,6 +4,7 @@ import rateLimit from '@fastify/rate-limit';
 import { ZodError } from 'zod';
 import type { PrismaClient } from '@prisma/client';
 import { config } from './config.js';
+import { ERROR_CODES } from './lib/errors.js';
 import { authPlugin } from './plugins/auth.js';
 import { authRoutes } from './modules/auth/routes.js';
 import { usersRoutes } from './modules/users/routes.js';
@@ -28,20 +29,11 @@ function envelope(code: string, message: string) {
   return { error: { code, message } };
 }
 
-// Only these application-level codes pass through to clients verbatim.
-// Everything else (Fastify's FST_*, Node's ERR_*, ad-hoc strings) is mapped
-// to a generic family so internals never leak into the API contract.
-const PASSTHROUGH_ERROR_CODES = new Set([
-  'BAD_REQUEST',
-  'VALIDATION_ERROR',
-  'UNAUTHORIZED',
-  'FORBIDDEN',
-  'NOT_FOUND',
-  'CONFLICT',
-  'UNPROCESSABLE',
-  'PAYLOAD_TOO_LARGE',
-  'RATE_LIMITED',
-]);
+// Only the application-level codes from lib/errors.ts pass through to
+// clients verbatim. Everything else (Fastify's FST_*, Node's ERR_*, ad-hoc
+// strings) is mapped to a generic family so internals never leak into the
+// API contract.
+const PASSTHROUGH_ERROR_CODES = new Set<string>(ERROR_CODES);
 
 function publicErrorCode(err: FastifyError, statusCode: number): string {
   if (err.code && PASSTHROUGH_ERROR_CODES.has(err.code)) return err.code;

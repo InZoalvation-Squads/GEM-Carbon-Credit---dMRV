@@ -3,7 +3,7 @@ import jwt from '@fastify/jwt';
 import type { FastifyReply, FastifyRequest } from 'fastify';
 import type { UserRole } from '@prisma/client';
 import { config } from '../config.js';
-import { appError } from '../lib/errors.js';
+import { appError, unauthorized } from '../lib/errors.js';
 
 /** Claims carried by the 15-minute access token. */
 export interface AccessTokenClaims {
@@ -46,14 +46,14 @@ export const authPlugin = fp(
       try {
         await req.jwtVerify();
       } catch {
-        throw appError(401, 'UNAUTHORIZED', 'Missing or invalid access token');
+        throw unauthorized();
       }
     });
 
     app.decorate('requireRole', (...roles: UserRole[]) => {
       return async (req: FastifyRequest) => {
         // Defensive: guard used without `authenticate` first.
-        if (!req.user) throw appError(401, 'UNAUTHORIZED', 'Missing or invalid access token');
+        if (!req.user) throw unauthorized();
         if (!roles.includes(req.user.role)) {
           throw appError(403, 'FORBIDDEN', `Requires role: ${roles.join(' or ')}`);
         }

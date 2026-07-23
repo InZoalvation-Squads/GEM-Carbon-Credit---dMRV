@@ -1,5 +1,6 @@
 import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
+import argon2 from 'argon2';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import { buildApp } from '../../app.js';
@@ -77,10 +78,12 @@ describe('auth module', () => {
       const random = body.refresh_token.slice(body.user.id.length + 1);
       expect(random).toMatch(/^[0-9a-f]{64}$/); // 256-bit hex
 
-      // stored hashed (argon2), never plaintext; expiry ~7 days out
+      // refresh token stored SHA-256-hashed (64 hex), never plaintext;
+      // password stored argon2id; expiry ~7 days out
       const row = await prisma.user.findUniqueOrThrow({ where: { id: body.user.id } });
-      expect(row.refresh_token_hash).toMatch(/^\$argon2id\$/);
-      expect(row.refresh_token_hash).not.toContain(random);
+      expect(row.refresh_token_hash).toMatch(/^[0-9a-f]{64}$/);
+      expect(row.refresh_token_hash).not.toBe(body.refresh_token);
+      expect(row.refresh_token_hash).not.toBe(random);
       expect(row.password_hash).toMatch(/^\$argon2id\$/);
       const ttlMs = row.refresh_token_expires_at!.getTime() - Date.now();
       expect(ttlMs).toBeGreaterThan(6.9 * 24 * 60 * 60 * 1000);
@@ -103,6 +106,13 @@ describe('auth module', () => {
       const res = await registerUser(app, { email: 'role@example.com', role: 'superuser' });
       expect(res.statusCode).toBe(400);
       expect(res.json().error.code).toBe('VALIDATION_ERROR');
+    });
+
+    it('SECURITY: refuses to self-register an admin (400)', async () => {
+      const res = await registerUser(app, { email: 'wannabe-admin@example.com', role: 'admin' });
+      expect(res.statusCode).toBe(400);
+      expect(res.json().error.code).toBe('VALIDATION_ERROR');
+      expect(await prisma.user.count({ where: { email: 'wannabe-admin@example.com' } })).toBe(0);
     });
   });
 
@@ -314,7 +324,24 @@ describe('auth module', () => {
     });
 
     it('lets the allowed role through', async () => {
-      const token = await tokenFor('guard-admin@example.com', 'admin');
+      // Admins cannot self-register — provision one directly, then log in.
+      await prisma.user.create({
+        data: {
+          id: 'usr-test-admin',
+          organization_id: ORG.id,
+          email: 'guard-admin@example.com',
+          name: 'Guard Admin',
+          role: 'admin',
+          password_hash: await argon2.hash('password-123', { type: argon2.argon2id }),
+        },
+      });
+      const login = await guarded.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: 'guard-admin@example.com', password: 'password-123' },
+      });
+      expect(login.statusCode).toBe(200);
+      const token = login.json().access_token as string;
       const res = await guarded.inject({
         method: 'GET',
         url: '/admin-only',

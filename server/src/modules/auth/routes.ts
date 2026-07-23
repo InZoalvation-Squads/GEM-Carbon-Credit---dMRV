@@ -1,13 +1,13 @@
 import type { FastifyInstance } from 'fastify';
 import type { User } from '@prisma/client';
 import { z } from 'zod';
+import { serializeUser } from '../users/service.js';
 import {
   loginUser,
   logoutUser,
   registerUser,
   rotateRefreshToken,
   issueRefreshToken,
-  serializeUser,
 } from './service.js';
 
 // Auth routes are brute-forceable — 20 requests/min per client (plan §Task 3).
@@ -16,7 +16,9 @@ const AUTH_RATE_LIMIT = { rateLimit: { max: 20, timeWindow: '1 minute' } };
 const RegisterBody = z.object({
   name: z.string().trim().min(1, 'name is required'),
   email: z.email().transform((e) => e.toLowerCase()),
-  role: z.enum(['admin', 'project_owner', 'esg_manager', 'verifier']),
+  // SECURITY: 'admin' is deliberately absent — admins are provisioned via
+  // seed/ops, never through self-service registration.
+  role: z.enum(['project_owner', 'esg_manager', 'verifier']),
   password: z.string().min(8, 'password must be at least 8 characters'),
 });
 

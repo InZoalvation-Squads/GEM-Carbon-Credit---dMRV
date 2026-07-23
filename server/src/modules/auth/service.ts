@@ -1,11 +1,20 @@
-import { randomBytes } from 'node:crypto';
+import { createHash, randomBytes, timingSafeEqual } from 'node:crypto';
 import argon2 from 'argon2';
 import { Prisma, type PrismaClient, type User, type UserRole } from '@prisma/client';
 import { appError } from '../../lib/errors.js';
 import { uid } from '../../lib/uid.js';
 
-/** argon2id everywhere — passwords AND stored refresh-token hashes. */
+/** argon2id for passwords (low-entropy, needs memory-hard hashing). */
 const ARGON2_OPTS = { type: argon2.argon2id } as const;
+
+/**
+ * Storage hash for refresh tokens. The token already carries 256 bits of
+ * entropy, so memory-hard hashing buys nothing — plain SHA-256 keeps the DB
+ * copy useless to a thief without slowing every rotation down.
+ */
+function hashRefreshToken(token: string): string {
+  return createHash('sha256').update(token).digest('hex');
+}
 
 export const REFRESH_TOKEN_TTL_MS = 7 * 24 * 60 * 60 * 1000; // 7 days
 
@@ -14,38 +23,13 @@ const BAD_CREDENTIALS = 'Invalid email or password';
 const INVALID_REFRESH = 'Invalid refresh token';
 
 // ---------------------------------------------------------------------------
-// Serialization — the ONLY way user rows leave this module. Sensitive columns
-// (password_hash, refresh_token_hash, refresh_token_expires_at) never appear.
-// ---------------------------------------------------------------------------
-
-export interface PublicUser {
-  id: string;
-  organization_id: string;
-  email: string;
-  name: string;
-  role: UserRole;
-  created_at: string;
-}
-
-export function serializeUser(user: User): PublicUser {
-  return {
-    id: user.id,
-    organization_id: user.organization_id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    created_at: user.created_at.toISOString(),
-  };
-}
-
-// ---------------------------------------------------------------------------
 // Register / login
 // ---------------------------------------------------------------------------
 
 export interface RegisterInput {
   name: string;
   email: string; // already normalized lowercase by the route schema
-  role: UserRole;
+  role: Exclude<UserRole, 'admin'>; // admins are never self-registered
   password: string;
 }
 
@@ -103,12 +87,12 @@ export async function loginUser(
 
 // ---------------------------------------------------------------------------
 // Refresh tokens — `<userId>.<256-bit random hex>` so lookup is a PK fetch,
-// stored argon2id-hashed on the user row, rotated on every use.
+// stored SHA-256-hashed on the user row, rotated on every use.
 // ---------------------------------------------------------------------------
 
 export async function issueRefreshToken(prisma: PrismaClient, userId: string): Promise<string> {
   const token = `${userId}.${randomBytes(32).toString('hex')}`;
-  const refresh_token_hash = await argon2.hash(token, ARGON2_OPTS);
+  const refresh_token_hash = hashRefreshToken(token);
   await prisma.user.update({
     where: { id: userId },
     data: {
@@ -144,7 +128,10 @@ export async function rotateRefreshToken(
     throw appError(401, 'UNAUTHORIZED', INVALID_REFRESH);
   }
 
-  const matches = await argon2.verify(user.refresh_token_hash, presented);
+  const presentedHash = Buffer.from(hashRefreshToken(presented), 'hex');
+  const storedHash = Buffer.from(user.refresh_token_hash, 'hex');
+  const matches =
+    presentedHash.length === storedHash.length && timingSafeEqual(presentedHash, storedHash);
   if (!matches) {
     // Reuse detection: a structurally valid token for this user that does not
     // match the CURRENT hash is an already-rotated (or forged) token being
