@@ -11,6 +11,7 @@ import { usersRoutes } from './modules/users/routes.js';
 import { projectsRoutes } from './modules/projects/routes.js';
 import { factorsRoutes } from './modules/factors/routes.js';
 import { monitoringRoutes } from './modules/monitoring/routes.js';
+import { evidenceRoutes } from './modules/evidence/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -41,6 +42,9 @@ const PASSTHROUGH_ERROR_CODES = new Set<string>(ERROR_CODES);
 function publicErrorCode(err: FastifyError, statusCode: number): string {
   if (err.code && PASSTHROUGH_ERROR_CODES.has(err.code)) return err.code;
   if (statusCode === 429) return 'RATE_LIMITED';
+  // Any body/file size rejection (Fastify's own FST_ERR_CTP_BODY_TOO_LARGE,
+  // @fastify/multipart's FST_REQ_FILE_TOO_LARGE, …) speaks one public code.
+  if (statusCode === 413) return 'PAYLOAD_TOO_LARGE';
   return statusCode >= 500 ? 'INTERNAL' : 'BAD_REQUEST';
 }
 
@@ -103,6 +107,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   await app.register(factorsRoutes, { prefix: '/api/v1/factors' });
   // Monitoring is a project sub-resource (/projects/:id/monitoring).
   await app.register(monitoringRoutes, { prefix: '/api/v1/projects' });
+  // Evidence spans /projects/:id/evidence AND /evidence/:id/… — it registers
+  // under the bare /api/v1 prefix and declares full sub-paths itself.
+  await app.register(evidenceRoutes, { prefix: '/api/v1' });
 
   return app;
 }

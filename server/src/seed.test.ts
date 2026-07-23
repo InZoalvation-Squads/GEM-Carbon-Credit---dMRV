@@ -41,7 +41,8 @@ describe('prisma seed', () => {
     // Second run must not duplicate or fail (upsert semantics).
     await seed(prisma, { demoSeedPassword: TEST_PASSWORD });
     expect(await tableCounts(prisma)).toEqual(first);
-  });
+    // Two full seed runs (8 argon2 hashes) can exceed vitest's 5s default.
+  }, 30_000);
 
   it('stores argon2 password hashes that verify against the demo password', async () => {
     const user = await prisma.user.findUnique({ where: { email: 'registry@gem.demo' } });
