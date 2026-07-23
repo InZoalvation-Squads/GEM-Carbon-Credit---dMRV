@@ -11,9 +11,35 @@ import { writeAudit, type AuditActor } from '../../lib/audit.js';
 import { appError } from '../../lib/errors.js';
 import { uid } from '../../lib/uid.js';
 
-/** API shape of a record — uploaded_at as ISO string (matches the SPA type). */
-export function serializeRecord(r: MonitoringRecord): Record<string, unknown> {
-  return { ...r, uploaded_at: r.uploaded_at.toISOString() };
+/**
+ * Public monitoring-record shape — explicit typed allowlist, NEVER a
+ * `{ ...row }` spread (a spread silently leaks any column later added to the
+ * model). All modules MUST serialize this way — in particular,
+ * Pdd.disclosure_salts and EvidenceFile.storage_path must never be spread
+ * into a response.
+ */
+export type PublicMonitoringRecord = {
+  id: string;
+  project_id: string;
+  record_date: string;
+  generation_kwh: number;
+  source: string;
+  uploaded_at: string;
+  param_key: string | null;
+  unit: string | null;
+};
+
+export function serializeRecord(r: MonitoringRecord): PublicMonitoringRecord {
+  return {
+    id: r.id,
+    project_id: r.project_id,
+    record_date: r.record_date,
+    generation_kwh: r.generation_kwh,
+    source: r.source,
+    uploaded_at: r.uploaded_at.toISOString(),
+    param_key: r.param_key,
+    unit: r.unit,
+  };
 }
 
 export interface MonitoringRowInput {

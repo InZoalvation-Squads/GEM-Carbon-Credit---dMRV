@@ -163,6 +163,10 @@ model EmissionFactor {
   is_current             Boolean
   created_at             DateTime @default(now())
 
+  // Backstop for the pair-scoped advisory lock in the factors service: even
+  // if a code path ever skips the lock, two racing inserts cannot both claim
+  // the same version for a country+source pair.
+  @@unique([country, source, version])
   @@map("emission_factors")
 }
 
@@ -315,6 +319,10 @@ model GuardianToken {
 
 model AuditLog {
   id                  String   @id
+  // Monotonic insert order — the chain's authoritative ordering. created_at
+  // has only ms precision, so same-millisecond rows would otherwise tie and
+  // head selection could mis-chain despite the advisory lock.
+  seq                 BigInt   @unique @default(autoincrement())
   user_id             String
   user_role           UserRole?
   ip_address          String?

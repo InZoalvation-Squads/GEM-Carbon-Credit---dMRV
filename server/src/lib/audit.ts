@@ -97,13 +97,15 @@ export function auditCoreOf(row: AuditLog): Record<string, unknown> {
  *
  * Reads the current chain head inside the transaction; a pg advisory xact
  * lock serializes concurrent appends so the chain can never fork (two
- * transactions reading the same head would both chain onto it).
+ * transactions reading the same head would both chain onto it). The head is
+ * the row with the highest `seq` — the monotonic insert counter — because
+ * created_at has only ms precision and same-millisecond rows would tie.
  */
 export async function writeAudit(tx: Prisma.TransactionClient, entry: AuditEntry): Promise<AuditLog> {
   // ::text because pg_advisory_xact_lock returns void, which Prisma cannot deserialize.
   await tx.$queryRaw`SELECT pg_advisory_xact_lock(hashtext('audit_log'))::text`;
   const head = await tx.auditLog.findFirst({
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    orderBy: { seq: 'desc' },
     select: { row_hash: true },
   });
   const prevRowHash = head?.row_hash ?? null;

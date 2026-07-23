@@ -8,6 +8,11 @@ import { uid } from '../lib/uid.js';
 
 export const TEST_ORG_ID = 'org-0001';
 
+/** Authorization header for an `app.inject` call. */
+export function auth(token: string): { authorization: string } {
+  return { authorization: `Bearer ${token}` };
+}
+
 export async function createOrg(
   prisma: PrismaClient,
   id = TEST_ORG_ID,
@@ -82,7 +87,7 @@ export function expectedRowHash(row: AuditLog): string {
  */
 export async function expectValidChainTail(prisma: PrismaClient): Promise<AuditLog[]> {
   const rows = await prisma.auditLog.findMany({
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
+    orderBy: { seq: 'desc' }, // seq is the chain's authoritative order
     take: 2,
   });
   expect(rows.length).toBeGreaterThan(0);
@@ -93,9 +98,7 @@ export async function expectValidChainTail(prisma: PrismaClient): Promise<AuditL
 
 /** The newest audit row, for asserting what a mutation just recorded. */
 export async function latestAudit(prisma: PrismaClient): Promise<AuditLog> {
-  const row = await prisma.auditLog.findFirst({
-    orderBy: [{ created_at: 'desc' }, { id: 'desc' }],
-  });
+  const row = await prisma.auditLog.findFirst({ orderBy: { seq: 'desc' } });
   expect(row).not.toBeNull();
   return row!;
 }

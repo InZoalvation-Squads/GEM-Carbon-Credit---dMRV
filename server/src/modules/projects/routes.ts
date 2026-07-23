@@ -1,7 +1,7 @@
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
 import { actorFromRequest } from '../../lib/audit.js';
-import { isoDateString } from '../../lib/validation.js';
+import { idParams, isoDateString } from '../../lib/validation.js';
 import { createProject, listProjects, serializeProject, updateProject } from './service.js';
 
 const PROJECT_STATUS = ['draft', 'active', 'suspended', 'retired'] as const;
@@ -27,8 +27,6 @@ const PatchBody = z
   })
   .refine((p) => Object.keys(p).length > 0, 'at least one field to update is required');
 
-const Params = z.object({ id: z.string().min(1) });
-
 export async function projectsRoutes(app: FastifyInstance): Promise<void> {
   const canWrite = [app.authenticate, app.requireRole('project_owner', 'admin', 'esg_manager')];
 
@@ -44,7 +42,7 @@ export async function projectsRoutes(app: FastifyInstance): Promise<void> {
   });
 
   app.patch('/:id', { preHandler: canWrite }, async (req) => {
-    const { id } = Params.parse(req.params);
+    const { id } = idParams.parse(req.params);
     const patch = PatchBody.parse(req.body ?? {});
     const project = await updateProject(app.prisma, actorFromRequest(req), id, patch);
     return { project: serializeProject(project) };

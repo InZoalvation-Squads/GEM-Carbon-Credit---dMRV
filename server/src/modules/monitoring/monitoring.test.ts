@@ -3,11 +3,11 @@ import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import {
+  auth,
   createOrg,
   registerUser,
   expectValidChainTail,
   latestAudit,
-  TEST_ORG_ID,
 } from '../../test/fixtures.js';
 import { buildApp } from '../../app.js';
 import { uid } from '../../lib/uid.js';
@@ -40,8 +40,6 @@ describe('monitoring module', () => {
   let plainProjectId: string; // no PDD at all
   let registeredProjectId: string; // registered PDD → stamped uploads
   let draftPddProjectId: string; // draft PDD → NOT stamped
-
-  const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
   async function createProject(name: string): Promise<string> {
     const res = await app.inject({

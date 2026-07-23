@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import {
+  auth,
   createOrg,
   registerUser,
   expectValidChainTail,
@@ -55,8 +56,6 @@ describe('projects module', () => {
     await app.close();
     await prisma.$disconnect();
   });
-
-  const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
   describe('POST /api/v1/projects', () => {
     it('requires auth', async () => {

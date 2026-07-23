@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import {
+  auth,
   createOrg,
   createAdmin,
   registerUser,
@@ -40,8 +41,6 @@ describe('factors module', () => {
     await app.close();
     await prisma.$disconnect();
   });
-
-  const auth = (token: string) => ({ authorization: `Bearer ${token}` });
 
   describe('GET /api/v1/factors', () => {
     it('requires auth', async () => {
@@ -114,6 +113,35 @@ describe('factors module', () => {
       });
       expect(all.map((f) => [f.version, f.is_current])).toEqual([[1, false], [2, true]]);
       await expectValidChainTail(prisma);
+    });
+
+    it('serializes two parallel creates for the same pair: versions 2 and 3, exactly one current', async () => {
+      const pair = { country: 'MY', source: 'TNB Grid' };
+      const base = { ...pair, factor_kgco2e_per_kwh: 0.5, effective_date: '2025-01-01' };
+      const first = await app.inject({
+        method: 'POST', url: '/api/v1/factors', headers: auth(esg.token), payload: base,
+      });
+      expect(first.statusCode).toBe(201);
+
+      const [a, b] = await Promise.all([
+        app.inject({
+          method: 'POST', url: '/api/v1/factors', headers: auth(esg.token),
+          payload: { ...base, factor_kgco2e_per_kwh: 0.51 },
+        }),
+        app.inject({
+          method: 'POST', url: '/api/v1/factors', headers: auth(admin.token),
+          payload: { ...base, factor_kgco2e_per_kwh: 0.52 },
+        }),
+      ]);
+      expect(a.statusCode).toBe(201);
+      expect(b.statusCode).toBe(201);
+
+      const rows = await prisma.emissionFactor.findMany({
+        where: pair, orderBy: { version: 'asc' },
+      });
+      expect(rows.map((f) => f.version)).toEqual([1, 2, 3]); // no duplicate versions
+      expect(rows.filter((f) => f.is_current)).toHaveLength(1);
+      expect(rows.find((f) => f.is_current)!.version).toBe(3); // last committed wins
     });
 
     it('versions independently per country+source pair', async () => {

@@ -35,12 +35,24 @@ function migrateDeploy(databaseUrl: string): void {
 }
 
 /**
+ * Name of this run's test database: `<main_db>_test` by default, or
+ * `<main_db>_test_<suffix>` when VITEST_DB_SUFFIX is set (vitest.config.ts
+ * sets it from the runner's pid so two concurrent `npm test` runs never
+ * collide; the per-run DB is dropped in the global teardown).
+ */
+export function testDatabaseName(): string {
+  const mainUrl = new URL(config.DATABASE_URL);
+  const mainDbName = decodeURIComponent(mainUrl.pathname.replace(/^\//, ''));
+  const rawSuffix = process.env.VITEST_DB_SUFFIX;
+  if (!rawSuffix) return `${mainDbName}_test`;
+  return `${mainDbName}_test_${rawSuffix.replace(/[^a-zA-Z0-9_]/g, '_')}`;
+}
+
+/**
  * Ensure the test database exists and is migrated; returns its DATABASE_URL.
  */
 export async function setupTestDatabase(): Promise<string> {
-  const mainUrl = new URL(config.DATABASE_URL);
-  const mainDbName = decodeURIComponent(mainUrl.pathname.replace(/^\//, ''));
-  const testDbName = `${mainDbName}_test`;
+  const testDbName = testDatabaseName();
 
   const admin = new PrismaClient({ datasourceUrl: config.DATABASE_URL });
   try {

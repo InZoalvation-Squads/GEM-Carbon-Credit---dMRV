@@ -64,7 +64,7 @@ describe('lib/audit', () => {
       expect(second.prev_row_hash).toBe(first.row_hash);
 
       // Recompute from what actually landed in the database.
-      const stored = await prisma.auditLog.findMany({ orderBy: { created_at: 'asc' } });
+      const stored = await prisma.auditLog.findMany({ orderBy: { seq: 'asc' } });
       expect(stored).toHaveLength(2);
       for (const row of stored) {
         expect(row.row_hash).toBe(expectedRowHash(row));
@@ -90,9 +90,7 @@ describe('lib/audit', () => {
           prisma.$transaction((tx) => writeAudit(tx, entry('PROJECT_UPDATED', `prj-${i}`))),
         ),
       );
-      const rows = await prisma.auditLog.findMany({
-        orderBy: [{ created_at: 'asc' }, { id: 'asc' }],
-      });
+      const rows = await prisma.auditLog.findMany({ orderBy: { seq: 'asc' } });
       expect(rows).toHaveLength(5);
       // Each row links to exactly its predecessor — a fork would repeat a prev hash.
       expect(rows[0]!.prev_row_hash).toBeNull();
