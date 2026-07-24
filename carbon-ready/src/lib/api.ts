@@ -20,13 +20,16 @@ export const api = {
   async getProject(id: UUID): Promise<Project | undefined> {
     return tick(useStore.getState().projects.find((p) => p.id === id));
   },
+  // `await` on the store write actions: in server mode they return a promise
+  // carrying the SERVER entity (typed as the demo shape — see dual() in
+  // src/store/index.ts); awaiting is a no-op for the plain demo value.
   async createProject(input: Omit<Project, 'id' | 'created_at' | 'updated_at' | 'organization_id' | 'lifecycle_stage'>): Promise<Project> {
-    const project = useStore.getState().createProject(input);
+    const project = await useStore.getState().createProject(input);
     toast.success('Project created', project.name);
     return tick(project);
   },
   async updateProject(id: UUID, patch: Partial<Project>): Promise<Project | undefined> {
-    const project = useStore.getState().updateProject(id, patch);
+    const project = await useStore.getState().updateProject(id, patch);
     toast.success('Project updated', project?.name);
     return tick(project);
   },
@@ -36,8 +39,10 @@ export const api = {
     const existing = state.records.filter((r) => r.project_id === project_id).map((r) => r.record_date);
     const result = parseAndValidateCsv(csvText, existing);
     if (result.accepted.length > 0) {
-      state.addMonitoringRecords(project_id, result.accepted);
+      // Server mode: resolves after the POST + stamped-row re-fetch land.
+      await state.addMonitoringRecords(project_id, result.accepted);
     }
+    // No-op in server mode — the server audits CSV_UPLOADED transactionally.
     state.audit_write('CSV_UPLOADED', 'monitoring', project_id, {
       accepted: result.accepted.length,
       rejected: result.rejected.length,
@@ -81,7 +86,7 @@ export const api = {
     return tick(useStore.getState().factors);
   },
   async addFactor(input: Omit<EmissionFactor, 'id' | 'version' | 'is_current' | 'created_at'>): Promise<EmissionFactor> {
-    const factor = useStore.getState().addEmissionFactor(input);
+    const factor = await useStore.getState().addEmissionFactor(input);
     toast.success('Emission factor added', `${factor.country} · ${factor.source} v${factor.version}`);
     return tick(factor);
   },

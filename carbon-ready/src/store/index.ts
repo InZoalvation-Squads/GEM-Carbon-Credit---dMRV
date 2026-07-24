@@ -20,7 +20,12 @@ import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { issuerIdentity } from '../lib/identity';
 import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
-import { serverMode, authApi, ApiError, SessionExpiredError, type ServerUser } from '../lib/server-api';
+import {
+  serverMode, authApi, ApiError, SessionExpiredError, onSessionExpired,
+  projectsApi, factorsApi, monitoringApi, methodologiesApi,
+  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi,
+  type ServerUser,
+} from '../lib/server-api';
 
 interface AppState {
   currentUser: User;
@@ -32,8 +37,11 @@ interface AppState {
   logout: () => void;
   registeredAccounts: Array<User & { password: string }>;
   register: (input: { name: string; email: string; role: UserRole; password: string }) => Promise<{ ok: boolean; error?: string }>;
-  // Server mode: bulk-GET hydration after login (plan Task 2 fills this in).
+  // Server mode: bulk-GET hydration after login. Slices are replaced
+  // wholesale (server is the source of truth); failed slice names land in
+  // hydration_errors — partial hydration is allowed (UI wiring later).
   hydrateFromServer: () => Promise<void>;
+  hydration_errors: string[];
   organization: Organization;
   projects: Project[];
   records: MonitoringRecord[];
@@ -113,6 +121,27 @@ function authErrorMessage(err: unknown): string {
   return 'Cannot reach the server. Check your connection and try again.';
 }
 
+/**
+ * DUAL-MODE WRITE PATTERN (plan Task 2 — the template for Tasks 3-5).
+ *
+ * Each write-through action defines ONE `apply` function holding the store
+ * mutation (the `set()` body + audit hooks), then forks:
+ *   demo:   build the entity locally (the pre-server code, byte-equivalent)
+ *           and apply it synchronously;
+ *   server: call the API first and feed the SERVER entity through the same
+ *           apply — server-assigned ids/versions/timestamps/stamps win.
+ *
+ * The declared action type keeps the demo (synchronous) shape: every product
+ * call site goes through src/lib/api.ts, whose async wrappers `await` the
+ * result — a no-op for the plain demo value, an unwrap for the server
+ * promise — while demo-mode tests keep consuming the synchronous return.
+ * This cast is the single place that promise/value duality lives; do not
+ * consume a write action's return synchronously in server mode.
+ */
+function dual<T>(demo: () => T, server: () => Promise<T>): T {
+  return (serverMode() ? server() : demo()) as T;
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
@@ -171,9 +200,78 @@ export const useStore = create<AppState>()(
           return { ok: false, error: authErrorMessage(err) };
         }
       },
-      // No-op stub: plan Task 2 replaces this with parallel bulk GETs
-      // (projects, factors, methodologies, monitoring, pdds, verifications, …).
-      hydrateFromServer: async () => {},
+      // Server mode: bulk-GET everything the SPA reads from the store. Each
+      // hydrated slice is replaced WHOLESALE — the server is the source of
+      // truth. Comments stay local (no bulk endpoint; threads hydrate with
+      // their PDD/verification detail responses in later tasks).
+      hydrateFromServer: async () => {
+        const failed: string[] = [];
+
+        // Projects come first — monitoring and evidence are per-project
+        // sub-resources, so their fetches need the project ids.
+        let projects: Project[] | null = null;
+        try {
+          projects = await projectsApi.list();
+          set({ projects });
+        } catch {
+          failed.push('projects');
+        }
+
+        const slices: Array<[string, Promise<void>]> = [
+          ['factors', factorsApi.list().then((factors) => set({ factors }))],
+          [
+            'methodologies',
+            (async () => {
+              // List rows are summaries; /export returns the full document
+              // with its id stripped — re-attach the id from the list row.
+              const rows = await methodologiesApi.list();
+              const methodologies = await Promise.all(
+                rows.map(async (row): Promise<Methodology> => ({
+                  ...(await methodologiesApi.exportDoc(row.id)),
+                  id: row.id,
+                })),
+              );
+              set({ methodologies });
+            })(),
+          ],
+          [
+            'pdds',
+            (async () => {
+              // GET /pdds without ?state= is the validation queue (in-flight
+              // only) — draft/registered/rejected are fetched explicitly so
+              // the slice is complete.
+              const [inflight, drafts, registered, rejected] = await Promise.all([
+                pddsApi.list(), pddsApi.list('draft'), pddsApi.list('registered'), pddsApi.list('rejected'),
+              ]);
+              set({ pdds: [...inflight, ...drafts, ...registered, ...rejected] });
+            })(),
+          ],
+          ['verifications', verificationsApi.list().then((verifications) => set({ verifications }))],
+          ['credentials', credentialsApi.list().then((credentials) => set({ credentials }))],
+          ['tokens', tokensApi.list().then((tokens) => set({ tokens }))],
+        ];
+        if (projects) {
+          const ids = projects.map((p) => p.id);
+          slices.push(
+            ['records', Promise.all(ids.map((id) => monitoringApi.list(id)))
+              .then((lists) => set({ records: lists.flat() }))],
+            ['evidence', Promise.all(ids.map((id) => evidenceApi.listByProject(id)))
+              .then((lists) => set({ evidence: lists.flat() }))],
+          );
+        } else {
+          // Without the project list the per-project slices cannot be fetched.
+          failed.push('records', 'evidence');
+        }
+
+        const settled = await Promise.allSettled(slices.map(([, task]) => task));
+        settled.forEach((result, i) => {
+          if (result.status === 'rejected') failed.push(slices[i][0]);
+        });
+        // Partial hydration is allowed: successful slices are already applied;
+        // failed slice names are kept for later UI wiring (toast/banner).
+        set({ hydration_errors: failed });
+      },
+      hydration_errors: [],
       organization: seedOrg,
       // App boots with only the imported real solar fleet. Emission factors and the
       // methodology library are kept as reference data; everything else is empty.
@@ -191,7 +289,12 @@ export const useStore = create<AppState>()(
       methodologies: seedMethodologies,
       pdds: seedPdds,
 
-      audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) =>
+      audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) => {
+        // Server mode: no-op — the server writes the hash-chained audit row
+        // inside the same transaction as each mutation (it owns the chain; a
+        // client-side row would fork it). The AuditLog page reads GET /audit
+        // in plan Task 4.
+        if (serverMode()) return;
         set((s) => ({
           audit: [
             newAudit(
@@ -201,64 +304,102 @@ export const useStore = create<AppState>()(
             ),
             ...s.audit,
           ],
-        })),
+        }));
+      },
 
       createProject: (input) => {
-        const now = new Date().toISOString();
-        const p: Project = { id: uid('prj'), organization_id: get().organization.id, lifecycle_stage: 'unregistered', created_at: now, updated_at: now, ...input };
-        set((s) => ({ projects: [p, ...s.projects] }));
-        get().audit_write('PROJECT_CREATED', 'project', p.id, { name: p.name }, { new_value: { name: p.name } });
-        return p;
+        const apply = (p: Project): Project => {
+          set((s) => ({ projects: [p, ...s.projects] }));
+          get().audit_write('PROJECT_CREATED', 'project', p.id, { name: p.name }, { new_value: { name: p.name } });
+          return p;
+        };
+        return dual(
+          () => {
+            const now = new Date().toISOString();
+            return apply({ id: uid('prj'), organization_id: get().organization.id, lifecycle_stage: 'unregistered', created_at: now, updated_at: now, ...input });
+          },
+          () => projectsApi.create(input).then(apply),
+        );
       },
 
       updateProject: (id, patch) => {
-        let updated: Project | undefined;
-        let before: Project | undefined;
-        set((s) => ({
-          projects: s.projects.map((p) => {
-            if (p.id !== id) return p;
-            before = p;
-            updated = { ...p, ...patch, updated_at: new Date().toISOString() };
-            return updated;
-          }),
-        }));
-        if (updated && before) get().audit_write('PROJECT_UPDATED', 'project', id, { changes: patch }, { previous_value: { ...before }, new_value: { ...updated } });
-        return updated;
+        const apply = (updated: Project): Project => {
+          let before: Project | undefined;
+          set((s) => ({
+            projects: s.projects.map((p) => {
+              if (p.id !== id) return p;
+              before = p;
+              return updated;
+            }),
+          }));
+          if (before) get().audit_write('PROJECT_UPDATED', 'project', id, { changes: patch }, { previous_value: { ...before }, new_value: { ...updated } });
+          return updated;
+        };
+        return dual<Project | undefined>(
+          () => {
+            const current = get().projects.find((p) => p.id === id);
+            if (!current) return undefined;
+            return apply({ ...current, ...patch, updated_at: new Date().toISOString() });
+          },
+          // The server 404s an unknown id (ApiError) instead of resolving undefined.
+          () => projectsApi.update(id, patch).then(apply),
+        );
       },
 
-      addMonitoringRecords: (project_id, rows) => {
-        const uploaded_at = new Date().toISOString();
-        // Stamp each record with the project's methodology driver param + unit
-        // (resolved via its PDD) — but only once the PDD is registered: a draft
-        // PDD's methodology can still change, and a stale param_key would silently
-        // exclude records from calc totals. Unregistered projects stay unstamped (legacy shape).
-        const pdd = get().pddByProject(project_id);
-        const m = pdd?.state === 'registered' ? get().methodologies.find((x) => x.id === pdd.methodology_id) : undefined;
-        const stamp = m ? { param_key: m.calculation.input_param, unit: m.calculation.input_unit } : {};
-        const recs: MonitoringRecord[] = rows.map((r) => ({
-          id: uid('mon'), project_id, source: 'csv_upload', uploaded_at, ...stamp, ...r,
-        }));
-        set((s) => ({ records: [...s.records, ...recs] }));
-        return recs.length;
-      },
+      addMonitoringRecords: (project_id, rows) =>
+        dual(
+          () => {
+            const uploaded_at = new Date().toISOString();
+            // Stamp each record with the project's methodology driver param + unit
+            // (resolved via its PDD) — but only once the PDD is registered: a draft
+            // PDD's methodology can still change, and a stale param_key would silently
+            // exclude records from calc totals. Unregistered projects stay unstamped (legacy shape).
+            const pdd = get().pddByProject(project_id);
+            const m = pdd?.state === 'registered' ? get().methodologies.find((x) => x.id === pdd.methodology_id) : undefined;
+            const stamp = m ? { param_key: m.calculation.input_param, unit: m.calculation.input_unit } : {};
+            const recs: MonitoringRecord[] = rows.map((r) => ({
+              id: uid('mon'), project_id, source: 'csv_upload', uploaded_at, ...stamp, ...r,
+            }));
+            set((s) => ({ records: [...s.records, ...recs] }));
+            return recs.length;
+          },
+          // Server path: the POST stamps param_key/unit server-side but returns
+          // only { accepted } — re-fetch so the SERVER rows (server ids +
+          // stamps) replace this project's slice, never locally-built ones.
+          async () => {
+            const { accepted } = await monitoringApi.addRows(project_id, rows);
+            const records = await monitoringApi.list(project_id);
+            set((s) => ({ records: [...s.records.filter((r) => r.project_id !== project_id), ...records] }));
+            return accepted;
+          },
+        ),
 
       addEmissionFactor: (input) => {
-        const existing = get().factors.filter((f) => f.country === input.country && f.source === input.source);
-        const nextVersion = existing.reduce((m, f) => Math.max(m, f.version), 0) + 1;
-        const ef: EmissionFactor = {
-          id: uid('ef'), version: nextVersion, is_current: true,
-          created_at: new Date().toISOString(), ...input,
+        const apply = (ef: EmissionFactor): EmissionFactor => {
+          set((s) => ({
+            factors: [
+              ef,
+              ...s.factors.map((f) =>
+                f.country === ef.country && f.source === ef.source ? { ...f, is_current: false } : f
+              ),
+            ],
+          }));
+          get().audit_write('EMISSION_FACTOR_ADDED', 'factor', ef.id, { country: ef.country, source: ef.source, version: ef.version }, { new_value: { factor_kgco2e_per_kwh: ef.factor_kgco2e_per_kwh, version: ef.version } });
+          return ef;
         };
-        set((s) => ({
-          factors: [
-            ef,
-            ...s.factors.map((f) =>
-              f.country === input.country && f.source === input.source ? { ...f, is_current: false } : f
-            ),
-          ],
-        }));
-        get().audit_write('EMISSION_FACTOR_ADDED', 'factor', ef.id, { country: ef.country, source: ef.source, version: ef.version }, { new_value: { factor_kgco2e_per_kwh: ef.factor_kgco2e_per_kwh, version: ef.version } });
-        return ef;
+        return dual(
+          () => {
+            const existing = get().factors.filter((f) => f.country === input.country && f.source === input.source);
+            const nextVersion = existing.reduce((m, f) => Math.max(m, f.version), 0) + 1;
+            return apply({
+              id: uid('ef'), version: nextVersion, is_current: true,
+              created_at: new Date().toISOString(), ...input,
+            });
+          },
+          // Server assigns id/version/is_current; local older versions of the
+          // same country+source are flipped is_current:false by the same apply.
+          () => factorsApi.create(input).then(apply),
+        );
       },
 
       recordCalculation: (project_id, emission_factor_id, totals) => {
@@ -553,3 +694,9 @@ export const useStore = create<AppState>()(
     { name: 'carbon-ready-store-v15' }
   )
 );
+
+// Session-expiry seam: ONE registration at module init. Any server call whose
+// token refresh is dead throws SessionExpiredError, and this callback flips
+// the app to the login screen regardless of which call site hit it. Demo mode
+// never issues server requests, so it stays inert there.
+onSessionExpired(() => useStore.setState({ isAuthenticated: false }));

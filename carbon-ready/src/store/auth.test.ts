@@ -99,7 +99,10 @@ describe('auth — server mode (VITE_API_BASE_URL set, mocked fetch)', () => {
 
   beforeEach(() => {
     localStorage.clear();
-    useStore.setState({ isAuthenticated: false });
+    // Task 2 wired real bulk-GET hydration into login/register; these tests
+    // cover the auth exchange only (exact fetch-call counts), so hydration is
+    // stubbed out here — it has its own suite in src/store/hydrate.test.ts.
+    useStore.setState({ isAuthenticated: false, hydrateFromServer: async () => {} });
     vi.stubEnv('VITE_API_BASE_URL', 'http://api.test');
   });
 

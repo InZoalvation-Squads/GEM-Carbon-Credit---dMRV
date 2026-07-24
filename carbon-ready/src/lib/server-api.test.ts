@@ -1,6 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import {
-  serverMode, apiFetch, authApi,
+  serverMode, apiFetch, authApi, onSessionExpired,
+  projectsApi, factorsApi, monitoringApi, methodologiesApi,
+  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi,
   getSession, setSession, clearSession,
   ApiError, SessionExpiredError, SESSION_KEY,
 } from './server-api';
@@ -276,5 +278,192 @@ describe('authApi', () => {
 
     await expect(authApi.refresh()).rejects.toBeInstanceOf(SessionExpiredError);
     expect(getSession()).toBeNull();
+  });
+});
+
+describe('onSessionExpired', () => {
+  afterEach(() => {
+    onSessionExpired(() => {}); // detach test spies from later tests
+  });
+
+  it('notifies the registered callback when the refresh flow is dead', async () => {
+    setSession({ access_token: 'stale', refresh_token: 'ref-dead' });
+    const expired = vi.fn();
+    onSessionExpired(expired);
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'expired' } }))
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'Invalid refresh token' } })));
+
+    await expect(apiFetch('/projects')).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(expired).toHaveBeenCalledTimes(1);
+    expect(getSession()).toBeNull(); // session cleared before the callback ran
+  });
+
+  it('is a single registration — a later callback replaces the earlier one', async () => {
+    const first = vi.fn();
+    const second = vi.fn();
+    onSessionExpired(first);
+    onSessionExpired(second);
+    // 401 with no stored session → nothing to refresh → session expired
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'no token' } }),
+    ));
+
+    await expect(apiFetch('/projects')).rejects.toBeInstanceOf(SessionExpiredError);
+    expect(first).not.toHaveBeenCalled();
+    expect(second).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('data endpoint groups — response envelopes match the server routes', () => {
+  beforeEach(() => {
+    setSession({ access_token: 'acc-1', refresh_token: 'ref-1' });
+  });
+
+  it('projectsApi.list GETs /projects and unwraps {projects}', async () => {
+    const projects = [{ id: 'prj-1' }, { id: 'prj-2' }];
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { projects }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await projectsApi.list()).toEqual(projects);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/projects`);
+  });
+
+  it('projectsApi.create POSTs the input and unwraps {project}', async () => {
+    const project = { id: 'prj-srv-1', name: 'Plant' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { project }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const input = { name: 'Plant', location: 'Bangkok, Thailand', capacity_kwp: 100, commission_date: '2026-01-01', status: 'draft' as const };
+    expect(await projectsApi.create(input)).toEqual(project);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/v1/projects`);
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toEqual(input);
+  });
+
+  it('projectsApi.update PATCHes /projects/:id and unwraps {project}', async () => {
+    const project = { id: 'prj-1', name: 'Renamed' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { project }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await projectsApi.update('prj-1', { name: 'Renamed' })).toEqual(project);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/v1/projects/prj-1`);
+    expect(init.method).toBe('PATCH');
+    expect(JSON.parse(init.body)).toEqual({ name: 'Renamed' });
+  });
+
+  it('factorsApi unwraps {factors} on list and {factor} on create', async () => {
+    const factor = { id: 'ef-srv-1', country: 'TH', source: 'EGAT', version: 3 };
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(200, { factors: [factor] }))
+      .mockResolvedValueOnce(jsonResponse(201, { factor }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await factorsApi.list()).toEqual([factor]);
+    expect(await factorsApi.create({ country: 'TH', source: 'EGAT', factor_kgco2e_per_kwh: 0.5, effective_date: '2026-01-01' })).toEqual(factor);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/factors`);
+    expect(fetchMock.mock.calls[1][1].method).toBe('POST');
+  });
+
+  it('monitoringApi.list scopes to the project and appends the optional date range', async () => {
+    const records = [{ id: 'mon-1' }];
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, { records }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await monitoringApi.list('prj-1')).toEqual(records);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/projects/prj-1/monitoring`);
+
+    await monitoringApi.list('prj-1', { from: '2026-01-01', to: '2026-02-01' });
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/v1/projects/prj-1/monitoring?from=2026-01-01&to=2026-02-01`);
+  });
+
+  it('monitoringApi.addRows POSTs {rows} and returns the {accepted} count verbatim', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { accepted: 2 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const rows = [
+      { record_date: '2026-01-01', generation_kwh: 10 },
+      { record_date: '2026-01-02', generation_kwh: 12 },
+    ];
+    expect(await monitoringApi.addRows('prj-1', rows)).toEqual({ accepted: 2 });
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe(`${BASE}/api/v1/projects/prj-1/monitoring`);
+    expect(JSON.parse(init.body)).toEqual({ rows });
+  });
+
+  it('methodologiesApi.list unwraps {methodologies} summaries', async () => {
+    const methodologies = [{ id: 'mth-1', code: 'T-VER-S-01', name: 'Solar', standard: 'T-VER', version: '1.0', sectoral_scope: 'Energy', status: 'active' }];
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(200, { methodologies })));
+
+    expect(await methodologiesApi.list()).toEqual(methodologies);
+  });
+
+  it('methodologiesApi.exportDoc returns the bare document with schema_version stripped', async () => {
+    const doc = { schema_version: 2, code: 'T-VER-S-01', name: 'Solar', standard: 'T-VER', version: '1.0', status: 'active' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, doc));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const result = await methodologiesApi.exportDoc('mth-1');
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/methodologies/mth-1/export`);
+    expect(result).toEqual({ code: 'T-VER-S-01', name: 'Solar', standard: 'T-VER', version: '1.0', status: 'active' });
+    expect('schema_version' in result).toBe(false);
+  });
+
+  it('pddsApi.list hits /pdds bare (in-flight queue) or with an explicit ?state=', async () => {
+    const pdds = [{ id: 'PDD-1' }];
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, { pdds }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await pddsApi.list()).toEqual(pdds);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/pdds`);
+
+    await pddsApi.list('registered');
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/v1/pdds?state=registered`);
+  });
+
+  it('pddsApi.byProject unwraps {pdd} from the project-scoped route', async () => {
+    const pdd = { id: 'PDD-1', project_id: 'prj-1' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { pdd }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await pddsApi.byProject('prj-1')).toEqual(pdd);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/projects/prj-1/pdd`);
+  });
+
+  it('verificationsApi.list unwraps {verifications} and forwards filters as query params', async () => {
+    const verifications = [{ id: 'ver-1' }];
+    const fetchMock = vi.fn().mockImplementation(async () => jsonResponse(200, { verifications }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await verificationsApi.list()).toEqual(verifications);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/verifications`);
+
+    await verificationsApi.list({ project_id: 'prj-1', state: 'approved' });
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/v1/verifications?project_id=prj-1&state=approved`);
+  });
+
+  it('evidenceApi.listByProject unwraps {evidence}', async () => {
+    const evidence = [{ id: 'ev-1', project_id: 'prj-1' }];
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { evidence }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await evidenceApi.listByProject('prj-1')).toEqual(evidence);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/projects/prj-1/evidence`);
+  });
+
+  it('credentialsApi.list and tokensApi.list unwrap {credentials} / {tokens}', async () => {
+    const credentials = [{ id: 'vc-1' }];
+    const tokens = [{ id: 'tok-1' }];
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(200, { credentials }))
+      .mockResolvedValueOnce(jsonResponse(200, { tokens }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    expect(await credentialsApi.list()).toEqual(credentials);
+    expect(await tokensApi.list()).toEqual(tokens);
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/credentials`);
+    expect(fetchMock.mock.calls[1][0]).toBe(`${BASE}/api/v1/tokens`);
   });
 });
