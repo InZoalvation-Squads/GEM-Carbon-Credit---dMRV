@@ -53,20 +53,20 @@ describe('Register page', () => {
     expect(screen.getByText(/at least 8 characters/i)).toBeInTheDocument();
   });
 
-  it('registers with the chosen role and navigates to the dashboard', () => {
+  it('registers with the chosen role and navigates to the dashboard', async () => {
     renderRegister();
     fill();
     fireEvent.change(screen.getByLabelText(/^role$/i), { target: { value: 'verifier' } });
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
-    expect(screen.getByText('DASHBOARD')).toBeInTheDocument();
+    expect(await screen.findByText('DASHBOARD')).toBeInTheDocument();
     expect(useStore.getState().isAuthenticated).toBe(true);
     expect(useStore.getState().currentUser.role).toBe('verifier');
   });
 
-  it('surfaces the duplicate-email error from the store', () => {
+  it('surfaces the duplicate-email error from the store', async () => {
     renderRegister();
     fill({ email: 'vvb@gem.demo' });
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
-    expect(screen.getByText(/already exists/i)).toBeInTheDocument();
+    expect(await screen.findByText(/already exists/i)).toBeInTheDocument();
   });
 });

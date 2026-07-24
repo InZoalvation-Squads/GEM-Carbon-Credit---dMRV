@@ -20,16 +20,20 @@ import { shortHash, randomSaltHex } from '../lib/hash';
 import { buildApprovalSubject, buildPddSubject, issueCredential, mintGuardianToken, projectTopicId, toIpfsCid, DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { issuerIdentity } from '../lib/identity';
 import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guardian-schema';
+import { serverMode, authApi, ApiError, SessionExpiredError, type ServerUser } from '../lib/server-api';
 
 interface AppState {
   currentUser: User;
   setRole: (role: UserRole) => void;
-  // Mock auth (no backend) — demo accounts mapped to Guardian roles.
+  // Dual-mode auth: demo accounts (localStorage) by default; real backend
+  // when VITE_API_BASE_URL is set. Both paths resolve the same {ok,error} shape.
   isAuthenticated: boolean;
-  login: (email: string, password: string) => { ok: boolean; error?: string };
+  login: (email: string, password: string) => Promise<{ ok: boolean; error?: string }>;
   logout: () => void;
   registeredAccounts: Array<User & { password: string }>;
-  register: (input: { name: string; email: string; role: UserRole; password: string }) => { ok: boolean; error?: string };
+  register: (input: { name: string; email: string; role: UserRole; password: string }) => Promise<{ ok: boolean; error?: string }>;
+  // Server mode: bulk-GET hydration after login (plan Task 2 fills this in).
+  hydrateFromServer: () => Promise<void>;
   organization: Organization;
   projects: Project[];
   records: MonitoringRecord[];
@@ -98,38 +102,78 @@ function uid(prefix: string) {
 
 const CALLER_IP = '203.0.113.10'; // stand-in for request IP until real auth middleware (Sprint 3+)
 
+/** Server user → SPA User (drops organization_id; org handling stays store-side). */
+function serverUserToUser(u: ServerUser): User {
+  return { id: u.id, email: u.email, name: u.name, role: u.role, created_at: u.created_at };
+}
+
+/** Server-mode auth failures → user-facing message for the login/register forms. */
+function authErrorMessage(err: unknown): string {
+  if (err instanceof ApiError || err instanceof SessionExpiredError) return err.message;
+  return 'Cannot reach the server. Check your connection and try again.';
+}
+
 export const useStore = create<AppState>()(
   persist(
     (set, get) => ({
       currentUser: seedUser,
       setRole: (role) => set((s) => ({ currentUser: { ...s.currentUser, role } })),
       isAuthenticated: false,
-      login: (email, password) => {
+      login: async (email, password) => {
         const normalized = email.trim().toLowerCase();
-        const demo = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === normalized);
-        if (demo) {
-          if (password !== DEMO_PASSWORD) return { ok: false, error: 'Incorrect password.' };
-          set({ currentUser: demo, isAuthenticated: true });
+        if (!serverMode()) {
+          const demo = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === normalized);
+          if (demo) {
+            if (password !== DEMO_PASSWORD) return { ok: false, error: 'Incorrect password.' };
+            set({ currentUser: demo, isAuthenticated: true });
+            return { ok: true };
+          }
+          const registered = get().registeredAccounts.find((a) => a.email.toLowerCase() === normalized);
+          if (!registered) return { ok: false, error: 'No account found for that email.' };
+          if (password !== registered.password) return { ok: false, error: 'Incorrect password.' };
+          const { password: _pw, ...user } = registered;
+          set({ currentUser: user, isAuthenticated: true });
           return { ok: true };
         }
-        const registered = get().registeredAccounts.find((a) => a.email.toLowerCase() === normalized);
-        if (!registered) return { ok: false, error: 'No account found for that email.' };
-        if (password !== registered.password) return { ok: false, error: 'Incorrect password.' };
-        const { password: _pw, ...user } = registered;
-        set({ currentUser: user, isAuthenticated: true });
-        return { ok: true };
+        try {
+          const { user } = await authApi.login(normalized, password);
+          set({ currentUser: serverUserToUser(user), isAuthenticated: true });
+          await get().hydrateFromServer();
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, error: authErrorMessage(err) };
+        }
       },
-      logout: () => set({ isAuthenticated: false }),
+      logout: () => {
+        // Server mode: revoke the refresh token best-effort (session cleared inside).
+        if (serverMode()) authApi.logout().catch(() => {});
+        set({ isAuthenticated: false });
+      },
       registeredAccounts: [],
-      register: ({ name, email, role, password }) => {
+      register: async ({ name, email, role, password }) => {
         const normalized = email.trim().toLowerCase();
-        const taken = DEMO_ACCOUNTS.some((a) => a.email.toLowerCase() === normalized)
-          || get().registeredAccounts.some((a) => a.email.toLowerCase() === normalized);
-        if (taken) return { ok: false, error: 'An account with that email already exists.' };
-        const user: User = { id: uid('usr'), email: normalized, name: name.trim(), role, created_at: new Date().toISOString() };
-        set((s) => ({ registeredAccounts: [...s.registeredAccounts, { ...user, password }], currentUser: user, isAuthenticated: true }));
-        return { ok: true };
+        if (!serverMode()) {
+          const taken = DEMO_ACCOUNTS.some((a) => a.email.toLowerCase() === normalized)
+            || get().registeredAccounts.some((a) => a.email.toLowerCase() === normalized);
+          if (taken) return { ok: false, error: 'An account with that email already exists.' };
+          const user: User = { id: uid('usr'), email: normalized, name: name.trim(), role, created_at: new Date().toISOString() };
+          set((s) => ({ registeredAccounts: [...s.registeredAccounts, { ...user, password }], currentUser: user, isAuthenticated: true }));
+          return { ok: true };
+        }
+        // The server 400s admin self-registration; the form hides it in server mode.
+        if (role === 'admin') return { ok: false, error: 'Admin accounts cannot be self-registered.' };
+        try {
+          const { user } = await authApi.register({ name: name.trim(), email: normalized, role, password });
+          set({ currentUser: serverUserToUser(user), isAuthenticated: true });
+          await get().hydrateFromServer();
+          return { ok: true };
+        } catch (err) {
+          return { ok: false, error: authErrorMessage(err) };
+        }
       },
+      // No-op stub: plan Task 2 replaces this with parallel bulk GETs
+      // (projects, factors, methodologies, monitoring, pdds, verifications, …).
+      hydrateFromServer: async () => {},
       organization: seedOrg,
       // App boots with only the imported real solar fleet. Emission factors and the
       // methodology library are kept as reference data; everything else is empty.
