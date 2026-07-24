@@ -15,6 +15,7 @@ import { evidenceRoutes } from './modules/evidence/routes.js';
 import { methodologiesRoutes } from './modules/methodologies/routes.js';
 import { pddsRoutes } from './modules/pdds/routes.js';
 import { verificationsRoutes } from './modules/verifications/routes.js';
+import { credentialsRoutes } from './modules/credentials/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -117,6 +118,9 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // PDDs span /projects/:id/pdd AND /pdds/:id/… — bare prefix, like evidence.
   await app.register(pddsRoutes, { prefix: '/api/v1' });
   await app.register(verificationsRoutes, { prefix: '/api/v1/verifications' });
+  // Credentials span /verifications/:id/anchor, /pdds/:id/credential,
+  // /credentials/… and /tokens — bare prefix, like evidence and pdds.
+  await app.register(credentialsRoutes, { prefix: '/api/v1' });
 
   return app;
 }

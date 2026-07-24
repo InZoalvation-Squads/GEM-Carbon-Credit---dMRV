@@ -101,4 +101,16 @@ describe('copied libs stay in sync with their carbon-ready sources', () => {
   it('guardian-sim.ts stand-ins match guardian.ts (partial: pure parts only)', () => {
     expectChunksInSource(join(SERVER_LIB, 'guardian-sim.ts'), join(SPA_SRC, 'lib', 'guardian.ts'));
   });
+
+  it('identity.ts matches (partial: verify path only — no keygen/signing/custody)', () => {
+    expectChunksInSource(join(SERVER_LIB, 'identity.ts'), join(SPA_SRC, 'lib', 'identity.ts'));
+  });
+
+  it('vc.ts matches (partial: verify path only — signCredential stays in the browser)', () => {
+    expectChunksInSource(join(SERVER_LIB, 'vc.ts'), join(SPA_SRC, 'lib', 'vc.ts'));
+  });
+
+  it('vc-types.ts blocks match the SPA type file note-for-note', () => {
+    expectChunksInSource(join(SERVER_LIB, 'vc-types.ts'), join(SPA_SRC, 'types', 'index.ts'));
+  });
 });

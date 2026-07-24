@@ -7,7 +7,10 @@ import { Prisma, type AuditLog, type UserRole } from '@prisma/client';
 import { canonical, shortHash } from './hash.js';
 import { uid } from './uid.js';
 
-/** Verbatim from carbon-ready/src/types/index.ts `AuditAction`. */
+/**
+ * Verbatim from carbon-ready/src/types/index.ts `AuditAction`, plus the
+ * server-side extension listed at the bottom of the union.
+ */
 export type AuditAction =
   | 'PROJECT_CREATED'
   | 'PROJECT_UPDATED'
@@ -31,7 +34,13 @@ export type AuditAction =
   | 'PDD_REVISION_REQUESTED'
   | 'PROJECT_REGISTERED'
   | 'PDD_REJECTED'
-  | 'TOKEN_MINTED';
+  | 'TOKEN_MINTED'
+  // Server-side extension (NOT in the SPA union): the SPA registers + signs
+  // the PDD credential in one browser action and folds the credential fields
+  // into its PROJECT_REGISTERED entry; the server splits them because the
+  // browser signs the VC AFTER register and POSTs it separately (Task 8).
+  // AuditLog.action is a plain String column, so no migration is needed.
+  | 'PDD_CREDENTIAL_ANCHORED';
 
 /** Verbatim from carbon-ready/src/types/index.ts `EntityType`. */
 export type EntityType =

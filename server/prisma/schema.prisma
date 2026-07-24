@@ -132,6 +132,7 @@ model Project {
   evidence_files     EvidenceFile[]
   verifications      VerificationRequest[]
   pdds               Pdd[]
+  credentials        Credential[]
 
   @@index([organization_id])
   @@map("projects")
@@ -291,11 +292,17 @@ model Pdd {
 model Credential {
   id         String   @id
   schema_id  String
+  // Denormalized from the anchored entity (verification/pdd) at insert time so
+  // credential + token lists can be org-scoped with a plain join; the SPA
+  // derives this from payload.subject.project_id instead.
+  project_id String
   payload    Json // the full signed VC object (incl. proof)
   created_at DateTime @default(now())
 
-  token GuardianToken?
+  project Project        @relation(fields: [project_id], references: [id])
+  token   GuardianToken?
 
+  @@index([project_id])
   @@map("credentials")
 }
 
