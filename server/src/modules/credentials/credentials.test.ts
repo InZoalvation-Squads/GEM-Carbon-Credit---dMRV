@@ -66,8 +66,11 @@ const SOLAR_SECTION_DATA = {
   monitoring_frequency: 'Monthly', qaqc_procedure: 'Monthly meter reads cross-checked against utility bill.',
 };
 
+// context/vc_type are covered by the signature (signingInput hashes the whole
+// unsigned VC), so responses must carry them for offline re-verification.
 const CREDENTIAL_PUBLIC_KEYS = [
-  'id', 'schema_id', 'issuer_did', 'issued_at', 'subject', 'package_hash', 'hcs', 'proof',
+  'id', 'schema_id', 'issuer_did', 'issued_at', 'subject', 'package_hash', 'hcs',
+  'context', 'vc_type', 'proof',
 ];
 const TOKEN_PUBLIC_KEYS = [
   'id', 'token_id', 'serial_number', 'project_id', 'credential_id', 'amount_tco2e',
@@ -218,6 +221,8 @@ describe('credentials module', () => {
         explorer_url: `https://hashscan.io/testnet/topic/${topic_id}/message/1`,
       },
       context: ['https://www.w3.org/ns/credentials/v2'],
+      // NOT a typo: the SPA builds vc_type as ['VerifiableCredential', schema.type],
+      // and both guardian-schema.ts schemas have type 'VerifiableCredential'.
       vc_type: ['VerifiableCredential', 'VerifiableCredential'],
       ...overrides,
     }, signer);
@@ -249,6 +254,8 @@ describe('credentials module', () => {
         explorer_url: `https://hashscan.io/testnet/topic/${topic_id}/message/1`,
       },
       context: ['https://www.w3.org/ns/credentials/v2'],
+      // Same as approvalVc: ['VerifiableCredential', schema.type] with
+      // guardian-schema.ts type 'VerifiableCredential' — faithful, not a typo.
       vc_type: ['VerifiableCredential', 'VerifiableCredential'],
       ...overrides,
     }, signer);
@@ -392,7 +399,7 @@ describe('credentials module', () => {
       expect(res.json().error.message).toMatch(/package_hash/);
     });
 
-    it('422s when subject.verification_id points at a different package', async () => {
+    it('422s when the subject points at a different package or project', async () => {
       const v = await approvedVerification();
       const vc = approvalVc(v, {
         subject: { verification_id: 'VR-someone-else', project_id: v.project_id, package_hash: v.hash_value },
@@ -400,6 +407,15 @@ describe('credentials module', () => {
       const res = await post(`/api/v1/verifications/${v.id}/anchor`, verifier.token, vc as unknown as Record<string, unknown>);
       expect(res.statusCode).toBe(422);
       expect(res.json().error.message).toMatch(/subject/);
+
+      // Right verification_id, wrong project — the subject must be pinned to
+      // the verification's own project (symmetric with the mint pinning).
+      const wrongProject = approvalVc(v, {
+        subject: { verification_id: v.id, project_id: 'prj-someone-else', package_hash: v.hash_value },
+      });
+      const res2 = await post(`/api/v1/verifications/${v.id}/anchor`, verifier.token, wrongProject as unknown as Record<string, unknown>);
+      expect(res2.statusCode).toBe(422);
+      expect(res2.json().error.message).toMatch(/subject\.project_id/);
     });
 
     it('409s a double anchor', async () => {
@@ -479,6 +495,9 @@ describe('credentials module', () => {
       // subject.pdd_id must point at :id.
       const wrongSubject = pddVc(p, { subject: { pdd_id: 'PDD-other', project_id: p.project_id } });
       expect((await post(`/api/v1/pdds/${p.id}/credential`, verifier.token, wrongSubject as unknown as Record<string, unknown>)).statusCode).toBe(422);
+      // … and subject.project_id must be the PDD's own project.
+      const wrongProject = pddVc(p, { subject: { pdd_id: p.id, project_id: 'prj-someone-else' } });
+      expect((await post(`/api/v1/pdds/${p.id}/credential`, verifier.token, wrongProject as unknown as Record<string, unknown>)).statusCode).toBe(422);
       // Tampered after signing.
       const tampered = pddVc(p);
       (tampered.subject as Record<string, unknown>).methodology = 'T-VER-S-01 v99.0';
@@ -600,6 +619,20 @@ describe('credentials module', () => {
         expect(Object.keys(t).sort()).toEqual([...TOKEN_PUBLIC_KEYS].sort());
       }
       expect(tokenRows.some((t) => t.credential_id === credentialId)).toBe(true);
+    });
+
+    it('returns credentials that re-verify offline (round-trip through GET)', async () => {
+      await anchoredCredential(); // at least one row to verify
+      const res = await get('/api/v1/credentials', owner.token);
+      expect(res.statusCode).toBe(200);
+      const rows = res.json().credentials as VerifiableCredential[];
+      expect(rows.length).toBeGreaterThan(0);
+      // The serializer must round-trip every signed field (incl. context and
+      // vc_type, which sit inside signingInput) — anyone holding the response
+      // can re-run the exact server-side verification and get 'valid'.
+      for (const credential of rows) {
+        expect(verifyCredential(credential)).toBe('valid');
+      }
     });
 
     it('requires auth', async () => {

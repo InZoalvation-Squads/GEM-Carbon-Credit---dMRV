@@ -18,6 +18,10 @@ export type SignedCredential = VerifiableCredential & {
  * Public credential shape — explicit typed allowlist, NEVER a `{ ...row }`
  * spread. The proof is INTENTIONALLY public: anyone can re-verify the
  * credential offline (publicKeyFromDidKey + Ed25519), that is the point.
+ * context/vc_type sit INSIDE the signed canonical form (signingInput covers
+ * every field but the proof), so they MUST round-trip for that offline
+ * verification to succeed — dropping them would fail verifyCredential on
+ * every response.
  */
 export type PublicCredential = {
   id: string;
@@ -27,13 +31,17 @@ export type PublicCredential = {
   subject: Record<string, unknown>;
   package_hash: string;
   hcs: VerifiableCredential['hcs'];
+  context?: string[];
+  vc_type?: string[];
   proof: SignedCredential['proof'];
 };
 
 export function serializeCredential(row: Credential): PublicCredential {
-  // The payload column stores the whole signed VC exactly as anchored.
+  // The payload column stores the whole signed VC exactly as anchored (it was
+  // zod-validated at insert), so every VC field is read back verbatim — the
+  // response re-verifies offline bit-for-bit.
   const vc = row.payload as unknown as SignedCredential;
-  return {
+  const credential: PublicCredential = {
     id: row.id,
     schema_id: row.schema_id,
     issuer_did: vc.issuer_did,
@@ -43,6 +51,12 @@ export function serializeCredential(row: Credential): PublicCredential {
     hcs: vc.hcs,
     proof: vc.proof,
   };
+  // Optional in the VC shape — include them exactly when the signed payload
+  // has them (an added-or-dropped key would change canonical() and break the
+  // proof), never invent defaults.
+  if (vc.context !== undefined) credential.context = vc.context;
+  if (vc.vc_type !== undefined) credential.vc_type = vc.vc_type;
+  return credential;
 }
 
 /** Public token shape — all SPA GuardianToken fields, explicit allowlist. */
@@ -138,6 +152,11 @@ export async function anchorVerification(
     if (vc.subject.verification_id !== v.id) {
       throw appError(422, 'UNPROCESSABLE', 'subject.verification_id does not match this verification');
     }
+    // Pin the subject to the verification's own project — symmetric with the
+    // project pinning on mint (the token later copies subject.project_id).
+    if (vc.subject.project_id !== v.project_id) {
+      throw appError(422, 'UNPROCESSABLE', "subject.project_id does not match the verification's project");
+    }
     requireValidSignature(vc);
 
     const credential = await insertCredential(tx, vc, v.project_id);
@@ -206,6 +225,11 @@ export async function anchorPddCredential(
     }
     if (vc.subject.pdd_id !== pdd.id) {
       throw appError(422, 'UNPROCESSABLE', 'subject.pdd_id does not match this PDD');
+    }
+    // Pin the subject to the PDD's own project — symmetric with the
+    // verification-anchor and mint project checks.
+    if (vc.subject.project_id !== pdd.project_id) {
+      throw appError(422, 'UNPROCESSABLE', "subject.project_id does not match the PDD's project");
     }
     requireValidSignature(vc);
 
@@ -333,6 +357,10 @@ export async function listCredentials(prisma: PrismaClient, organizationId: stri
 
 export async function listTokens(prisma: PrismaClient, organizationId: string): Promise<GuardianToken[]> {
   return prisma.guardianToken.findMany({
+    // Org-scope through credential → project rather than the token's own
+    // denormalized project_id: the credential linkage is the server-pinned
+    // source of truth (an FK-backed join), while token.project_id is a
+    // client-supplied copy merely cross-checked at mint time.
     where: { credential: { project: { organization_id: organizationId } } },
     orderBy: [{ minted_at: 'desc' }, { id: 'desc' }], // newest first — SPA store order
   });
