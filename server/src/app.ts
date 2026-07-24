@@ -16,6 +16,7 @@ import { methodologiesRoutes } from './modules/methodologies/routes.js';
 import { pddsRoutes } from './modules/pdds/routes.js';
 import { verificationsRoutes } from './modules/verifications/routes.js';
 import { credentialsRoutes } from './modules/credentials/routes.js';
+import { auditRoutes } from './modules/audit/routes.js';
 
 declare module 'fastify' {
   interface FastifyInstance {
@@ -121,6 +122,7 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // Credentials span /verifications/:id/anchor, /pdds/:id/credential,
   // /credentials/… and /tokens — bare prefix, like evidence and pdds.
   await app.register(credentialsRoutes, { prefix: '/api/v1' });
+  await app.register(auditRoutes, { prefix: '/api/v1/audit' });
 
   return app;
 }
