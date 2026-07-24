@@ -24,6 +24,9 @@ function apiBase(): string {
   return `${base}/api/v1`;
 }
 
+// CUSTODY: tokens live in localStorage, so any XSS can read them — same
+// custody standard as identity.ts key material. Production posture: move the
+// refresh token to an httpOnly cookie, or accept the risk behind a strict CSP.
 export const SESSION_KEY = 'carbon-ready-session-v1';
 
 export interface SessionTokens {
@@ -222,17 +225,24 @@ export const authApi = {
     return session;
   },
 
-  /** POST /auth/logout (best effort) — the local session is always cleared. */
+  /**
+   * POST /auth/logout (best effort). The session is captured and cleared
+   * synchronously BEFORE the revoke request, so a quick re-login can never be
+   * clobbered by this call's completion racing in later.
+   */
   async logout(): Promise<void> {
-    try {
-      if (getSession()) await request('/auth/logout', { method: 'POST' });
-    } finally {
-      clearSession();
-    }
+    const session = getSession();
+    clearSession();
+    if (!session) return;
+    await fetch(`${apiBase()}/auth/logout`, {
+      method: 'POST',
+      headers: { authorization: `Bearer ${session.access_token}` },
+    });
   },
 
-  /** GET /users/me — current user profile. */
-  me(): Promise<ServerUser> {
-    return apiFetch<ServerUser>('/users/me');
+  /** GET /users/me — current user profile (server wraps it as {user}). */
+  async me(): Promise<ServerUser> {
+    const { user } = await apiFetch<{ user: ServerUser }>('/users/me');
+    return user;
   },
 };

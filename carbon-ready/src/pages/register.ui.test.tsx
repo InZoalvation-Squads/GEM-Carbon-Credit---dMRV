@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { Register } from './Register';
@@ -68,5 +68,24 @@ describe('Register page', () => {
     fill({ email: 'vvb@gem.demo' });
     fireEvent.click(screen.getByRole('button', { name: /create account/i }));
     expect(await screen.findByText(/already exists/i)).toBeInTheDocument();
+  });
+});
+
+describe('Register page — role options per mode', () => {
+  afterEach(() => {
+    vi.unstubAllEnvs();
+  });
+
+  it('offers the admin (Standard Registry) role in demo mode', () => {
+    renderRegister();
+    expect(screen.getByRole('option', { name: 'Standard Registry' })).toBeInTheDocument();
+  });
+
+  it('hides the admin role in server mode (server rejects self-registered admins)', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://api.test');
+    renderRegister();
+    expect(screen.queryByRole('option', { name: 'Standard Registry' })).not.toBeInTheDocument();
+    // the self-service roles remain
+    expect(screen.getByRole('option', { name: /project/i })).toBeInTheDocument();
   });
 });

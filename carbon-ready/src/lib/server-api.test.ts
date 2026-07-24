@@ -156,6 +156,32 @@ describe('apiFetch', () => {
     expect(err.status).toBe(401);
     expect(fetchMock).toHaveBeenCalledTimes(3);
   });
+
+  it('deduplicates concurrent 401s into a single refresh POST', async () => {
+    setSession({ access_token: 'stale', refresh_token: 'ref-old' });
+    const fetchMock = vi.fn().mockImplementation(async (url: string, init: RequestInit) => {
+      if (String(url).endsWith('/auth/refresh')) {
+        return jsonResponse(200, { access_token: 'acc-new', refresh_token: 'ref-new' });
+      }
+      const bearer = (init.headers as Record<string, string>).authorization;
+      if (bearer === 'Bearer stale') {
+        return jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'expired' } });
+      }
+      return jsonResponse(200, { ok: true });
+    });
+    vi.stubGlobal('fetch', fetchMock);
+
+    const [a, b] = await Promise.all([
+      apiFetch<{ ok: boolean }>('/projects'),
+      apiFetch<{ ok: boolean }>('/factors'),
+    ]);
+
+    expect(a).toEqual({ ok: true });
+    expect(b).toEqual({ ok: true });
+    const refreshCalls = fetchMock.mock.calls.filter(([url]) => String(url).endsWith('/auth/refresh'));
+    expect(refreshCalls).toHaveLength(1); // one rotation shared by both 401s
+    expect(getSession()).toEqual({ access_token: 'acc-new', refresh_token: 'ref-new' });
+  });
 });
 
 describe('authApi', () => {
@@ -195,9 +221,13 @@ describe('authApi', () => {
     expect(getSession()).toBeNull();
   });
 
-  it('logout POSTs the revoke and always clears the session', async () => {
+  it('logout clears the session BEFORE the revoke request, then POSTs with the captured token', async () => {
     setSession({ access_token: 'acc-1', refresh_token: 'ref-1' });
-    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }));
+    let sessionAtRevokeTime: unknown = 'unset';
+    const fetchMock = vi.fn().mockImplementation(async () => {
+      sessionAtRevokeTime = getSession(); // race guard: a re-login must never be clobbered
+      return new Response(null, { status: 204 });
+    });
     vi.stubGlobal('fetch', fetchMock);
 
     await authApi.logout();
@@ -205,6 +235,7 @@ describe('authApi', () => {
     const [url, init] = fetchMock.mock.calls[0];
     expect(url).toBe(`${BASE}/api/v1/auth/logout`);
     expect(init.headers.authorization).toBe('Bearer acc-1');
+    expect(sessionAtRevokeTime).toBeNull(); // cleared before the request went out
     expect(getSession()).toBeNull();
   });
 
@@ -216,9 +247,9 @@ describe('authApi', () => {
     expect(getSession()).toBeNull();
   });
 
-  it('me GETs the current user with auth', async () => {
+  it('me GETs the current user with auth and unwraps the {user} envelope', async () => {
     setSession({ access_token: 'acc-1', refresh_token: 'ref-1' });
-    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, user));
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { user }));
     vi.stubGlobal('fetch', fetchMock);
 
     const result = await authApi.me();
