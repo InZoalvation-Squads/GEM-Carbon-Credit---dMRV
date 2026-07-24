@@ -127,7 +127,7 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
               <TR key={c.id}>
                 <TD className="font-mono text-xs text-ink-900">{c.id}</TD>
                 <TD className="text-ink-700">{v?.project_id ?? (c.subject.project_id as string)}</TD>
-                <TD className="text-right">{formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e</TD>
+                <TD className="text-right">{Number.isFinite(Number(c.subject.reduction_tco2e)) ? `${formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e` : '—'}</TD>
                 <TD className="font-mono text-xs text-ink-500">{c.hcs.topic_id} · #{c.hcs.sequence_number}</TD>
                 <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(c.issued_at)}</TD>
                 <TD>
@@ -146,6 +146,10 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
                 <TD className="text-right">
                   {token ? (
                     <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-700"><Check size={13} /> Minted #{token.serial_number}</span>
+                  ) : c.schema_id !== 'mrv-approval-v1' ? (
+                    // Only MRV approval credentials carry a tCO₂e claim to mint;
+                    // PDD registration credentials are records, not issuance events.
+                    <span className="text-xs text-ink-400">—</span>
                   ) : isRegistry ? (
                     <Button variant="secondary" onClick={() => onMint(c.id)}><Coins size={14} /> Mint VCU</Button>
                   ) : (
