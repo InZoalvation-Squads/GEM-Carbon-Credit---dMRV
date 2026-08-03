@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue } from './pdd';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeYearlyTable } from './pdd';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -141,5 +141,92 @@ describe('splitDisclosure', () => {
       expect(verifyDisclosedValue('IRR 4.2%', salts.investment_metric, r.value_hash)).toBe(true);
       expect(verifyDisclosedValue('IRR 9.9%', salts.investment_metric, r.value_hash)).toBe(false);
     });
+  });
+});
+
+// ============================================================
+// Official T-VER-S-F001-PDD math — verified against the MCRU
+// reference PDD (Solar Rooftop 667.20 kW, EF 0.4682, 7 years).
+// ============================================================
+const TGO_FACTORS: EmissionFactor[] = [
+  { id: 'ef-tgo', country: 'TH', source: 'TGO', factor_kgco2e_per_kwh: 0.4682,
+    effective_date: '2025-01-01', version: 2, is_current: true, created_at: '' },
+];
+
+// Consumers table from the MCRU appendix (kwh_year on the inverter row is a
+// direct entry; the others derive from rated_w × hours). Total = 5,801.68 kWh.
+const MCRU_CONSUMERS = [
+  { equipment: 'Smart Logger 5 เครื่อง', rated_w: 40, hours_per_year: 8760 },  // 350.40
+  { equipment: 'Power Supply 1 เครื่อง', rated_w: 550, hours_per_year: 8760 }, // 4,818.00
+  { equipment: 'Water Pump', rated_w: 2300, hours_per_year: 10 },              // 23.00
+  { equipment: 'Inverter (Standby Mode)', kwh_year: 610.28 },                  // 610.28
+];
+
+const MCRU_DATA = {
+  year1_generation_kwh: 963915,
+  degradation_pct: 0.4,
+  crediting_years: '7',
+  consumers: MCRU_CONSUMERS,
+};
+
+describe('computeEcPj', () => {
+  it('sums rated×hours and direct kWh entries (MCRU appendix)', () => {
+    expect(computeEcPj(MCRU_CONSUMERS)).toBe(5801.68);
+  });
+  it('returns 0 for missing/empty tables', () => {
+    expect(computeEcPj(undefined)).toBe(0);
+    expect(computeEcPj([])).toBe(0);
+  });
+  it('ignores rows without enough data', () => {
+    expect(computeEcPj([{ equipment: 'TV' }, { rated_w: 100 }])).toBe(0);
+  });
+});
+
+describe('computeYearlyTable — reproduces the MCRU reference PDD', () => {
+  const ctx = { project: PROJECT, factors: TGO_FACTORS, sectionData: MCRU_DATA };
+
+  it('BE per year (2-dp) matches the form', () => {
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows.map((r) => r.be)).toEqual([451.31, 449.5, 447.7, 445.91, 444.13, 442.35, 440.58]);
+  });
+  it('PE is constant 2.72 tCO2/yr', () => {
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows.every((r) => r.pe === 2.72)).toBe(true);
+  });
+  it('yearly ER is floored to whole tCO2e', () => {
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows.map((r) => r.er)).toEqual([448, 446, 444, 443, 441, 439, 437]);
+  });
+  it('totals and averages match the form', () => {
+    const t = computeYearlyTable(ctx)!;
+    expect(t.totals.be).toBe(3121.48);
+    expect(t.totals.er).toBe(3098);
+    expect(t.avg.be).toBe(445.93);
+    expect(t.avg.er).toBe(443);
+    expect(t.years).toBe(7);
+  });
+  it('returns null without a grid factor', () => {
+    expect(computeYearlyTable({ project: PROJECT, factors: [], sectionData: MCRU_DATA })).toBeNull();
+  });
+  it('falls back to the capacity model when no year-1 override is given', () => {
+    const ctx2 = { project: PROJECT, factors: TGO_FACTORS,
+      sectionData: { crediting_years: '7', degradation_pct: 0, performance_ratio: 0.8 } };
+    const t = computeYearlyTable(ctx2)!;
+    // 820 kWp × 4.0 h × 365 × 0.8 = 957,760 kWh → BE = 448.42
+    expect(t.rows[0].be).toBe(448.42);
+    expect(t.rows[6].be).toBe(448.42); // no degradation
+  });
+});
+
+describe('resolveComputed — official-form sources', () => {
+  const ctx = { project: PROJECT, factors: TGO_FACTORS, sectionData: MCRU_DATA };
+  it('annual_generation honors the year-1 override', () => {
+    expect(resolveComputed('annual_generation', ctx)).toBe(963915);
+  });
+  it('ec_pj / be_annual / pe_annual / er_annual', () => {
+    expect(resolveComputed('ec_pj', ctx)).toBe(5801.68);
+    expect(resolveComputed('be_annual', ctx)).toBe(445.93);
+    expect(resolveComputed('pe_annual', ctx)).toBe(2.72);
+    expect(resolveComputed('er_annual', ctx)).toBe(443);
   });
 });
