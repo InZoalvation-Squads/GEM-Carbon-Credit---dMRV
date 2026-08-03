@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Printer, ArrowLeft, Lock, Eye, EyeOff } from 'lucide-react';
+import { Printer, ArrowLeft, Lock, Eye, EyeOff, FileText } from 'lucide-react';
 import { useStore } from '../store';
 import { Card } from '../components/Card';
 import { Button } from '../components/Button';
@@ -37,6 +37,11 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
       <div className={clsx('mb-4 flex items-center print:hidden', embedded ? 'justify-end' : 'justify-between')}>
         {!embedded && <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>}
         <div className="flex items-center gap-2">
+          {methodology.document_template === 'T-VER-S-F001-PDD' && (
+            <Link to={`/registration/${pdd.id}/official`}>
+              <Button variant="ghost"><FileText size={16} /> เอกสารฟอร์ม อบก.</Button>
+            </Link>
+          )}
           <Button variant="ghost" onClick={() => setPublicView((v) => !v)}>
             {publicView ? <EyeOff size={16} /> : <Eye size={16} />} Public view
           </Button>
