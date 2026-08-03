@@ -24,6 +24,10 @@ describe('registration store', () => {
     s.selectMethodology('prj-0004', 'meth-tver-solar');
     const pdd = s.pddByProject('prj-0004')!;
     s.savePddDraft(pdd.id, {
+      project_title_th: 'โครงการทดสอบ', project_owner: 'ผู้ทดสอบ', project_scale: 'เล็กมาก',
+      crediting_years: '7', crediting_start: '2026-01-01',
+      preparer_name: 'ผู้จัดทำ', coordinator_name: 'ผู้ประสานงาน',
+      registered_elsewhere: 'ไม่มี', degradation_pct: 0.4,
       technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
       baseline_scenario: 'Grid electricity displaced by solar generation',
       barrier_type: 'Technological', barrier_explanation: 'x', common_practice: true,
@@ -95,6 +99,10 @@ describe('registration store', () => {
     s.selectMethodology('prj-0004', 'meth-tver-solar');
     const pdd = s.pddByProject('prj-0004')!;
     s.savePddDraft(pdd.id, {
+      project_title_th: 'โครงการทดสอบ', project_owner: 'ผู้ทดสอบ', project_scale: 'เล็กมาก',
+      crediting_years: '7', crediting_start: '2026-01-01',
+      preparer_name: 'ผู้จัดทำ', coordinator_name: 'ผู้ประสานงาน',
+      registered_elsewhere: 'ไม่มี', degradation_pct: 0.4,
       technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
       baseline_scenario: 'Grid electricity displaced by solar generation',
       barrier_type: 'Technological', barrier_explanation: 'x', common_practice: true,

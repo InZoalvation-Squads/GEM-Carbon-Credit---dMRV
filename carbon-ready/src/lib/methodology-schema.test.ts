@@ -55,6 +55,22 @@ describe('methodology JSON schema v2', () => {
   });
 });
 
+describe('extended T-VER solar methodology (T-VER-S-F001-PDD)', () => {
+  it('roundtrips through the JSON contract with the full official-form field set', () => {
+    const solar = seedMethodologies.find((m) => m.code === 'T-VER-S-01')!;
+    const res = parseMethodologyJson(methodologyToJson(solar));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+    if (res.ok) {
+      expect(res.methodology.document_template).toBe('T-VER-S-F001-PDD');
+      const keys = res.methodology.pdd_sections.flatMap((s) => s.fields.map((f) => f.key));
+      for (const k of ['project_title_th', 'installations', 'consumers', 'crediting_years',
+        'degradation_pct', 'preparer_name', 'registered_elsewhere', 'ec_pj', 'er_annual']) {
+        expect(keys, `missing field ${k}`).toContain(k);
+      }
+    }
+  });
+});
+
 describe('schema v2 — table fields & document_template', () => {
   const baseDoc = () => JSON.parse(methodologyToJson(seedMethodologies[0]));
 
@@ -62,7 +78,7 @@ describe('schema v2 — table fields & document_template', () => {
     const doc = baseDoc();
     doc.document_template = 'T-VER-S-F001-PDD';
     doc.pdd_sections[0].fields.push({
-      key: 'installations', label: 'Installations', type: 'table', required: false,
+      key: 'test_table_field', label: 'Installations', type: 'table', required: false,
       columns: [
         { key: 'building', label: 'Building', type: 'text' },
         { key: 'kwp', label: 'Capacity', type: 'number', unit: 'kWp' },
