@@ -42,8 +42,8 @@ function HeaderBox() {
     <table className="doc-table mb-3 w-full">
       <tbody>
         <tr>
-          <td rowSpan={3} className="w-16 text-center align-middle">
-            <span className="inline-block rounded-full border border-[#333] px-1.5 py-2 text-[10px] font-bold leading-tight">T-VER</span>
+          <td rowSpan={3} className="w-20 text-center align-middle">
+            <img src="/tgo-logo-notext.svg" alt="T-VER" className="mx-auto h-12 w-auto" />
           </td>
           <td>โครงการลดก๊าซเรือนกระจกภาคสมัครใจตามมาตรฐานของประเทศไทย</td>
           <td rowSpan={2} className="w-40 text-center align-middle">{FORM_CODE}</td>
