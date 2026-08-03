@@ -64,7 +64,8 @@ describe('extended T-VER solar methodology (T-VER-S-F001-PDD)', () => {
       expect(res.methodology.document_template).toBe('T-VER-S-F001-PDD');
       const keys = res.methodology.pdd_sections.flatMap((s) => s.fields.map((f) => f.key));
       for (const k of ['project_title_th', 'installations', 'consumers', 'crediting_years',
-        'degradation_pct', 'preparer_name', 'registered_elsewhere', 'ec_pj', 'er_annual']) {
+        'degradation_pct', 'preparer_name', 'registered_elsewhere', 'ec_pj', 'er_annual',
+        'owner_name', 'project_address', 'permit_no', 'permit_date', 'equipment_specs']) {
         expect(keys, `missing field ${k}`).toContain(k);
       }
     }

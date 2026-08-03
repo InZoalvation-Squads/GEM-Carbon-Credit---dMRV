@@ -41,11 +41,18 @@ export function validatePdd(m: Methodology, data: Record<string, unknown>): PddV
   return { ok: missing.length === 0, missing };
 }
 
-/** Current grid emission factor for the project's country, or null. */
+/**
+ * Current grid emission factor for the project's country, or null. Versioning
+ * is per country+source pair, so several sources can be current at once for
+ * one country — the latest effective_date wins.
+ */
 function gridFactor(ctx: ComputeContext): number | null {
-  const country = locationToCountryCode(ctx.project.location.split(',').pop()?.trim() ?? '');
-  const f = ctx.factors.find((x) => x.country === country && x.is_current);
-  return f ? f.factor_kgco2e_per_kwh : null;
+  const current = ctx.factors.filter(
+    (x) => x.country === locationToCountryCode(ctx.project.location.split(',').pop()?.trim() ?? '') && x.is_current,
+  );
+  if (current.length === 0) return null;
+  const f = current.reduce((a, b) => (b.effective_date >= a.effective_date ? b : a));
+  return f.factor_kgco2e_per_kwh;
 }
 
 /** Resolve a computed field's value from project + factors + current answers. */

@@ -103,6 +103,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   };
   const has = (k: string, val: string) => d[k] === val;
   const installations = (Array.isArray(d.installations) ? d.installations : []) as Array<Record<string, unknown>>;
+  const equipmentSpecs = (Array.isArray(d.equipment_specs) ? d.equipment_specs : []) as Array<Record<string, unknown>>;
+  const address = typeof d.project_address === 'string' && d.project_address !== '' ? d.project_address : project.location;
+  const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
   const ecPj = computeEcPj(consumers);
   const consumerKwh = (r: Record<string, unknown>): number | null => {
@@ -139,8 +142,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td>{str('project_title_en')}</td></tr>
               <tr><td className="font-bold">ผู้พัฒนาโครงการ</td><td>{str('project_owner')}</td></tr>
               <tr><td className="font-bold">ผู้พัฒนาโครงการร่วม</td><td>{str('co_developer')}</td></tr>
-              <tr><td className="font-bold">เจ้าของโครงการ</td><td>{str('project_owner')}</td></tr>
-              <tr><td className="font-bold">ที่ตั้งโครงการ</td><td>{project.location}</td></tr>
+              <tr><td className="font-bold">เจ้าของโครงการ</td><td>{ownerName}</td></tr>
+              <tr><td className="font-bold">ที่ตั้งโครงการ</td><td className="whitespace-pre-wrap">{address}</td></tr>
               <tr>
                 <td className="font-bold">พิกัดที่ตั้งโครงการ</td>
                 <td>
@@ -221,7 +224,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="w-44 font-bold">ผู้พัฒนาโครงการ</td><td>{str('project_owner')}</td></tr>
               <tr><td className="font-bold">ชื่อผู้ประสานงาน</td><td>{str('coordinator_name')}</td></tr>
               <tr><td className="font-bold">ตำแหน่ง</td><td>{str('coordinator_position')}</td></tr>
-              <tr><td className="font-bold">ที่อยู่</td><td>{project.location}</td></tr>
+              <tr><td className="font-bold">ที่อยู่</td><td className="whitespace-pre-wrap">{address}</td></tr>
               <tr><td className="font-bold">โทรศัพท์</td><td>{str('coordinator_phone')}</td></tr>
               <tr><td className="font-bold">E-mail</td><td>{str('coordinator_email')}</td></tr>
             </tbody>
@@ -237,12 +240,34 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="whitespace-pre-wrap indent-8">{str('before_project')}</p>
           <p className="mt-2 font-bold underline">หลังดำเนินโครงการ</p>
           <p className="whitespace-pre-wrap indent-8">{str('after_project')}</p>
+          {d.permit_no !== undefined && d.permit_no !== '' && (
+            <p className="indent-8">
+              ทำการติดตั้งตามใบอนุญาตก่อสร้างอาคาร ดัดแปลงอาคาร หรือรื้อถอนอาคาร
+              เลขที่ {str('permit_no')} ลงวันที่ {thaiDate(d.permit_date)}
+            </p>
+          )}
 
           <p className="mt-3 font-bold underline">1.2 ขอบเขตการดำเนินโครงการ</p>
           <p className="indent-8">
             โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(project.capacity_kwp)} kWp
             ({str('technology')}, {str('grid_connection')}) เพื่อทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
           </p>
+          {equipmentSpecs.length > 0 && (
+            <>
+              <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
+              <ol className="list-decimal pl-14">
+                {equipmentSpecs.map((r, i) => (
+                  <li key={i}>
+                    {String(r.item ?? '-')}
+                    {r.brand !== undefined && r.brand !== '' ? ` ยี่ห้อ ${String(r.brand)}` : ''}
+                    {r.model !== undefined && r.model !== '' ? ` รุ่น ${String(r.model)}` : ''}
+                    {r.spec !== undefined && r.spec !== '' ? ` ${String(r.spec)}` : ''}
+                    {r.qty !== undefined && r.qty !== '' ? ` จำนวน ${fmtInt(Number(r.qty))}` : ''}
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
           {installations.length > 0 && (
             <>
               <p className="mt-2 text-center font-bold">ตารางที่ 1 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ</p>

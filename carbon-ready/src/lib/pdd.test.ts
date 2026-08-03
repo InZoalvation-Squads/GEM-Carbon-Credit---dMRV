@@ -181,6 +181,22 @@ const MCRU_DATA = {
   consumers: MCRU_CONSUMERS,
 };
 
+describe('gridFactor via resolveComputed — multiple current sources per country', () => {
+  it('picks the current factor with the latest effective_date', () => {
+    const two: EmissionFactor[] = [
+      { id: 'ef-egat', country: 'TH', source: 'EGAT', factor_kgco2e_per_kwh: 0.51,
+        effective_date: '2024-01-01', version: 1, is_current: true, created_at: '' },
+      { id: 'ef-tgo2', country: 'TH', source: 'TGO 2568', factor_kgco2e_per_kwh: 0.4682,
+        effective_date: '2025-01-01', version: 1, is_current: true, created_at: '' },
+    ];
+    const ctx = { project: PROJECT, factors: two, sectionData: {} };
+    expect(resolveComputed('grid_factor', ctx)).toBe(0.4682);
+    // order-independent
+    const ctxRev = { project: PROJECT, factors: [...two].reverse(), sectionData: {} };
+    expect(resolveComputed('grid_factor', ctxRev)).toBe(0.4682);
+  });
+});
+
 describe('computeEcPj', () => {
   it('sums rated×hours and direct kWh entries (MCRU appendix)', () => {
     expect(computeEcPj(MCRU_CONSUMERS)).toBe(5801.68);

@@ -100,9 +100,11 @@ describe('table field editor', () => {
     fireEvent.click(screen.getByRole('button', { name: 'A.' }));
     expect(screen.getByText('อุปกรณ์หลักที่ติดตั้งรายอาคาร')).toBeInTheDocument();
 
-    fireEvent.click(screen.getByRole('button', { name: /เพิ่มแถว/ }));
+    // Section A now holds two table fields (installations + equipment_specs);
+    // the installations editor renders first.
+    fireEvent.click(screen.getAllByRole('button', { name: /เพิ่มแถว/ })[0]);
     expect(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง').length).toBe(1);
-    fireEvent.click(screen.getByRole('button', { name: /เพิ่มแถว/ }));
+    fireEvent.click(screen.getAllByRole('button', { name: /เพิ่มแถว/ })[0]);
     expect(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง').length).toBe(2);
 
     fireEvent.change(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง')[0], { target: { value: 'อาคาร 1' } });

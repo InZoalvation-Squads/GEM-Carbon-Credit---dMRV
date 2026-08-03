@@ -80,8 +80,14 @@ function seedMcruData(overrides: Record<string, unknown> = {}) {
     }],
   });
   const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  // demoFixtures reuses module-level objects across seedDemo() calls, so
+  // optional keys mutated by an earlier test would otherwise leak into this one.
+  const {
+    permit_no: _p1, permit_date: _p2, owner_name: _p3, project_address: _p4,
+    equipment_specs: _p5, ...base
+  } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
-    ...pdd.section_data,
+    ...base,
     project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา',
     project_owner: 'มหาวิทยาลัยทดสอบ',
     project_scale: 'เล็กมาก',
@@ -188,5 +194,43 @@ describe('TverSF001Pdd — fallbacks', () => {
   it('unknown pdd id renders the not-found empty state, not a crash', () => {
     render(<MemoryRouter><TverSF001Pdd pddId="PDD-NOPE" /></MemoryRouter>);
     expect(screen.getByText('PDD not found')).toBeInTheDocument();
+  });
+});
+
+describe('TverSF001Pdd — submission-grade fields (permit, owner, address, equipment)', () => {
+  it('renders the construction permit line, separate owner, and full address', () => {
+    seedMcruData({
+      owner_name: 'เจ้าของแยก จำกัด',
+      project_address: '46 หมู่ 3 ตำบลจอมบึง อำเภอจอมบึง จังหวัดราชบุรี 70150',
+      permit_no: '12/2568',
+      permit_date: '2025-03-25',
+    });
+    renderDoc();
+    expect(screen.getByText('เจ้าของแยก จำกัด')).toBeInTheDocument();
+    expect(screen.getAllByText(/46 หมู่ 3 ตำบลจอมบึง/).length).toBeGreaterThan(0); // cover + ที่อยู่ผู้ประสานงาน
+    expect(screen.getByText(/เลขที่ 12\/2568/)).toBeInTheDocument();
+    expect(screen.getByText(/ลงวันที่.*2568/)).toBeInTheDocument(); // Buddhist year of 2025-03-25
+  });
+
+  it('renders the numbered technology list from equipment_specs', () => {
+    seedMcruData({
+      equipment_specs: [
+        { item: 'แผงเซลล์แสงอาทิตย์ (Monocrystalline)', brand: 'Trinasolar', model: 'TSM-NEG21C.20', spec: 'ขนาด 695 วัตต์', qty: 960 },
+        { item: 'อินเวอร์เตอร์', brand: 'Huawei', model: 'SUN2000-50KTL-M3', qty: 16 },
+      ],
+    });
+    renderDoc();
+    const li = screen.getByText(/Trinasolar/);
+    expect(li.textContent).toContain('รุ่น TSM-NEG21C.20');
+    expect(li.textContent).toContain('จำนวน 960');
+    expect(screen.getByText(/SUN2000-50KTL-M3/)).toBeInTheDocument();
+  });
+
+  it('falls back to developer name and project.location when the new fields are empty', () => {
+    seedMcruData();
+    renderDoc();
+    // เจ้าของโครงการ row shows the developer (มหาวิทยาลัยทดสอบ appears twice: ผู้พัฒนา + เจ้าของ)
+    expect(screen.getAllByText('มหาวิทยาลัยทดสอบ').length).toBeGreaterThanOrEqual(2);
+    expect(screen.queryByText(/เลขที่ 12\/2568/)).toBeNull(); // no permit line without data
   });
 });
