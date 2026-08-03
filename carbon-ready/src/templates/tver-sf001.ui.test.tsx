@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
-import { TverSF001Pdd } from './TverSF001Pdd';
+import { TverSF001Pdd, pddSiteImages } from './TverSF001Pdd';
 import { seedDemo } from '../test/demoFixtures';
 import { useStore } from '../store';
 
@@ -232,5 +232,22 @@ describe('TverSF001Pdd — submission-grade fields (permit, owner, address, equi
     // เจ้าของโครงการ row shows the developer (มหาวิทยาลัยทดสอบ appears twice: ผู้พัฒนา + เจ้าของ)
     expect(screen.getAllByText('มหาวิทยาลัยทดสอบ').length).toBeGreaterThanOrEqual(2);
     expect(screen.queryByText(/เลขที่ 12\/2568/)).toBeNull(); // no permit line without data
+  });
+});
+
+describe('TverSF001Pdd — evidence figures', () => {
+  it('pddSiteImages picks only active image evidence of the project', () => {
+    const ev = useStore.getState().evidence;
+    const picked = pddSiteImages(ev, 'prj-0001');
+    expect(picked.length).toBeGreaterThan(0);
+    expect(picked.every((e) => e.kind === 'image' && e.status === 'active' && e.project_id === 'prj-0001')).toBe(true);
+    expect(pddSiteImages(ev, 'prj-nope')).toEqual([]);
+  });
+
+  it('local-store mode renders no figure section (file bytes live behind the server API)', () => {
+    seedMcruData();
+    renderDoc();
+    expect(screen.queryByText('ภาพประกอบการติดตั้ง')).toBeNull();
+    expect(document.querySelector('figure')).toBeNull();
   });
 });

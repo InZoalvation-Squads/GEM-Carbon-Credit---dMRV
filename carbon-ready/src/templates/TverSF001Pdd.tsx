@@ -1,11 +1,12 @@
-import type { ReactNode } from 'react';
+import { useEffect, useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button } from '../components/Button';
 import { EmptyState } from '../components/EmptyState';
 import { computeYearlyTable, computeEcPj, resolveComputed } from '../lib/pdd';
-import type { PddComputedSource } from '../types';
+import { serverMode, evidenceApi } from '../lib/server-api';
+import type { EvidenceFile, PddComputedSource } from '../types';
 
 // ============================================================
 // T-VER-S-F001-PDD — official TGO single-project PDD layout.
@@ -77,6 +78,61 @@ function Page({ children }: { children: ReactNode }) {
       {children}
       <Footer />
     </section>
+  );
+}
+
+/** Active image evidence of the project — the figures embedded in section 1. */
+export function pddSiteImages(evidence: EvidenceFile[], projectId: string): EvidenceFile[] {
+  return evidence.filter((e) => e.project_id === projectId && e.kind === 'image' && e.status === 'active');
+}
+
+/**
+ * ภาพประกอบการติดตั้ง — image evidence rendered as numbered figures.
+ * Bytes only exist behind the server API, so figures render in server mode
+ * only; local-store mode carries evidence metadata without file content.
+ */
+function EvidenceFigures({ projectId }: { projectId: string }) {
+  const evidence = useStore((s) => s.evidence);
+  const images = pddSiteImages(evidence, projectId);
+  const [urls, setUrls] = useState<Record<string, string>>({});
+
+  useEffect(() => {
+    if (!serverMode() || images.length === 0) return;
+    let alive = true;
+    const created: string[] = [];
+    void (async () => {
+      for (const img of images) {
+        const blob = await evidenceApi.fileBlob(img.id);
+        if (!alive) break;
+        if (!blob) continue;
+        const url = URL.createObjectURL(blob);
+        created.push(url);
+        setUrls((m) => ({ ...m, [img.id]: url }));
+      }
+    })();
+    return () => {
+      alive = false;
+      created.forEach((u) => URL.revokeObjectURL(u));
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [projectId, images.length]);
+
+  const shown = images.filter((img) => urls[img.id]);
+  if (shown.length === 0) return null;
+  return (
+    <div className="mt-3">
+      <p className="font-bold underline">ภาพประกอบการติดตั้ง</p>
+      <div className="mt-1 grid grid-cols-2 gap-3">
+        {shown.map((img, i) => (
+          <figure key={img.id} className="break-inside-avoid">
+            <img src={urls[img.id]} alt={img.description ?? img.file_name} className="w-full border border-[#333]" />
+            <figcaption className="mt-0.5 text-center text-[12px]">
+              ภาพที่ {i + 1} {img.description ?? img.file_name}
+            </figcaption>
+          </figure>
+        ))}
+      </div>
+    </div>
   );
 }
 
@@ -298,6 +354,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
+          <EvidenceFigures projectId={project.id} />
 
           <p className="mt-3 font-bold underline">1.3 การนับซ้ำ</p>
           <p className="indent-8">

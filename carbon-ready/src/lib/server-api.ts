@@ -397,6 +397,19 @@ export const evidenceApi = {
   async listByProject(projectId: string): Promise<EvidenceFile[]> {
     return (await apiFetch<{ evidence: EvidenceFile[] }>(`/projects/${projectId}/evidence`)).evidence;
   },
+  /**
+   * GET /evidence/:id/file → raw bytes as a Blob (authed). Best-effort for
+   * inline document figures: any failure (404, no stored blob, network)
+   * resolves to null rather than throwing.
+   */
+  async fileBlob(id: string): Promise<Blob | null> {
+    try {
+      const res = await request(`/evidence/${id}/file`, {});
+      return res.ok ? await res.blob() : null;
+    } catch {
+      return null;
+    }
+  },
 };
 
 export const credentialsApi = {
