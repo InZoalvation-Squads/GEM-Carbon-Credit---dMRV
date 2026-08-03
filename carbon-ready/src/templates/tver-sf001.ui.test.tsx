@@ -58,3 +58,135 @@ describe('TverSF001Pdd official template', () => {
     expect(screen.getByTestId('ecpj-total').textContent).toContain('350.40');
   });
 });
+
+// ============================================================
+// MCRU reference PDD — the template must render the same numbers the
+// official document shows (see docs: T-VER-S-F001-PDD_MCRU example).
+// ============================================================
+const MCRU_CONSUMERS = [
+  { equipment: 'Smart Logger 5 เครื่อง', rated_w: 40, hours_per_year: 8760, note: 'ทำงาน 24 ชั่วโมง/วัน' },
+  { equipment: 'Power Supply 1 เครื่อง', rated_w: 550, hours_per_year: 8760, note: 'ทำงาน 24 ชั่วโมง/วัน' },
+  { equipment: 'Water Pump', rated_w: 2300, hours_per_year: 10, note: 'ล้างแผง 1 ครั้ง/ปี' },
+  { equipment: 'Inverter (Standby Mode)', kwh_year: 610.28, note: 'non sun peak hour' },
+];
+
+function seedMcruData(overrides: Record<string, unknown> = {}) {
+  // prj-0001 (PDD-2000) is in India — pin an IN factor at the MCRU EF so the
+  // rendered numbers match the reference document exactly.
+  useStore.setState({
+    factors: [{
+      id: 'ef-in-mcru', country: 'IN', source: 'TGO', factor_kgco2e_per_kwh: 0.4682,
+      effective_date: '2025-01-01', version: 9, is_current: true, created_at: '',
+    }],
+  });
+  const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  pdd.section_data = {
+    ...pdd.section_data,
+    project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา',
+    project_owner: 'มหาวิทยาลัยทดสอบ',
+    project_scale: 'เล็กมาก',
+    crediting_years: '7',
+    crediting_start: '2026-01-01',
+    year1_generation_kwh: 963915,
+    degradation_pct: 0.4,
+    consumers: MCRU_CONSUMERS,
+    registered_elsewhere: 'ไม่มี',
+    ...overrides,
+  };
+}
+
+/** First character (☑/☐) of every checkbox row whose label matches. */
+function checkboxStates(label: string | RegExp): string[] {
+  return screen.getAllByText(label).map((el) => (el.parentElement?.textContent ?? '').trim().charAt(0));
+}
+
+describe('TverSF001Pdd — MCRU reference figures render in the document', () => {
+  beforeEach(() => seedMcruData());
+
+  it('yearly table shows the exact BE rows, floored ER rows, totals and averages', () => {
+    renderDoc();
+    const text = screen.getByTestId('yearly-table').textContent ?? '';
+    for (const be of ['451.31', '449.50', '447.70', '445.91', '444.13', '442.35', '440.58']) {
+      expect(text, `BE ${be}`).toContain(be);
+    }
+    expect(text).toContain('3,121.48');  // BE total
+    expect(text).toContain('3,098');     // ER total (sum of floored years)
+    expect(text).toContain('445.93');    // BE average
+    expect(text).toContain('2.72');      // PE
+  });
+
+  it('appendix sums EC_PJ to 5,801.68 kWh from mixed rated×hours and direct rows', () => {
+    renderDoc();
+    expect(screen.getByTestId('ecpj-total').textContent).toContain('5,801.68');
+    expect(screen.getByText('Inverter (Standby Mode)')).toBeInTheDocument();
+    expect(screen.getByText('ล้างแผง 1 ครั้ง/ปี')).toBeInTheDocument();
+  });
+
+  it('cover shows the annual ER (443 tCO₂e/yr) and Buddhist-era crediting date', () => {
+    renderDoc();
+    expect(screen.getByText(/443 ตันคาร์บอนไดออกไซด์เทียบเท่าต่อปี/)).toBeInTheDocument();
+    // 2026-01-01 → พ.ศ. 2569 (th-TH locale uses the Buddhist calendar)
+    expect(screen.getAllByText(/2569/).length).toBeGreaterThan(0);
+  });
+});
+
+describe('TverSF001Pdd — checkbox states follow section_data', () => {
+  it('ticks เล็กมาก / 7 ปี / ไม่มี(นับซ้ำ) and leaves the others empty', () => {
+    seedMcruData();
+    renderDoc();
+    expect(checkboxStates('เล็กมาก')).toEqual(['☑']);
+    expect(checkboxStates('เล็ก')).toEqual(['☐']);
+    expect(checkboxStates('ใหญ่')).toEqual(['☐']);
+    for (const s of checkboxStates(/^7 ปี/)) expect(s).toBe('☑');
+    for (const s of checkboxStates(/^10 ปี/)) expect(s).toBe('☐');
+    expect(checkboxStates('ไม่มี')).toEqual(['☑']);
+  });
+
+  it('micro-scale projects get the Positive List additionality branch', () => {
+    seedMcruData();
+    renderDoc();
+    expect(screen.getByText(/Positive List/)).toBeInTheDocument();
+    expect(checkboxStates(/^ไม่ต้องพิสูจน์การดำเนินงานเพิ่ม/)).toEqual(['☑']);
+  });
+
+  it('non-micro scale flips to the "must prove additionality" branch with the barrier text', () => {
+    seedMcruData({ project_scale: 'ใหญ่' });
+    renderDoc();
+    expect(checkboxStates(/^ต้องพิสูจน์การดำเนินงานเพิ่ม/)).toEqual(['☑']);
+    expect(checkboxStates('ใหญ่')).toEqual(['☑']);
+    expect(checkboxStates('เล็กมาก')).toEqual(['☐']);
+  });
+
+  it('double counting "มี" ticks that row and renders the registry details', () => {
+    seedMcruData({
+      registered_elsewhere: 'มี',
+      registry_name: 'REC-โครงการเดิม', registry_scheme: 'I-REC', registry_period: '2567–2568',
+    });
+    renderDoc();
+    expect(checkboxStates('ไม่มี')).toEqual(['☐']);
+    expect(screen.getByText(/REC-โครงการเดิม/)).toBeInTheDocument();
+    expect(screen.getByText(/I-REC/)).toBeInTheDocument();
+  });
+});
+
+describe('TverSF001Pdd — fallbacks', () => {
+  it('missing emission factor: no yearly table, shows the Thai error note instead', () => {
+    seedMcruData();
+    useStore.setState({ factors: [] });
+    renderDoc();
+    expect(screen.queryByTestId('yearly-table')).toBeNull();
+    expect(screen.getByText(/ยังคำนวณไม่ได้/)).toBeInTheDocument();
+  });
+
+  it('empty consumers table hides the appendix page entirely', () => {
+    seedMcruData({ consumers: [] });
+    renderDoc();
+    expect(screen.queryByTestId('ecpj-total')).toBeNull();
+    expect(screen.queryByText(/ภาคผนวก/)).toBeNull();
+  });
+
+  it('unknown pdd id renders the not-found empty state, not a crash', () => {
+    render(<MemoryRouter><TverSF001Pdd pddId="PDD-NOPE" /></MemoryRouter>);
+    expect(screen.getByText('PDD not found')).toBeInTheDocument();
+  });
+});

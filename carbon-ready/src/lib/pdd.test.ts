@@ -55,6 +55,18 @@ describe('validatePdd', () => {
     expect(validatePdd(METH, inv).ok).toBe(false);
     expect(validatePdd(METH, { ...inv, investment_metric: 'IRR' }).ok).toBe(true);
   });
+  it('treats an empty array as missing for required table fields', () => {
+    const tm: Methodology = {
+      ...METH,
+      pdd_sections: [{ key: 't', title: 'T', fields: [
+        { key: 'rows', label: 'Rows', type: 'table', required: true,
+          columns: [{ key: 'a', label: 'A', type: 'text' }] },
+      ] }],
+    };
+    expect(validatePdd(tm, { rows: [] }).ok).toBe(false);
+    expect(validatePdd(tm, { rows: [{ a: 'x' }] }).ok).toBe(true);
+  });
+
   it('never requires computed fields', () => {
     const res = validatePdd(METH, { technology: 'PV', barrier_type: 'Technological' });
     expect(res.missing.map((m) => m.field)).not.toContain('capacity_kwp');
