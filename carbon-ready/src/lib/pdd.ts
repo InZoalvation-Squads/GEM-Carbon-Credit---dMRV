@@ -33,7 +33,8 @@ export function validatePdd(m: Methodology, data: Record<string, unknown>): PddV
       if (!field.required || field.type === 'computed') continue;
       if (!isFieldVisible(field, data)) continue;
       const v = data[field.key];
-      const empty = v === undefined || v === null || v === '';
+      const empty = v === undefined || v === null || v === ''
+        || (Array.isArray(v) && v.length === 0);
       if (empty) missing.push({ section: section.key, field: field.key, label: field.label });
     }
   }

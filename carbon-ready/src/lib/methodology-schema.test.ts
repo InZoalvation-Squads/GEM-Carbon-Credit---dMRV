@@ -54,3 +54,51 @@ describe('methodology JSON schema v2', () => {
     expect(parseMethodologyJson(JSON.stringify(bad)).ok).toBe(false);
   });
 });
+
+describe('schema v2 — table fields & document_template', () => {
+  const baseDoc = () => JSON.parse(methodologyToJson(seedMethodologies[0]));
+
+  it('accepts a table field with columns and a document_template', () => {
+    const doc = baseDoc();
+    doc.document_template = 'T-VER-S-F001-PDD';
+    doc.pdd_sections[0].fields.push({
+      key: 'installations', label: 'Installations', type: 'table', required: false,
+      columns: [
+        { key: 'building', label: 'Building', type: 'text' },
+        { key: 'kwp', label: 'Capacity', type: 'number', unit: 'kWp' },
+      ],
+    });
+    const res = parseMethodologyJson(JSON.stringify(doc));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+  });
+
+  it('rejects a table field without columns', () => {
+    const doc = baseDoc();
+    doc.pdd_sections[0].fields.push({ key: 't', label: 'T', type: 'table', required: false });
+    expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
+  });
+
+  it('rejects columns on a non-table field', () => {
+    const doc = baseDoc();
+    doc.pdd_sections[0].fields.push({
+      key: 't', label: 'T', type: 'text', required: false,
+      columns: [{ key: 'c', label: 'C', type: 'text' }],
+    });
+    expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
+  });
+
+  it('rejects an unknown document_template', () => {
+    const doc = baseDoc();
+    doc.document_template = 'NOT-A-FORM';
+    expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
+  });
+
+  it('accepts the new computed sources', () => {
+    const doc = baseDoc();
+    for (const source of ['annual_generation', 'ec_pj', 'be_annual', 'pe_annual', 'er_annual']) {
+      doc.pdd_sections[0].fields.push({ key: `c_${source}`, label: source, type: 'computed', required: false, source });
+    }
+    const res = parseMethodologyJson(JSON.stringify(doc));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+  });
+});
