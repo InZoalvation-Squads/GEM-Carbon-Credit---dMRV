@@ -6,6 +6,7 @@ import { PddDocument } from '../pages/PddDocument';
 import { Registration } from '../pages/Registration';
 import { VERRA_VM0042_METHODOLOGY } from '../data/methodologies';
 import { seedDemo } from '../test/demoFixtures';
+import { useStore } from '../store';
 
 beforeEach(() => seedDemo());
 
@@ -83,5 +84,32 @@ describe('RegistrationGate', () => {
       </MemoryRouter>,
     );
     expect(screen.getByText('SECRET DMRV')).toBeInTheDocument();
+  });
+});
+
+describe('table field editor', () => {
+  it('adds and removes rows on a table field (installations, section A)', () => {
+    // Point the editable draft project at the Solar methodology so the
+    // extended T-VER-S-F001 sections (incl. table fields) render.
+    const pdd = useStore.getState().selectMethodology('prj-0004', 'meth-tver-solar');
+    render(
+      <MemoryRouter initialEntries={[`/registration/${pdd.id}`]}>
+        <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: 'A.' }));
+    expect(screen.getByText('อุปกรณ์หลักที่ติดตั้งรายอาคาร')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /เพิ่มแถว/ }));
+    expect(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง').length).toBe(1);
+    fireEvent.click(screen.getByRole('button', { name: /เพิ่มแถว/ }));
+    expect(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง').length).toBe(2);
+
+    fireEvent.change(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง')[0], { target: { value: 'อาคาร 1' } });
+    expect(screen.getByDisplayValue('อาคาร 1')).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: 'ลบแถว 2' }));
+    expect(screen.getAllByPlaceholderText('พื้นที่ติดตั้ง').length).toBe(1);
+    expect(screen.getByDisplayValue('อาคาร 1')).toBeInTheDocument();
   });
 });

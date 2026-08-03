@@ -174,6 +174,10 @@ function FieldInput({ field, value, computed, readonly, onChange }: {
     );
   }
 
+  if (field.type === 'table') {
+    return <TableFieldInput field={field} value={value} readonly={readonly} onChange={onChange} />;
+  }
+
   let control;
   if (field.type === 'textarea') {
     control = <Textarea label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)} />;
@@ -201,6 +205,61 @@ function FieldInput({ field, value, computed, readonly, onChange }: {
   return (
     <div>
       {control}
+      {field.help && <span className="mt-1 block text-xs text-ink-400">{field.help}</span>}
+    </div>
+  );
+}
+
+function TableFieldInput({ field, value, readonly, onChange }: {
+  field: PddFieldSchema; value: unknown; readonly: boolean; onChange: (v: unknown) => void;
+}) {
+  const columns = field.columns ?? [];
+  const rows = (Array.isArray(value) ? value : []) as Array<Record<string, unknown>>;
+  const setCell = (ri: number, key: string, v: unknown) =>
+    onChange(rows.map((r, i) => (i === ri ? { ...r, [key]: v } : r)));
+  return (
+    <div>
+      <span className="mb-1 block text-sm font-medium text-ink-700">{field.label}</span>
+      <div className="overflow-x-auto rounded-lg ring-1 ring-ink-200">
+        <table className="w-full text-sm">
+          <thead className="bg-ink-50 text-left text-xs text-ink-500">
+            <tr>
+              {columns.map((c) => (
+                <th key={c.key} className="px-2 py-1.5 font-medium">{c.label}{c.unit ? ` (${c.unit})` : ''}</th>
+              ))}
+              {!readonly && <th className="w-8" />}
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((row, ri) => (
+              <tr key={ri} className="border-t border-ink-100">
+                {columns.map((c) => (
+                  <td key={c.key} className="px-1 py-1">
+                    <input
+                      className="w-full rounded border border-ink-200 px-2 py-1 text-sm disabled:bg-ink-50"
+                      type={c.type === 'number' ? 'number' : 'text'}
+                      placeholder={c.label}
+                      aria-label={`${c.label} แถว ${ri + 1}`}
+                      disabled={readonly}
+                      value={String(row[c.key] ?? '')}
+                      onChange={(e) => setCell(ri, c.key, c.type === 'number' ? (e.target.value === '' ? '' : Number(e.target.value)) : e.target.value)}
+                    />
+                  </td>
+                ))}
+                {!readonly && (
+                  <td className="px-1 text-center">
+                    <button type="button" aria-label={`ลบแถว ${ri + 1}`} className="text-ink-400 hover:text-red-600"
+                      onClick={() => onChange(rows.filter((_, i) => i !== ri))}>✕</button>
+                  </td>
+                )}
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+      {!readonly && (
+        <Button variant="ghost" className="mt-1" onClick={() => onChange([...rows, {}])}>+ เพิ่มแถว</Button>
+      )}
       {field.help && <span className="mt-1 block text-xs text-ink-400">{field.help}</span>}
     </div>
   );
