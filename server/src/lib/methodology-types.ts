@@ -22,11 +22,19 @@ export type EvidenceCategory =
 // ============================================================
 export type PddFieldType =
   | 'text' | 'textarea' | 'number' | 'select' | 'date'
-  | 'boolean' | 'url' | 'email' | 'image' | 'computed';
+  | 'boolean' | 'url' | 'email' | 'image' | 'computed' | 'table';
 
 export type PddComputedSource =
   | 'capacity_kwp' | 'project_location' | 'commission_date'
-  | 'grid_factor' | 'er_estimate';
+  | 'grid_factor' | 'er_estimate'
+  | 'annual_generation' | 'ec_pj' | 'be_annual' | 'pe_annual' | 'er_annual';
+
+export interface PddTableColumn {
+  key: string;
+  label: string;
+  type: 'text' | 'number';
+  unit?: string;
+}
 
 export interface PddFieldSchema {
   key: string;                 // unique across the methodology
@@ -39,6 +47,7 @@ export interface PddFieldSchema {
   showIf?: { field: string; equals: string };   // conditional visibility
   source?: PddComputedSource;  // for 'computed'
   sensitive?: boolean;         // selective disclosure: published only as a hash
+  columns?: PddTableColumn[];  // for 'table' — value is Array<Record<column.key, string|number>>
 }
 
 export interface PddSectionSchema {
@@ -83,4 +92,6 @@ export interface Methodology {
   pdd_sections: PddSectionSchema[];
   required_evidence: EvidenceCategory[];
   monitoring_params: MonitoringParam[];
+  /** Official-form renderer registered for this methodology (template-per-form). */
+  document_template?: 'T-VER-S-F001-PDD';
 }

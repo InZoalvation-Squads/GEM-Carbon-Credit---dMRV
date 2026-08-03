@@ -2,6 +2,7 @@
 // until workspaces (Phase 1b). Only the type import differs: the SPA imports
 // Methodology from '../types'; the server carries a note-for-note minimal
 // subset in ./methodology-types.ts.
+
 import { z } from 'zod';
 import type { Methodology } from './methodology-types.js';
 
@@ -16,13 +17,16 @@ export const METHODOLOGY_SCHEMA_VERSION = 2 as const;
 
 const PDD_FIELD_TYPES = [
   'text', 'textarea', 'number', 'select', 'date',
-  'boolean', 'url', 'email', 'image', 'computed',
+  'boolean', 'url', 'email', 'image', 'computed', 'table',
 ] as const;
 
 const PDD_COMPUTED_SOURCES = [
   'capacity_kwp', 'project_location', 'commission_date',
   'grid_factor', 'er_estimate',
+  'annual_generation', 'ec_pj', 'be_annual', 'pe_annual', 'er_annual',
 ] as const;
+
+const DOCUMENT_TEMPLATES = ['T-VER-S-F001-PDD'] as const;
 
 const EVIDENCE_CATEGORIES = [
   'meter_reading', 'utility_bill', 'commissioning_report', 'site_photo',
@@ -38,6 +42,13 @@ const ShowIfSchema = z.strictObject({
   equals: z.string(),
 });
 
+const PddTableColumnSchema = z.strictObject({
+  key: z.string().min(1),
+  label: z.string().min(1),
+  type: z.enum(['text', 'number']),
+  unit: z.string().min(1).optional(),
+});
+
 const PddFieldSchema = z.strictObject({
   key: z.string().min(1),
   label: z.string().min(1),
@@ -49,6 +60,7 @@ const PddFieldSchema = z.strictObject({
   showIf: ShowIfSchema.optional(),
   source: z.enum(PDD_COMPUTED_SOURCES).optional(),
   sensitive: z.boolean().optional(),
+  columns: z.array(PddTableColumnSchema).min(1).optional(),
 });
 
 const PddSectionSchema = z.strictObject({
@@ -85,6 +97,7 @@ const MethodologyDocSchema = z.strictObject({
   pdd_sections: z.array(PddSectionSchema).min(1),
   required_evidence: z.array(z.enum(EVIDENCE_CATEGORIES)).min(1),
   monitoring_params: z.array(MonitoringParamSchema).min(1),
+  document_template: z.enum(DOCUMENT_TEMPLATES).optional(),
 }).superRefine((doc, ctx) => {
   // --- calculation ↔ monitoring_params ---
   const driver = doc.monitoring_params.find((p) => p.key === doc.calculation.input_param);
@@ -155,6 +168,12 @@ const MethodologyDocSchema = z.strictObject({
       }
       if (f.type === 'computed' && f.sensitive) {
         ctx.addIssue({ code: 'custom', path: [...path, 'sensitive'], message: `computed field "${f.key}" cannot be marked sensitive` });
+      }
+      if (f.type === 'table' && (!f.columns || f.columns.length === 0)) {
+        ctx.addIssue({ code: 'custom', path: [...path, 'columns'], message: `table field "${f.key}" must declare non-empty columns` });
+      }
+      if (f.type !== 'table' && f.columns) {
+        ctx.addIssue({ code: 'custom', path: [...path, 'columns'], message: `field "${f.key}" is not a table and must not declare columns` });
       }
       if (f.showIf && !fieldKeys.has(f.showIf.field)) {
         ctx.addIssue({ code: 'custom', path: [...path, 'showIf', 'field'], message: `showIf on "${f.key}" references unknown field "${f.showIf.field}"` });
