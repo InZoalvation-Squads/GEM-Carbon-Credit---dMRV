@@ -1,18 +1,21 @@
 import { useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { ChevronRight, Clock, Gauge, Leaf, TrendingUp } from 'lucide-react';
-import { Card, CardBody } from '../components/Card';
-import { Table, THead, TR, TH, TD } from '../components/Table';
-import { KpiCard } from '../components/KpiCard';
-import { PageHeader } from '../components/PageHeader';
-import { StatusBadge } from '../components/StatusBadge';
+import { ChevronRight, Clock, Gauge, Leaf, Plus, TrendingUp } from 'lucide-react';
+import { Card, CardBody } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
+import { KpiCard } from '../components/ui/KpiCard';
+import { PageHeader } from '../components/layout/PageHeader';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { useStore } from '../store';
+import { RequestVerificationModal } from '../components/evidence/RequestVerificationModal';
 import { STATE_LABEL } from '../lib/labels';
 import { formatTco2e } from '../lib/format';
 import { fmtDate } from '../lib/date';
 import type { VerificationState } from '../types';
 
-const STATES: (VerificationState | 'all')[] = ['all', 'submitted', 'under_review', 'revision_required', 'approved', 'rejected'];
+const OPEN_STATES: VerificationState[] = ['submitted', 'under_review', 'revision_required'];
+const STATES: (VerificationState | 'all' | 'open')[] = ['open', 'all', 'submitted', 'under_review', 'revision_required', 'approved', 'rejected'];
 
 function slaDays(submitted_at: string | null): number | null {
   if (!submitted_at) return null;
@@ -22,10 +25,16 @@ function slaDays(submitted_at: string | null): number | null {
 export function Verifications() {
   const navigate = useNavigate();
   const verifications = useStore((s) => s.verifications);
-  const [filter, setFilter] = useState<VerificationState | 'all'>('all');
+  const projects = useStore((s) => s.projects);
+  const role = useStore((s) => s.currentUser.role);
+  const projectName = useMemo(() => new Map(projects.map((p) => [p.id, p.name])), [projects]);
+  const [filter, setFilter] = useState<VerificationState | 'all' | 'open'>('open');
+  const [requesting, setRequesting] = useState(false);
+  const canRequest = role === 'project_owner' || role === 'esg_manager';
 
   const rows = useMemo(
-    () => verifications.filter((v) => filter === 'all' || v.state === filter),
+    () => verifications.filter((v) =>
+      filter === 'all' ? true : filter === 'open' ? OPEN_STATES.includes(v.state) : v.state === filter),
     [verifications, filter]
   );
 
@@ -35,7 +44,13 @@ export function Verifications() {
 
   return (
     <div>
-      <PageHeader title="Verifications" subtitle="Review packages across all projects, sorted by SLA risk. Approvals are hash-sealed for Hedera Guardian anchoring (Sprint 3)." />
+      <PageHeader
+        title="Verifications"
+        subtitle="Review packages across all projects, sorted by SLA risk. Approvals are hash-sealed and anchored on Hedera."
+        action={canRequest ? (
+          <Button onClick={() => setRequesting(true)}><Plus size={16} /> Request verification</Button>
+        ) : undefined}
+      />
 
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
         <KpiCard label="Open packages" value={open} hint="awaiting review" icon={<Clock size={20} />} />
@@ -54,7 +69,7 @@ export function Verifications() {
               (filter === s ? 'bg-brand-600 text-white' : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900')
             }
           >
-            {s === 'all' ? 'All' : STATE_LABEL[s]}
+            {s === 'all' ? 'All' : s === 'open' ? 'Open' : STATE_LABEL[s]}
           </button>
         ))}
       </div>
@@ -86,7 +101,10 @@ export function Verifications() {
                         </div>
                       </button>
                     </TD>
-                    <TD className="hidden md:table-cell text-ink-500">{v.owner_name}</TD>
+                    <TD className="hidden md:table-cell">
+                      <div className="font-medium text-ink-900">{projectName.get(v.project_id) ?? v.project_id}</div>
+                      <div className="text-[12px] text-ink-500">{v.owner_name}</div>
+                    </TD>
                     <TD><StatusBadge state={v.state} /></TD>
                     <TD className="hidden sm:table-cell text-right font-medium">{formatTco2e(v.reduction_kgco2e)}</TD>
                     <TD>
@@ -108,6 +126,7 @@ export function Verifications() {
           </Table>
         </CardBody>
       </Card>
+      {requesting && <RequestVerificationModal onClose={() => setRequesting(false)} />}
     </div>
   );
 }

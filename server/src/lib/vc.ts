@@ -8,11 +8,11 @@ import { canonical, sha256Hex } from './hash.js';
 import { publicKeyFromDidKey, verifyBytes } from './identity.js';
 import type { VerifiableCredential } from './vc-types.js';
 
-// The signature covers sha256(canonical(vc without proof)), so any field edit —
+// The signature covers sha256(canonical(vc without proof/anchor)), so any field edit —
 // subject, issuer, HCS coordinates — invalidates the proof offline.
 // (Module-private, exactly like the SPA source.)
 function signingInput(vc: VerifiableCredential): Uint8Array {
-  const { proof: _p, ...unsigned } = vc;
+  const { proof: _p, anchor: _a, ...unsigned } = vc;
   return hexToBytes(sha256Hex(canonical(unsigned)));
 }
 

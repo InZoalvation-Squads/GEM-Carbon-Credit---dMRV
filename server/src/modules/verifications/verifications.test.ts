@@ -89,11 +89,22 @@ describe('verifications module', () => {
     return app.inject({ method: 'POST', url, headers: auth(token), payload: payload ?? {} });
   }
 
+  // Verra overlap guard: every default package gets its own untouched month.
+  let periodSeq = 0;
+  function uniquePeriod(): { monitoring_period_start: string; monitoring_period_end: string } {
+    const seq = periodSeq++;
+    const year = 2030 + Math.floor(seq / 12);
+    const month = String((seq % 12) + 1).padStart(2, '0');
+    return {
+      monitoring_period_start: `${year}-${month}-01`,
+      monitoring_period_end: `${year}-${month}-27`,
+    };
+  }
+
   async function createPackage(overrides: Record<string, unknown> = {}, token = owner.token) {
     return post('/api/v1/verifications', token, {
       project_id: projectId,
-      monitoring_period_start: '2026-03-01',
-      monitoring_period_end: '2026-03-31',
+      ...uniquePeriod(),
       reduction_kgco2e: 24_550,
       factors_snapshot: FACTORS_SNAPSHOT,
       evidence_ids: [],
@@ -432,6 +443,23 @@ describe('verifications module', () => {
       });
       expect(res.statusCode).toBe(404);
       expect((await app.inject({ method: 'GET', url: '/api/v1/verifications' })).statusCode).toBe(401);
+    });
+  });
+
+  describe('Verra period-overlap guard', () => {
+    it('409s a package whose monitoring period overlaps an existing one', async () => {
+      const first = await createPackage({ monitoring_period_start: '2040-01-01', monitoring_period_end: '2040-03-31' });
+      expect(first.statusCode).toBe(201);
+      const overlapping = await createPackage({ monitoring_period_start: '2040-03-15', monitoring_period_end: '2040-06-30' });
+      expect(overlapping.statusCode).toBe(409);
+      expect(overlapping.json().error.message).toMatch(/overlaps package/);
+      // a rejected package frees its period
+      const id = first.json().verification.id as string;
+      await post(`/api/v1/verifications/${id}/submit`, owner.token);
+      await post(`/api/v1/verifications/${id}/start-review`, verifier.token);
+      await post(`/api/v1/verifications/${id}/reject`, verifier.token, { reason: 'test' });
+      const retry = await createPackage({ monitoring_period_start: '2040-01-01', monitoring_period_end: '2040-03-31' });
+      expect(retry.statusCode).toBe(201);
     });
   });
 });

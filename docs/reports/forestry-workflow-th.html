@@ -1,0 +1,140 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>ขั้นตอนโครงการปลูกป่า — GEM Carbon Credit</title>
+<style>
+  @page { size: A4; margin: 14mm 14mm 16mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: "Sarabun", "TH Sarabun New", "Noto Sans Thai", -apple-system, "Helvetica Neue", sans-serif;
+    color: #1e2530; margin: 0; font-size: 12.5px; line-height: 1.5;
+  }
+  h1 { font-size: 24px; margin: 0 0 2px; color: #0f2f28; letter-spacing: -.3px; }
+  .sub { color: #5b6b78; font-size: 12.5px; margin: 0 0 16px; }
+  .rule { height: 3px; background: linear-gradient(90deg,#c9a227,#1f7a5c); border-radius: 3px; margin: 0 0 18px; }
+
+  /* Role legend */
+  .roles { display: flex; gap: 10px; margin: 0 0 20px; }
+  .role { flex: 1; border-radius: 10px; padding: 10px 12px; color: #fff; }
+  .role b { display: block; font-size: 13.5px; }
+  .role span { font-size: 11px; opacity: .92; }
+  .r-blue   { background: #2563a6; }
+  .r-green  { background: #1f7a5c; }
+  .r-orange { background: #c9761f; }
+
+  h2 { font-size: 14px; margin: 20px 0 8px; color: #0f2f28; display:flex; align-items:center; gap:8px; }
+  h2 .gate { background:#0f2f28; color:#fff; font-size:10.5px; padding:2px 8px; border-radius:20px; font-weight:600; }
+
+  /* Steps */
+  .step { display: flex; gap: 12px; padding: 9px 0; border-bottom: 1px solid #eef1f4; page-break-inside: avoid; }
+  .step:last-child { border-bottom: none; }
+  .num { flex: 0 0 26px; height: 26px; border-radius: 50%; display: grid; place-items: center;
+         font-weight: 700; color: #fff; font-size: 12px; }
+  .who { flex: 0 0 128px; font-weight: 700; font-size: 12px; padding-top: 3px; }
+  .who small { display:block; font-weight:400; color:#7a8894; font-size:10px; }
+  .what { flex: 1; padding-top: 2px; }
+  .what .tag { display:inline-block; background:#f0f3f6; color:#54636f; border-radius:5px;
+               padding:1px 7px; font-size:10px; margin-left:6px; }
+  .b .num, .b .bar { background:#2563a6; } .b .who { color:#2563a6; }
+  .g .num, .g .bar { background:#1f7a5c; } .g .who { color:#1f7a5c; }
+  .o .num, .o .bar { background:#c9761f; } .o .who { color:#c9761f; }
+
+  .box { background:#f6f9f7; border:1px solid #dfe9e3; border-radius:10px; padding:12px 14px; margin-top:16px; }
+  .box b { color:#0f2f28; }
+  .box ul { margin:6px 0 0; padding-left:18px; } .box li { margin:2px 0; }
+
+  .foot { margin-top:18px; color:#8a97a2; font-size:10px; text-align:center; }
+  .pill { display:inline-block; background:#e8f3ee; color:#1f7a5c; border-radius:20px; padding:1px 9px; font-size:10.5px; font-weight:600; }
+</style>
+</head>
+<body>
+
+  <h1>🌳 ขั้นตอนโครงการปลูกป่า (ARR / Forestry)</h1>
+  <p class="sub">GEM Carbon Credit · dMRV บน Hedera Guardian — ใครต้องทำอะไรบ้าง ตั้งแต่ต้นจนได้คาร์บอนเครดิต</p>
+  <div class="rule"></div>
+
+  <div class="roles">
+    <div class="role r-blue"><b>🔵 Project Proponent</b><span>เจ้าของโครงการปลูกป่า — สร้างโครงการ, กรอกเอกสาร, ปลูก &amp; ติดตามจริง</span></div>
+    <div class="role r-green"><b>🟢 VVB</b><span>ผู้ตรวจสอบ/ทวนสอบอิสระ — ตรวจเอกสารและผลจริง</span></div>
+    <div class="role r-orange"><b>🟠 Standard Registry</b><span>ผู้ออกเครดิต (Verra) — ขึ้นทะเบียน &amp; ออกเครดิต VCU</span></div>
+  </div>
+
+  <h2><span class="gate">GATE 1</span> ลงทะเบียนโครงการ (Registration)</h2>
+
+  <div class="step b">
+    <div class="num">1</div>
+    <div class="who">Project Proponent<small>เจ้าของโครงการ</small></div>
+    <div class="what">สร้างโครงการปลูกป่าในระบบ — ใส่ชื่อ, พื้นที่ (location), วันเริ่มโครงการ (กำลังการผลิต = 0 เพราะเป็นป่าไม้) <span class="tag">Projects → New</span></div>
+  </div>
+  <div class="step b">
+    <div class="num">2</div>
+    <div class="who">Project Proponent</div>
+    <div class="what">เลือก Methodology (เช่น <b>VM0047</b> หรือ T-VER-F-01) แล้วกรอกเอกสาร <b>PDD</b> ครบ A–E: ข้อมูลโครงการ, Baseline, Additionality, คาดการณ์การกักเก็บ (tCO₂e/ปี), แผนติดตาม <span class="tag">Registration</span></div>
+  </div>
+  <div class="step b">
+    <div class="num">3</div>
+    <div class="who">Project Proponent</div>
+    <div class="what">แนบหลักฐาน (Site Photo, Supporting Evidence, Commissioning Report) แล้วกด <b>ส่ง PDD</b> เพื่อตรวจสอบ <span class="tag">Submit</span></div>
+  </div>
+  <div class="step g">
+    <div class="num">4</div>
+    <div class="who">VVB<small>ผู้ตรวจอิสระ</small></div>
+    <div class="what"><b>Validate</b> PDD — ตรวจว่าออกแบบโครงการถูกหลัก methodology → ออก Validation Report หรือส่งกลับให้แก้ไข <span class="tag">Validation Queue</span></div>
+  </div>
+  <div class="step o">
+    <div class="num">5</div>
+    <div class="who">Standard Registry<small>Verra</small></div>
+    <div class="what">อนุมัติและ <b>ขึ้นทะเบียนโครงการ</b> (เข้า Project Pipeline &amp; Registry) → ปลดล็อกระบบ dMRV ให้เริ่มติดตามได้</div>
+  </div>
+
+  <h2><span class="gate">GATE 2</span> ติดตามผล &amp; ทวนสอบ → ออกเครดิต</h2>
+
+  <div class="step b">
+    <div class="num">6</div>
+    <div class="who">Project Proponent</div>
+    <div class="what"><b>ปลูก &amp; ติดตามจริง</b> — วัดการเติบโต/การกักเก็บคาร์บอนจริง (สำรวจแปลงตัวอย่าง + สมการ allometric) แล้วอัปโหลดข้อมูลเป็น tCO₂e ต่อรอบ <span class="tag">Upload</span></div>
+  </div>
+  <div class="step b">
+    <div class="num">7</div>
+    <div class="who">Project Proponent</div>
+    <div class="what">รวมข้อมูลเป็น <b>ชุดทวนสอบ</b> (ช่วงเวลา + ปริมาณ tCO₂e + หลักฐาน) แล้วส่งให้ VVB <span class="tag">Verifications</span></div>
+  </div>
+  <div class="step g">
+    <div class="num">8</div>
+    <div class="who">VVB</div>
+    <div class="what"><b>Verify</b> — ตรวจทวนสอบ, ให้ความเห็น, ขอแก้ หรือ <b>อนุมัติ</b> ชุดข้อมูล (ล็อกด้วย hash) <span class="tag">Review</span></div>
+  </div>
+  <div class="step g">
+    <div class="num">9</div>
+    <div class="who">VVB</div>
+    <div class="what"><b>Anchor to Hedera Guardian</b> — ออก Verifiable Credential (VC) บันทึกลง HCS topic บนบล็อกเชน</div>
+  </div>
+  <div class="step o">
+    <div class="num">10</div>
+    <div class="who">Standard Registry</div>
+    <div class="what"><b>Mint VCU Token</b> — สร้างคาร์บอนเครดิตตาม VC ที่ผ่านการทวนสอบ → เห็นใน Token History <span class="tag">Guardian</span></div>
+  </div>
+
+  <div class="box">
+    <b>👀 ตรวจสอบย้อนหลังได้ (Audit)</b> — ทุกฝ่ายดูได้:
+    <ul>
+      <li><b>PDD Document</b> (แท็บในหน้าโครงการ) — เอกสารเต็มพร้อม content hash สำหรับตรวจความถูกต้อง</li>
+      <li><b>Trust Chain</b> — ไทม์ไลน์: PDD ขึ้นทะเบียน → ทวนสอบผ่าน → ออก VC → Mint token</li>
+      <li><b>Token History</b> &amp; <b>Audit Log</b> — ประวัติการออกเครดิตและทุกการกระทำ</li>
+    </ul>
+  </div>
+
+  <div class="box" style="background:#fbf7ec; border-color:#efe2c4;">
+    <b>⭐ จุดเด่นของโครงการปลูกป่า (ต่างจากพลังงาน)</b>
+    <ul>
+      <li>ข้อมูลติดตามเป็น <b>tCO₂e โดยตรง</b> (จากการวัดต้นไม้ ไม่ใช่หน่วยไฟฟ้า kWh)</li>
+      <li>VM0047 ใช้ <b>Dynamic Performance Benchmark</b> (เทียบกับแปลงควบคุม) แทน baseline คงที่</li>
+      <li>เลือกวิธีวัดได้ 2 แบบ: <span class="pill">Area-based</span> (รีโมตเซนซิ่ง) หรือ <span class="pill">Census-based</span> (นับต้นจริง)</li>
+    </ul>
+  </div>
+
+  <div class="foot">GEM Carbon Credit — dMRV · จัดทำอัตโนมัติเพื่อประกอบการพิจารณา · สอดคล้องนโยบาย Hedera Guardian VM0047</div>
+
+</body>
+</html>

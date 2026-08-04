@@ -1,18 +1,18 @@
 import { useMemo, useState } from 'react';
 import { Plus, Search, FolderSearch } from 'lucide-react';
 import clsx from 'clsx';
-import { Card, CardBody } from './Card';
-import { Button } from './Button';
-import { Table, THead, TR, TH, TD } from './Table';
-import { EmptyState } from './EmptyState';
-import { CategoryChip, EvidenceStatusDot, FileKindIcon } from './StatusBadge';
-import { EvidenceUploadModal } from './EvidenceUploadModal';
-import { EvidenceDetailDrawer } from './EvidenceDetailDrawer';
-import { useStore } from '../store';
-import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../lib/labels';
-import { fmtDate } from '../lib/date';
-import { formatBytes } from '../lib/format';
-import type { EvidenceCategory, EvidenceFile, UUID } from '../types';
+import { Card, CardBody } from '../ui/Card';
+import { Button } from '../ui/Button';
+import { Table, THead, TR, TH, TD } from '../ui/Table';
+import { EmptyState } from '../ui/EmptyState';
+import { CategoryChip, EvidenceStatusDot, FileKindIcon } from '../ui/StatusBadge';
+import { EvidenceUploadModal } from '../evidence/EvidenceUploadModal';
+import { EvidenceDetailModal } from '../evidence/EvidenceDetailModal';
+import { useStore } from '../../store';
+import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../../lib/labels';
+import { fmtDate } from '../../lib/date';
+import { formatBytes } from '../../lib/format';
+import type { EvidenceCategory, EvidenceFile, UUID } from '../../types';
 
 export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
   const evidence = useStore((s) => s.evidence);
@@ -115,7 +115,7 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
       </Card>
 
       <EvidenceUploadModal open={uploadOpen} onClose={() => setUploadOpen(false)} projectId={projectId} onUploaded={notify} />
-      <EvidenceDetailDrawer evidence={selected} onClose={() => setSelected(null)} />
+      <EvidenceDetailModal evidence={selected} onClose={() => setSelected(null)} />
 
       {toast && (
         <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-xl">

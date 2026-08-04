@@ -8,7 +8,12 @@ import type { Pdd, PddState, Prisma, PrismaClient } from '@prisma/client';
 import { writeAudit, type AuditActor } from '../../lib/audit.js';
 import { appError } from '../../lib/errors.js';
 import { projectTopicId, toIpfsCid } from '../../lib/guardian-sim.js';
+import { canonical } from '../../lib/hash.js';
+import { ipfsAddBytes, ipfsEnabled } from '../../lib/ipfs.js';
+import { guardianEnabled, submitPddToGuardian } from '../../lib/guardian-client.js';
+import { anchorProjectListing } from '../credentials/anchor.js';
 import type { Methodology as MethodologyDoc } from '../../lib/methodology-types.js';
+import { computeYearlyTable } from '../../lib/pdd-calc.js';
 import {
   pddContentHash,
   sensitiveFieldKeys,
@@ -47,6 +52,8 @@ export type PublicPdd = {
   ipfs_cid: string | null;
   credential_id: string | null;
   rejection_reason: string | null;
+  /** Guardian policy trail { policy_id, tracking_id, submitted_at, approved_at? } — null when Guardian is not wired. */
+  guardian_ref: Record<string, unknown> | null;
 };
 
 export function serializePdd(p: Pdd): PublicPdd {
@@ -64,6 +71,7 @@ export function serializePdd(p: Pdd): PublicPdd {
     content_hash: p.content_hash,
     ipfs_cid: p.ipfs_cid,
     credential_id: p.credential_id,
+    guardian_ref: (p.guardian_ref ?? null) as PublicPdd['guardian_ref'],
     rejection_reason: p.rejection_reason,
     // disclosure_salts intentionally omitted — see the type's doc comment.
   };
@@ -192,6 +200,20 @@ export async function savePddDraft(
 
 // ---------------- submitPdd ----------------
 export async function submitPdd(prisma: PrismaClient, actor: AuditActor, pddId: string): Promise<Pdd> {
+  const submitted = await submitPddTx(prisma, actor, pddId);
+  // Verra-style pipeline listing: first submission gives the project its
+  // public registry identity (real HCS topic + `project_listed` message).
+  // Best-effort — a flaky testnet never blocks the submission; the topic is
+  // then created lazily at the first anchor instead.
+  try {
+    await anchorProjectListing(prisma, submitted.project_id, submitted.id);
+  } catch {
+    // lazy creation at first anchor covers this
+  }
+  return submitted;
+}
+
+function submitPddTx(prisma: PrismaClient, actor: AuditActor, pddId: string): Promise<Pdd> {
   return prisma.$transaction(async (tx) => {
     const pdd = await requirePdd(tx, actor.org, pddId);
     if (pdd.state !== 'draft' && pdd.state !== 'revision_required') {
@@ -301,6 +323,61 @@ export interface RegisterResult {
 }
 
 export async function registerProject(
+  prisma: PrismaClient,
+  actor: AuditActor,
+  pddId: string,
+): Promise<RegisterResult> {
+  const result = await registerProjectTx(prisma, actor, pddId);
+  // Best-effort REAL CID: pin the exact canonical preimage of content_hash so
+  // fetching the CID and re-hashing it reproduces `content_hash` offline.
+  // Failure keeps the deterministic simulated CID — never blocks Gate 1.
+  if (ipfsEnabled()) {
+    try {
+      const preimage = canonical({
+        methodology_snapshot: result.pdd.methodology_snapshot,
+        section_data: (result.pdd.section_data ?? {}) as Record<string, unknown>,
+        evidence_ids: [...result.pdd.evidence_ids].sort(),
+      });
+      const cid = await ipfsAddBytes(preimage);
+      result.pdd = await prisma.pdd.update({ where: { id: result.pdd.id }, data: { ipfs_cid: cid } });
+    } catch {
+      // simulated CID stays in place
+    }
+  }
+  // Best-effort Guardian policy submission (as the Project Proponent): the
+  // registered PDD also enters the published Guardian policy, whose own
+  // trust chain (VC on the policy topic + IPFS) runs beside our direct
+  // anchor. The SR approval fires later, at the credential-anchor step.
+  if (guardianEnabled()) {
+    try {
+      const sectionData = (result.pdd.section_data ?? {}) as Record<string, unknown>;
+      // Same yearly-ER math as the SPA's official form: the amount Guardian
+      // mints at approval must equal the PDD's stated avg annual reduction.
+      const project = await prisma.project.findUniqueOrThrow({
+        where: { id: result.pdd.project_id },
+        select: { location: true, capacity_kwp: true, commission_date: true },
+      });
+      const factors = await prisma.emissionFactor.findMany({ where: { is_current: true } });
+      const table = computeYearlyTable({ project, factors, sectionData });
+      const submission = await submitPddToGuardian({
+        pdd_id: result.pdd.id,
+        project_id: result.pdd.project_id,
+        content_hash: result.pdd.content_hash ?? '',
+        ipfs_cid: result.pdd.ipfs_cid ?? '',
+        reduction_tco2e: table?.avg.er ?? 0,
+      });
+      result.pdd = await prisma.pdd.update({
+        where: { id: result.pdd.id },
+        data: { guardian_ref: submission as unknown as Prisma.InputJsonValue },
+      });
+    } catch {
+      // Guardian down/flaky — the direct HCS anchor still guarantees integrity
+    }
+  }
+  return result;
+}
+
+function registerProjectTx(
   prisma: PrismaClient,
   actor: AuditActor,
   pddId: string,

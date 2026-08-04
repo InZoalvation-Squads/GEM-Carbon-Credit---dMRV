@@ -37,6 +37,19 @@ export function buildApprovalSubject(v: VerificationRequest, evidence: EvidenceF
 
 // Guardian creates one HCS topic per project under the policy topic. Simulated as a
 // deterministic id in the 0.0.481000–0.0.481999 range so re-derivation is stable.
+/**
+ * Consensus coordinates to DISPLAY for a credential: the server-written real
+ * Hedera anchor when present, else the in-payload simulated hcs (local mode
+ * and legacy credentials).
+ */
+export function displayHcs(c: VerifiableCredential): { topic_id: string; sequence_number: number; explorer_url: string; real: boolean } {
+  if (c.anchor) {
+    // HashScan has no /message/{n} route — older stored anchors carried it.
+    return { ...c.anchor, explorer_url: c.anchor.explorer_url.replace(/\/message\/\d+$/, ''), real: true };
+  }
+  return { topic_id: c.hcs.topic_id, sequence_number: c.hcs.sequence_number, explorer_url: c.hcs.explorer_url, real: false };
+}
+
 export function projectTopicId(projectId: string): string {
   let digest = 0;
   for (let i = 0; i < projectId.length; i++) digest = (Math.imul(digest, 31) + projectId.charCodeAt(i)) >>> 0;

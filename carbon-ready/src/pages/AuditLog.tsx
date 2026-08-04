@@ -1,11 +1,11 @@
 import { useMemo, useState } from 'react';
 import { ShieldCheck, ShieldAlert } from 'lucide-react';
-import { Card, CardBody } from '../components/Card';
-import { Table, THead, TR, TH, TD } from '../components/Table';
-import { Badge } from '../components/Badge';
-import { Select } from '../components/Select';
-import { Input } from '../components/Input';
-import { PageHeader } from '../components/PageHeader';
+import { Card, CardBody } from '../components/ui/Card';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
+import { Badge } from '../components/ui/Badge';
+import { Select } from '../components/ui/Select';
+import { Input } from '../components/ui/Input';
+import { PageHeader } from '../components/layout/PageHeader';
 import { useStore } from '../store';
 import { auditRowHash } from '../store/audit';
 import { fmtDateTime } from '../lib/date';

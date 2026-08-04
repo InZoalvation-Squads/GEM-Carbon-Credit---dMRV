@@ -40,7 +40,10 @@ export type AuditAction =
   // into its PROJECT_REGISTERED entry; the server splits them because the
   // browser signs the VC AFTER register and POSTs it separately (Task 8).
   // AuditLog.action is a plain String column, so no migration is needed.
-  | 'PDD_CREDENTIAL_ANCHORED';
+  | 'PDD_CREDENTIAL_ANCHORED'
+  // Server-only: monitoring records pulled from the external IoT database
+  // by the scheduled ingest worker (lib/iot.ts) — no human actor.
+  | 'IOT_SYNCED';
 
 /** Verbatim from carbon-ready/src/types/index.ts `EntityType`. */
 export type EntityType =
@@ -62,7 +65,8 @@ export function actorFromRequest(req: FastifyRequest): AuditActor {
 
 export interface AuditEntry {
   userId: string;
-  role: UserRole;
+  // null = system job (e.g. the IoT ingest worker); the column is nullable.
+  role: UserRole | null;
   ip: string | null;
   action: AuditAction;
   entityType: EntityType;

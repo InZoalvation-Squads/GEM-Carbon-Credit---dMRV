@@ -1,13 +1,14 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
+import { MemoryRouter } from 'react-router-dom';
 import { TopBar } from './TopBar';
-import { seedDemo } from '../test/demoFixtures';
+import { seedDemo } from '../../test/demoFixtures';
 
 beforeEach(() => seedDemo());
 
 // The role switcher must show the same Guardian terminology as the rest of the app.
 function openRoleMenu() {
-  render(<TopBar onOpenSidebar={() => {}} />);
+  render(<MemoryRouter><TopBar onOpenSidebar={() => {}} /></MemoryRouter>);
   const toggle = screen.getAllByRole('button').find((b) => b.getAttribute('aria-haspopup') === 'menu')!;
   fireEvent.click(toggle);
 }

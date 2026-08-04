@@ -1,21 +1,22 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { useStore } from '../store';
-import { Card, CardBody, CardHeader } from '../components/Card';
-import { Badge } from '../components/Badge';
-import { Table, THead, TR, TH, TD } from '../components/Table';
-import { PageHeader } from '../components/PageHeader';
-import { Button } from '../components/Button';
-import { ProjectEvidenceTab } from '../components/ProjectEvidenceTab';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { Badge } from '../components/ui/Badge';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Button } from '../components/ui/Button';
+import { ProjectEvidenceTab } from '../components/project/ProjectEvidenceTab';
+import { ProjectCreditsTab } from '../components/project/ProjectCreditsTab';
 import { PddDocument } from './PddDocument';
-import { EmptyState } from '../components/EmptyState';
+import { EmptyState } from '../components/ui/EmptyState';
 import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
 import { ChevronLeft, Upload as UploadIcon, FileText } from 'lucide-react';
 import clsx from 'clsx';
-import { RegistrationGate } from '../components/RegistrationGate';
+import { RegistrationGate } from '../components/project/RegistrationGate';
 
-type Tab = 'overview' | 'evidence' | 'pdd';
+type Tab = 'overview' | 'evidence' | 'credits' | 'pdd';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -63,7 +64,7 @@ export function ProjectDetail() {
 
       {/* Tabs */}
       <div className="mb-4 flex items-center gap-1 border-b border-ink-200">
-        {([['overview', 'Monitoring'], ['evidence', 'Evidence'], ['pdd', 'PDD Document']] as [Tab, string][]).map(([key, label]) => (
+        {([['overview', 'Monitoring'], ['evidence', 'Evidence'], ['credits', 'Credits'], ['pdd', 'PDD Document']] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -93,7 +94,9 @@ export function ProjectDetail() {
         )
       ) : (
         <RegistrationGate projectId={project.id}>
-          {tab === 'overview' ? (
+          {tab === 'credits' ? (
+            <ProjectCreditsTab projectId={project.id} />
+          ) : tab === 'overview' ? (
             <Card>
               <CardHeader title="Monitoring Records" />
               <CardBody className="p-0">

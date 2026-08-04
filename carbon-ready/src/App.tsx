@@ -4,9 +4,11 @@ import { AppShell } from './layouts/AppShell';
 import { Login } from './pages/Login';
 import { Register } from './pages/Register';
 import { Dashboard } from './pages/Dashboard';
+import { HowItWorks } from './pages/HowItWorks';
 import { Projects } from './pages/Projects';
 import { ProjectDetail } from './pages/ProjectDetail';
 import { UploadPage } from './pages/Upload';
+import { IotMapping } from './pages/IotMapping';
 import { Calculations } from './pages/Calculations';
 import { EmissionFactors } from './pages/EmissionFactors';
 import { AuditLogPage } from './pages/AuditLog';
@@ -36,6 +38,7 @@ export default function App() {
         <Route element={<AppShell />}>
           <Route index element={<Navigate to="/dashboard" replace />} />
           <Route path="/dashboard" element={<Dashboard />} />
+          <Route path="/how-it-works" element={<HowItWorks />} />
           <Route path="/methodologies" element={<Methodologies />} />
           <Route path="/methodologies/:id" element={<Methodologies />} />
           <Route path="/registration" element={<Registration />} />
@@ -47,6 +50,7 @@ export default function App() {
           <Route path="/projects" element={<Projects />} />
           <Route path="/projects/:id" element={<ProjectDetail />} />
           <Route path="/upload" element={<UploadPage />} />
+          <Route path="/iot" element={<IotMapping />} />
           <Route path="/calculations" element={<Calculations />} />
           <Route path="/emission-factors" element={<EmissionFactors />} />
           <Route path="/verifications" element={<Verifications />} />

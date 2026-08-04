@@ -1,16 +1,18 @@
 import { useMemo, useState } from 'react';
+import { Check, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { api } from '../lib/api';
-import { PageHeader } from '../components/PageHeader';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
-import { Input } from '../components/Input';
-import { Select } from '../components/Select';
-import { Textarea } from '../components/Textarea';
-import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Input } from '../components/ui/Input';
+import { Select } from '../components/ui/Select';
+import { Textarea } from '../components/ui/Textarea';
+import { EmptyState } from '../components/ui/EmptyState';
+import { Modal } from '../components/ui/Modal';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
-import type { PddFieldSchema, PddComputedSource, Project } from '../types';
+import type { Methodology, PddFieldSchema, PddComputedSource, Project } from '../types';
 
 const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft'];
 
@@ -23,9 +25,9 @@ export function Registration() {
 
   const pdd = pdds.find((p) => p.id === pddId);
 
-  // ---- Entry screen: no pdd yet → choose methodology + project ----
-  const [methId, setMethId] = useState(methodologies[0]?.id ?? '');
-  const [projId, setProjId] = useState('');
+  // ---- Entry screen: no pdd yet → pick a methodology card, then the project ----
+  const [methId, setMethId] = useState('');
+  const [pickerOpen, setPickerOpen] = useState(false);
   // A project belongs to at most one methodology (via its PDD). Once a draft PDD exists it may
   // only be registered under that methodology; projects with no PDD yet are open to any.
   const candidateProjects = projects.filter((p) => {
@@ -34,31 +36,217 @@ export function Registration() {
     return !existing || existing.methodology_id === methId;
   });
 
-  async function startRegistration() {
-    if (!methId || !projId) return;
-    const created = await api.selectMethodology(projId, methId);
-    navigate(`/registration/${created.id}`);
-  }
+  const STANDARD_TONE: Record<string, string> = {
+    'T-VER': 'bg-emerald-50 text-emerald-700',
+    Verra: 'bg-sky-50 text-sky-700',
+    CDM: 'bg-amber-50 text-amber-700',
+  };
+
+  // Only the two flagship tracks are offered from this screen: solar first, forestry second.
+  const CARD_TRACKS = ['meth-tver-solar', 'meth-tver-forestry'];
+  const orderedMethodologies = CARD_TRACKS
+    .map((id) => methodologies.find((m) => m.id === id))
+    .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   if (!pdd) {
+    const selected = methodologies.find((m) => m.id === methId);
     return (
       <div>
-        <PageHeader title="Register a project" subtitle="Step 1 — choose a methodology, then the project it applies to" />
-        <Card className="max-w-xl space-y-4 p-6">
-          <Select label="Methodology" value={methId} onChange={(e) => { setMethId(e.target.value); setProjId(''); }}>
-            {methodologies.map((m) => <option key={m.id} value={m.id}>{m.code} — {m.name}</option>)}
-          </Select>
-          <Select label="Project" value={projId} onChange={(e) => setProjId(e.target.value)}>
-            <option value="">Select a project…</option>
-            {candidateProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
-          </Select>
-          <Button disabled={!methId || !projId} onClick={startRegistration}>Start PDD →</Button>
-        </Card>
+        <PageHeader title="Register a project" subtitle="Pick a methodology card — a project picker will pop up" />
+
+        {/* step 1 — methodology cards */}
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+          {orderedMethodologies.map((m) => {
+            const active = m.id === methId;
+            return (
+              <button
+                key={m.id}
+                type="button"
+                aria-pressed={active}
+                onClick={() => { setMethId(m.id); setPickerOpen(true); }}
+                className={`group relative rounded-xl border bg-white p-4 text-left shadow-card transition-all
+                  ${active
+                    ? 'border-brand-500 ring-2 ring-brand-500/60 shadow-lg'
+                    : 'border-ink-200/80 hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg'}`}
+              >
+                {active && (
+                  <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-white">
+                    <Check size={12} />
+                  </span>
+                )}
+                <div className="flex flex-wrap items-center gap-1.5 pr-6">
+                  <span className={`rounded-full px-2 py-0.5 text-[10px] font-semibold ${STANDARD_TONE[m.standard] ?? 'bg-ink-100 text-ink-600'}`}>
+                    {m.standard}
+                  </span>
+                  <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-medium text-ink-500">{m.version}</span>
+                  {m.document_template && (
+                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">ฟอร์ม อบก.</span>
+                  )}
+                </div>
+                <div className="mt-2 font-mono text-sm font-bold text-ink-900">{m.code}</div>
+                <div className="mt-0.5 line-clamp-2 text-[13px] leading-snug text-ink-600">{m.name}</div>
+                <div className="mt-3 flex items-center gap-3 border-t border-dashed border-ink-100 pt-2 text-[11px] text-ink-400">
+                  <span>{m.pdd_sections.length} sections</span>
+                  <span>·</span>
+                  <span>{m.required_evidence.length} evidence types</span>
+                  <span className="ml-auto truncate">{m.sectoral_scope}</span>
+                </div>
+              </button>
+            );
+          })}
+        </div>
+
+        {/* project picker / creator pops up when a card is clicked */}
+        {selected && pickerOpen && (
+          <StartPddModal
+            key={selected.id}
+            methodology={selected}
+            candidates={candidateProjects}
+            onClose={() => setPickerOpen(false)}
+          />
+        )}
       </div>
     );
   }
 
   return <PddEditor pddId={pdd.id} />;
+}
+
+/**
+ * One modal from methodology card → working PDD: create a new project (the
+ * primary path — it opens on the form when nothing eligible exists yet) or
+ * pick an eligible existing one, then jump straight into the PDD editor.
+ */
+function StartPddModal({ methodology, candidates, onClose }: {
+  methodology: Methodology;
+  candidates: Project[];
+  onClose: () => void;
+}) {
+  const navigate = useNavigate();
+  // Land-based tracks (forestry/ARR) have no installed kWp — prefill 0.
+  const landBased = methodology.calculation.formula !== 'grid_displacement';
+  const [mode, setMode] = useState<'pick' | 'create'>(candidates.length === 0 ? 'create' : 'pick');
+  const [projId, setProjId] = useState('');
+  const [busy, setBusy] = useState(false);
+  const [form, setForm] = useState({
+    name: '', location: '', capacity_kwp: landBased ? '0' : '',
+    commission_date: new Date().toISOString().slice(0, 10),
+  });
+  const [errors, setErrors] = useState<Record<string, string>>({});
+
+  async function startWith(projectId: string) {
+    const created = await api.selectMethodology(projectId, methodology.id);
+    navigate(`/registration/${created.id}`);
+  }
+
+  async function createAndStart() {
+    const errs: Record<string, string> = {};
+    if (!form.name.trim()) errs.name = 'Required';
+    if (!form.location.trim()) errs.location = 'Required';
+    const cap = Number(form.capacity_kwp);
+    if (form.capacity_kwp === '' || Number.isNaN(cap) || cap < 0) errs.capacity_kwp = 'Must be ≥ 0';
+    if (Object.keys(errs).length) { setErrors(errs); return; }
+    setBusy(true);
+    try {
+      const project = await api.createProject({
+        name: form.name.trim(), location: form.location.trim(), capacity_kwp: cap,
+        commission_date: form.commission_date, status: 'draft',
+      });
+      await startWith(project.id);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  return (
+    <Modal open onClose={onClose} title={`Start PDD — ${methodology.code}`}>
+      <div className="space-y-4">
+        <p className="text-[13px] text-ink-500">{methodology.name}</p>
+
+        {mode === 'pick' ? (
+          <>
+            {/* primary action: create the project this PDD is for */}
+            <button
+              type="button"
+              onClick={() => setMode('create')}
+              className="flex w-full items-center gap-3 rounded-lg border-2 border-dashed border-brand-300 bg-brand-50/40 px-4 py-3 text-left transition-colors hover:border-brand-500 hover:bg-brand-50"
+            >
+              <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-gradient text-white"><Plus size={16} /></span>
+              <span>
+                <span className="block text-sm font-semibold text-ink-900">Create a new project</span>
+                <span className="block text-[11px] text-ink-500">ตั้งโปรเจกต์ใหม่แล้วเริ่มกรอก PDD ต่อทันที</span>
+              </span>
+            </button>
+
+            <div className="flex items-center gap-3 text-[11px] uppercase tracking-wide text-ink-300">
+              <span className="h-px flex-1 bg-ink-100" /> or pick an existing project <span className="h-px flex-1 bg-ink-100" />
+            </div>
+
+            {candidates.length === 0 ? (
+              <p className="rounded-lg bg-ink-50 px-4 py-3 text-[13px] text-ink-500">
+                ยังไม่มีโปรเจกต์ที่เริ่ม PDD ได้ — โปรเจกต์เดิมถูก register แล้วหรือผูกกับ methodology อื่นอยู่
+              </p>
+            ) : (
+              <div className="max-h-60 space-y-2 overflow-y-auto pr-1">
+                {candidates.map((p) => {
+                  const active = p.id === projId;
+                  return (
+                    <button
+                      key={p.id}
+                      type="button"
+                      aria-pressed={active}
+                      onClick={() => setProjId(p.id)}
+                      className={`flex w-full items-center gap-3 rounded-lg border px-4 py-2.5 text-left transition-colors
+                        ${active ? 'border-brand-500 bg-brand-50/60' : 'border-ink-200 hover:border-brand-300 hover:bg-ink-50'}`}
+                    >
+                      <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border
+                        ${active ? 'border-brand-600 bg-brand-600 text-white' : 'border-ink-300'}`}>
+                        {active && <Check size={10} />}
+                      </span>
+                      <span className="min-w-0 flex-1">
+                        <span className="block truncate text-sm font-medium text-ink-900">{p.name}</span>
+                        <span className="block truncate text-[11px] text-ink-400">
+                          {p.location}{p.capacity_kwp > 0 ? ` · ${p.capacity_kwp.toLocaleString()} kWp` : ''}
+                        </span>
+                      </span>
+                      <span className="shrink-0 rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-medium text-ink-500">
+                        {p.lifecycle_stage === 'pdd_draft' ? 'PDD draft' : 'new'}
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            )}
+
+            <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
+              <Button variant="ghost" onClick={onClose}>Cancel</Button>
+              <Button disabled={!projId} onClick={() => void startWith(projId)}>Start PDD →</Button>
+            </div>
+          </>
+        ) : (
+          <>
+            <Input label="Project Name" value={form.name} autoFocus
+              onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} />
+            <Input label="Location" placeholder="e.g. Chom Bueng, Ratchaburi, Thailand" value={form.location}
+              onChange={(e) => setForm({ ...form, location: e.target.value })} error={errors.location} />
+            <Input label="Capacity (kWp)" type="number" inputMode="decimal" value={form.capacity_kwp}
+              onChange={(e) => setForm({ ...form, capacity_kwp: e.target.value })} error={errors.capacity_kwp} />
+            {landBased && <p className="-mt-2 text-xs text-ink-400">โครงการภาคป่าไม้ไม่มีกำลังติดตั้ง — ใช้ 0 ได้เลย</p>}
+            <Input label="Commission Date" type="date" value={form.commission_date}
+              onChange={(e) => setForm({ ...form, commission_date: e.target.value })} />
+            <div className="flex items-center justify-between gap-2 border-t border-ink-100 pt-3">
+              {candidates.length > 0 ? (
+                <Button variant="ghost" onClick={() => setMode('pick')}>← Pick existing</Button>
+              ) : (
+                <Button variant="ghost" onClick={onClose}>Cancel</Button>
+              )}
+              <Button loading={busy} onClick={createAndStart}>Create & Start PDD →</Button>
+            </div>
+          </>
+        )}
+      </div>
+    </Modal>
+  );
 }
 
 function PddEditor({ pddId }: { pddId: string }) {

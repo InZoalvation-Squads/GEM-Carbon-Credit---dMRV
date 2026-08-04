@@ -1,8 +1,9 @@
 import type {
   UserRole, Project, EmissionFactor, MonitoringRecord, Methodology, PddState,
   ProjectDesignDocument, VerificationRequest, VerificationState, EvidenceFile,
-  VerifiableCredential, GuardianToken,
+  VerifiableCredential, GuardianToken, VerificationComment,
 } from '../types';
+import type { DisclosureSplit } from './pdd';
 
 /**
  * Typed fetch client for the Phase 1a backend (plan Task 1,
@@ -116,7 +117,9 @@ export interface ApiFetchOptions {
 
 function request(path: string, { method = 'GET', body, auth = true }: ApiFetchOptions): Promise<Response> {
   const headers: Record<string, string> = {};
-  if (body !== undefined) headers['content-type'] = 'application/json';
+  // FormData bodies set their own multipart content-type (with boundary).
+  const isForm = typeof FormData !== 'undefined' && body instanceof FormData;
+  if (body !== undefined && !isForm) headers['content-type'] = 'application/json';
   if (auth) {
     const session = getSession();
     if (session) headers.authorization = `Bearer ${session.access_token}`;
@@ -125,7 +128,7 @@ function request(path: string, { method = 'GET', body, auth = true }: ApiFetchOp
   return fetch(`${apiBase()}${path}`, {
     method,
     headers,
-    body: body === undefined ? undefined : JSON.stringify(body),
+    body: body === undefined ? undefined : isForm ? (body as FormData) : JSON.stringify(body),
   });
 }
 
@@ -382,6 +385,53 @@ export const pddsApi = {
   async byProject(projectId: string): Promise<ProjectDesignDocument> {
     return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/projects/${projectId}/pdd`)).pdd;
   },
+  /** POST /projects/:id/pdd → the (created or existing) draft PDD. */
+  async selectMethodology(projectId: string, methodologyId: string): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/projects/${projectId}/pdd`, {
+      method: 'POST', body: { methodology_id: methodologyId },
+    })).pdd;
+  },
+  /** PUT /pdds/:id/draft — autosave section data + linked evidence. */
+  async saveDraft(pddId: string, sectionData: Record<string, unknown>, evidenceIds: string[]): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/pdds/${pddId}/draft`, {
+      method: 'PUT', body: { section_data: sectionData, evidence_ids: evidenceIds },
+    })).pdd;
+  },
+  /** POST /pdds/:id/submit — proponent sends the PDD into validation. */
+  async submit(pddId: string): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/pdds/${pddId}/submit`, { method: 'POST' })).pdd;
+  },
+  /** POST /pdds/:id/start-validation — VVB takes the package. */
+  async startValidation(pddId: string): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/pdds/${pddId}/start-validation`, { method: 'POST' })).pdd;
+  },
+  /** POST /pdds/:id/request-revision — back to the proponent with a summary. */
+  async requestRevision(pddId: string, summary: string): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/pdds/${pddId}/request-revision`, {
+      method: 'POST', body: { summary },
+    })).pdd;
+  },
+  /** POST /pdds/:id/reject — terminal rejection with a reason. */
+  async reject(pddId: string, reason: string): Promise<ProjectDesignDocument> {
+    return (await apiFetch<{ pdd: ProjectDesignDocument }>(`/pdds/${pddId}/reject`, {
+      method: 'POST', body: { reason },
+    })).pdd;
+  },
+  /** POST /pdds/:id/comments — review-thread comment (both sides). */
+  async addComment(pddId: string, body: string, sectionKey?: string): Promise<VerificationComment> {
+    return (await apiFetch<{ comment: VerificationComment }>(`/pdds/${pddId}/comments`, {
+      method: 'POST', body: { body, section_key: sectionKey },
+    })).comment;
+  },
+  /**
+   * POST /pdds/:id/register — server-side Gate-1 approval: re-validates,
+   * freezes content_hash + ipfs_cid, mints disclosure salts (kept in server
+   * custody) and returns the {disclosed, redacted} split for the browser to
+   * sign into the PDD Registration VC.
+   */
+  async register(pddId: string): Promise<{ pdd: ProjectDesignDocument; disclosure: DisclosureSplit }> {
+    return apiFetch(`/pdds/${pddId}/register`, { method: 'POST' });
+  },
 };
 
 export const verificationsApi = {
@@ -390,12 +440,78 @@ export const verificationsApi = {
     const path = `/verifications${query({ project_id: filter?.project_id, state: filter?.state })}`;
     return (await apiFetch<{ verifications: VerificationRequest[] }>(path)).verifications;
   },
+  /** POST /verifications — create a draft package (proponent side). */
+  async create(input: {
+    project_id: string;
+    monitoring_period_start: string;
+    monitoring_period_end: string;
+    reduction_kgco2e: number;
+    factors_snapshot: string;
+    evidence_ids: string[];
+  }): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>('/verifications', {
+      method: 'POST', body: input,
+    })).verification;
+  },
+  /** POST /verifications/:id/submit — proponent sends the package for review. */
+  async submit(id: string): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>(`/verifications/${id}/submit`, { method: 'POST' })).verification;
+  },
+  /** POST /verifications/:id/start-review — VVB takes the package. */
+  async startReview(id: string): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>(`/verifications/${id}/start-review`, { method: 'POST' })).verification;
+  },
+  /** POST /verifications/:id/request-revision — back to the owner. */
+  async requestRevision(id: string, summary: string): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>(`/verifications/${id}/request-revision`, {
+      method: 'POST', body: { summary },
+    })).verification;
+  },
+  /** POST /verifications/:id/approve — locks the package and seals hash_value. */
+  async approve(id: string, note?: string): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>(`/verifications/${id}/approve`, {
+      method: 'POST', body: note ? { note } : {},
+    })).verification;
+  },
+  /** POST /verifications/:id/reject — terminal rejection. */
+  async reject(id: string, reason: string): Promise<VerificationRequest> {
+    return (await apiFetch<{ verification: VerificationRequest }>(`/verifications/${id}/reject`, {
+      method: 'POST', body: { reason },
+    })).verification;
+  },
+  /** POST /verifications/:id/comments — review-thread comment. */
+  async addComment(id: string, body: string, evidenceId?: string): Promise<VerificationComment> {
+    return (await apiFetch<{ comment: VerificationComment }>(`/verifications/${id}/comments`, {
+      method: 'POST', body: { body, evidence_id: evidenceId },
+    })).comment;
+  },
 };
 
 export const evidenceApi = {
   /** GET /projects/:id/evidence → { evidence }. */
   async listByProject(projectId: string): Promise<EvidenceFile[]> {
     return (await apiFetch<{ evidence: EvidenceFile[] }>(`/projects/${projectId}/evidence`)).evidence;
+  },
+  /**
+   * POST /projects/:id/evidence (multipart) → the created evidence row.
+   * client_hash lets the server verify the bytes it stored match what the
+   * browser hashed (422 on mismatch).
+   */
+  async upload(
+    projectId: string,
+    file: File,
+    fields: { category: EvidenceFile['category']; description?: string; client_hash?: string },
+  ): Promise<EvidenceFile> {
+    const form = new FormData();
+    form.append('category', fields.category);
+    if (fields.description) form.append('description', fields.description);
+    if (fields.client_hash) form.append('client_hash', fields.client_hash);
+    form.append('file', file, file.name);
+    const res = await apiFetch<{ evidence: EvidenceFile }>(`/projects/${projectId}/evidence`, {
+      method: 'POST',
+      body: form,
+    });
+    return res.evidence;
   },
   /**
    * GET /evidence/:id/file → raw bytes as a Blob (authed). Best-effort for
@@ -413,6 +529,46 @@ export const evidenceApi = {
 };
 
 export const credentialsApi = {
+  /**
+   * POST /pdds/:id/credential — store the browser-signed PDD Registration VC.
+   * The server verifies the proof, persists the credential, then anchors it
+   * on the REAL Hedera topic; the returned credential carries `anchor` with
+   * live consensus coordinates (null if the testnet write is still pending).
+   */
+  async anchorPddCredential(
+    pddId: string,
+    vc: VerifiableCredential,
+  ): Promise<{ pdd: ProjectDesignDocument; credential: VerifiableCredential }> {
+    return apiFetch(`/pdds/${pddId}/credential`, { method: 'POST', body: vc });
+  },
+  /**
+   * POST /verifications/:id/anchor — store the browser-signed MRV Approval VC;
+   * the server persists, then anchors it on the real project topic.
+   */
+  async anchorVerification(
+    verificationId: string,
+    vc: VerifiableCredential,
+  ): Promise<{ verification: VerificationRequest; credential: VerifiableCredential }> {
+    return apiFetch(`/verifications/${verificationId}/anchor`, { method: 'POST', body: vc });
+  },
+  /**
+   * POST /credentials/:id/mint — persist the browser-assembled token; the
+   * server mints a REAL HTS serial (platform VCU token) and returns the row
+   * with live token_id/serial_number + an HCS mint anchor.
+   */
+  async mint(credentialId: string, token: GuardianToken): Promise<GuardianToken> {
+    return (await apiFetch<{ token: GuardianToken }>(
+      `/credentials/${encodeURIComponent(credentialId)}/mint`,
+      { method: 'POST', body: token },
+    )).token;
+  },
+  /** POST /credentials/:id/anchor — retry a pending on-chain anchor. */
+  async retryAnchor(credentialId: string): Promise<VerifiableCredential> {
+    return (await apiFetch<{ credential: VerifiableCredential }>(
+      `/credentials/${encodeURIComponent(credentialId)}/anchor`,
+      { method: 'POST' },
+    )).credential;
+  },
   /** GET /credentials → { credentials } (org-scoped, newest first). */
   async list(): Promise<VerifiableCredential[]> {
     return (await apiFetch<{ credentials: VerifiableCredential[] }>('/credentials')).credentials;
@@ -423,5 +579,96 @@ export const tokensApi = {
   /** GET /tokens → { tokens } (org-scoped, newest first). */
   async list(): Promise<GuardianToken[]> {
     return (await apiFetch<{ tokens: GuardianToken[] }>('/tokens')).tokens;
+  },
+};
+
+// ---------------------------------------------------------------------------
+// IoT ingest (mapping page)
+// ---------------------------------------------------------------------------
+
+export interface IotStatus {
+  enabled: boolean;
+  table?: string;
+  unit?: string;
+  value_kind?: string;
+  lookback_hours?: number;
+  timezone?: string;
+  deduction_pct?: number;
+}
+
+export interface IotDevice {
+  device_id: string;
+  name: string | null;
+  capacity_kwp: number | null;
+  location: string | null;
+  commission_date: string | null;
+  /** 0 = plant exists in the source but has no readings yet */
+  days: number;
+  first_date: string | null;
+  last_date: string | null;
+  avg_value: number;
+  /** effective mapping (DB row or legacy env pair); null = unmapped */
+  project_id: string | null;
+  /** mapped only: distinct record dates already in our monitoring store within the data range */
+  synced_days: number | null;
+}
+
+export interface IotMapping {
+  id: string;
+  device_id: string;
+  project_id: string;
+  project_name: string;
+  label: string | null;
+  created_at: string;
+}
+
+export interface IotSyncStats {
+  devices: number;
+  readings: number;
+  inserted: number;
+  skipped_existing: number;
+  skipped_partial_day: number;
+}
+
+export const iotApi = {
+  /** GET /iot/status → config summary (never the DB credentials). */
+  async status(): Promise<IotStatus> {
+    return apiFetch<IotStatus>('/iot/status');
+  },
+  /** GET /iot/devices → external plants + stats + current mapping. */
+  async devices(): Promise<IotDevice[]> {
+    return (await apiFetch<{ devices: IotDevice[] }>('/iot/devices')).devices;
+  },
+  /** GET /iot/mappings → stored device→project rows. */
+  async mappings(): Promise<IotMapping[]> {
+    return (await apiFetch<{ mappings: IotMapping[] }>('/iot/mappings')).mappings;
+  },
+  /** POST /iot/mappings (upsert per device). */
+  async map(deviceId: string, projectId: string, label?: string): Promise<void> {
+    await apiFetch('/iot/mappings', {
+      method: 'POST',
+      body: { device_id: deviceId, project_id: projectId, label },
+    });
+  },
+  /** DELETE /iot/mappings/:deviceId. */
+  async unmap(deviceId: string): Promise<void> {
+    await apiFetch(`/iot/mappings/${encodeURIComponent(deviceId)}`, { method: 'DELETE' });
+  },
+  /** POST /iot/create-project → 201 { project } (creates + maps in one call). */
+  async createProject(input: {
+    device_id: string;
+    name: string;
+    capacity_kwp: number;
+    location: string;
+    commission_date: string;
+  }): Promise<Project> {
+    return (await apiFetch<{ project: Project }>('/iot/create-project', { method: 'POST', body: input })).project;
+  },
+  /** POST /iot/sync — pull now; optional one-off backfill window in hours. */
+  async sync(lookbackHours?: number): Promise<IotSyncStats> {
+    return apiFetch<IotSyncStats>('/iot/sync', {
+      method: 'POST',
+      body: lookbackHours ? { lookback_hours: lookbackHours } : {},
+    });
   },
 };

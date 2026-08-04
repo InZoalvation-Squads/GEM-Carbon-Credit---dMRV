@@ -1,3 +1,4 @@
+import { createPortal } from 'react-dom';
 import { ReactNode, useEffect } from 'react';
 import { X } from 'lucide-react';
 
@@ -18,7 +19,9 @@ export function Drawer({ open, onClose, title, children, size = 'md' }: Props) {
     return () => window.removeEventListener('keydown', handler);
   }, [open, onClose]);
   if (!open) return null;
-  return (
+  // Portal to <body> — same rationale as Modal: route wrappers keep a CSS
+  // transform after their entry animation, which re-anchors position:fixed.
+  return createPortal(
     <div className="fixed inset-0 z-50" role="dialog" aria-modal="true">
       <div className="absolute inset-0 bg-ink-950/50 backdrop-blur-[2px] animate-fade-in" onClick={onClose} />
       <div className={`absolute right-0 top-0 h-full w-full ${SIZES[size]} bg-white shadow-xl ring-1 ring-ink-900/5 overflow-y-auto animate-slide-in-right`}>
@@ -34,6 +37,7 @@ export function Drawer({ open, onClose, title, children, size = 'md' }: Props) {
         </div>
         <div className="p-5">{children}</div>
       </div>
-    </div>
+    </div>,
+    document.body,
   );
 }

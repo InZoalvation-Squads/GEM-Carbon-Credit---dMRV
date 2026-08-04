@@ -1,17 +1,19 @@
 import { useRef, useState } from 'react';
 import { CloudUpload, X, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
-import { Modal } from './Modal';
-import { Button } from './Button';
-import { Textarea } from './Textarea';
-import { FileKindIcon } from './StatusBadge';
-import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../lib/labels';
-import { formatBytes } from '../lib/format';
-import { hashFileBytes } from '../lib/hash';
-import { useStore } from '../store';
-import type { EvidenceCategory, FileKind, UUID } from '../types';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { Textarea } from '../ui/Textarea';
+import { FileKindIcon } from '../ui/StatusBadge';
+import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../../lib/labels';
+import { formatBytes } from '../../lib/format';
+import { hashFileBytes } from '../../lib/hash';
+import { serverMode, evidenceApi } from '../../lib/server-api';
+import { toast } from '../layout/Toast';
+import { useStore } from '../../store';
+import type { EvidenceCategory, FileKind, UUID } from '../../types';
 
-const MAX_SIZE = 50 * 1024 * 1024;
+const MAX_SIZE = 25 * 1024 * 1024; // matches the server multipart cap (MAX_UPLOAD_BYTES)
 
 interface Staged {
   key: string;
@@ -58,6 +60,7 @@ export function EvidenceUploadModal({
   onUploaded: (count: number) => void;
 }) {
   const uploadEvidence = useStore((s) => s.uploadEvidence);
+  const ingestEvidence = useStore((s) => s.ingestEvidence);
   const [staged, setStaged] = useState<Staged[]>([]);
   const [desc, setDesc] = useState('');
   const [hover, setHover] = useState(false);
@@ -90,13 +93,31 @@ export function EvidenceUploadModal({
         try { return await hashFileBytes(s.file); } catch { return undefined; }
       })
     );
-    valid.forEach((s, i) =>
-      uploadEvidence(projectId, {
-        file_name: s.file_name, kind: s.kind, file_size: s.file_size,
-        category: s.category, description: desc || undefined, content_hash: hashes[i],
-      })
-    );
-    onUploaded(valid.length);
+    let done = 0;
+    for (let i = 0; i < valid.length; i++) {
+      const s = valid[i];
+      // Server mode: push real bytes to the API so /evidence/:id/file can
+      // serve them back (document figures, PDD cover). Demo samples have no
+      // File and stay local-store only in either mode.
+      if (serverMode() && s.file) {
+        try {
+          const row = await evidenceApi.upload(projectId, s.file, {
+            category: s.category, description: desc || undefined, client_hash: hashes[i],
+          });
+          ingestEvidence(row);
+          done++;
+        } catch {
+          toast.error('Upload failed', s.file_name);
+        }
+      } else {
+        uploadEvidence(projectId, {
+          file_name: s.file_name, kind: s.kind, file_size: s.file_size,
+          category: s.category, description: desc || undefined, content_hash: hashes[i],
+        });
+        done++;
+      }
+    }
+    if (done > 0) onUploaded(done);
     close();
   };
 
@@ -120,7 +141,7 @@ export function EvidenceUploadModal({
         >
           <CloudUpload className="mx-auto text-ink-400" size={28} />
           <div className="mt-2 text-sm font-medium text-ink-900">Drop files here, or click to browse</div>
-          <div className="mt-1 text-xs text-ink-500">PDF · JPG · PNG · XLSX — up to 50 MB each</div>
+          <div className="mt-1 text-xs text-ink-500">PDF · JPG · PNG · XLSX — up to 25 MB each</div>
         </div>
         <input
           ref={inputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx" className="hidden"
@@ -144,7 +165,7 @@ export function EvidenceUploadModal({
                 <div className="min-w-0 flex-1">
                   <div className="truncate text-sm font-medium text-ink-900">{s.file_name}</div>
                   <div className={clsx('text-xs', s.tooBig ? 'text-red-600' : 'text-ink-500')}>
-                    {formatBytes(s.file_size)}{s.tooBig && ' · exceeds 50 MB, skipped'}
+                    {formatBytes(s.file_size)}{s.tooBig && ' · exceeds 25 MB, skipped'}
                   </div>
                 </div>
                 {!s.tooBig && (
@@ -170,7 +191,7 @@ export function EvidenceUploadModal({
 
         {staged.some((s) => s.tooBig) && (
           <div className="flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
-            <AlertTriangle size={14} /> {staged.filter((s) => s.tooBig).length} file(s) exceed 50 MB and will be skipped.
+            <AlertTriangle size={14} /> {staged.filter((s) => s.tooBig).length} file(s) exceed 25 MB and will be skipped.
           </div>
         )}
 

@@ -1,7 +1,7 @@
-import { Card, CardBody, CardHeader } from '../components/Card';
-import { KpiCard } from '../components/KpiCard';
-import { PageHeader } from '../components/PageHeader';
-import { EmptyState } from '../components/EmptyState';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { KpiCard } from '../components/ui/KpiCard';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
 import { DailyGenerationChart } from '../components/charts/DailyGenerationChart';
 import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
 import { useDashboardSummary } from '../store/selectors';

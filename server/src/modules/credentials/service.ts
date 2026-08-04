@@ -34,6 +34,13 @@ export type PublicCredential = {
   context?: string[];
   vc_type?: string[];
   proof: SignedCredential['proof'];
+  /**
+   * Real Hedera consensus coordinates, written by the SERVER after the VC was
+   * signed (so it lives outside the proof). Null until anchoring succeeds;
+   * the in-payload `hcs` field keeps the browser's simulated values for
+   * proof round-tripping.
+   */
+  anchor: { topic_id: string; sequence_number: number; consensus_timestamp: string; explorer_url: string } | null;
 };
 
 export function serializeCredential(row: Credential): PublicCredential {
@@ -50,6 +57,7 @@ export function serializeCredential(row: Credential): PublicCredential {
     package_hash: vc.package_hash,
     hcs: vc.hcs,
     proof: vc.proof,
+    anchor: (row.anchor as PublicCredential['anchor']) ?? null,
   };
   // Optional in the VC shape — include them exactly when the signed payload
   // has them (an added-or-dropped key would change canonical() and break the
@@ -72,6 +80,8 @@ export type PublicToken = {
   minted_at: string;
   minted_by_role: UserRole;
   hcs: { topic_id: string; sequence_number: number; explorer_url: string };
+  /** Dual-standard issuance detail (HTS serial range + ERC-1155 batch); null for legacy rows. */
+  batch: Record<string, unknown> | null;
 };
 
 export function serializeToken(t: GuardianToken): PublicToken {
@@ -87,6 +97,7 @@ export function serializeToken(t: GuardianToken): PublicToken {
     minted_at: t.minted_at.toISOString(),
     minted_by_role: t.minted_by_role,
     hcs: t.hcs as PublicToken['hcs'],
+    batch: (t.batch ?? null) as PublicToken['batch'],
   };
 }
 

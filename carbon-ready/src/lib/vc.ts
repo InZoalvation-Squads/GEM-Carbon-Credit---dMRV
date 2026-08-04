@@ -7,10 +7,13 @@ export type VcVerdict = 'valid' | 'invalid' | 'unsigned';
 
 const W3C_CONTEXT = ['https://www.w3.org/ns/credentials/v2'];
 
-// The signature covers sha256(canonical(vc without proof)), so any field edit —
-// subject, issuer, HCS coordinates — invalidates the proof offline.
+// The signature covers sha256(canonical(vc without proof/anchor)), so any
+// field edit — subject, issuer, HCS coordinates — invalidates the proof
+// offline. `anchor` is REAL Hedera consensus metadata the SERVER attaches
+// AFTER signing (the browser can't know consensus coordinates in advance),
+// so like `proof` it lives outside the signed envelope.
 function signingInput(vc: VerifiableCredential): Uint8Array {
-  const { proof: _p, ...unsigned } = vc;
+  const { proof: _p, anchor: _a, ...unsigned } = vc;
   return hexToBytes(sha256Hex(canonical(unsigned)));
 }
 

@@ -22,6 +22,13 @@ const WIND = 'meth-tver-wind';
 // T-VER-S-01 v3.0 and publishes both sensitive fields (investment_metric via
 // its showIf on barrier_type = Investment, and barrier_explanation).
 const SOLAR_SECTION_DATA = {
+  // Official-form cover / preparer / declarations (T-VER-S-F001-PDD)
+  project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา',
+  project_title_en: 'Solar Rooftop Power Generation Project',
+  project_owner: 'GreenGrid Asia',
+  project_scale: 'เล็กมาก', crediting_years: '7', crediting_start: '2025-04-01',
+  preparer_name: 'Anong Siriwan', coordinator_name: 'Kittipong Chaiyo',
+  registered_elsewhere: 'ไม่มี', degradation_pct: 0.4,
   technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
   baseline_scenario: 'Grid electricity displaced by on-site solar generation',
   barrier_type: 'Investment', investment_metric: 'IRR',
@@ -35,6 +42,7 @@ const PDD_PUBLIC_KEYS = [
   'id', 'project_id', 'methodology_id', 'methodology_snapshot', 'state',
   'section_data', 'evidence_ids', 'assigned_validator_name', 'submitted_at',
   'validated_at', 'content_hash', 'ipfs_cid', 'credential_id', 'rejection_reason',
+  'guardian_ref',
 ];
 
 describe('pdds module', () => {

@@ -1,11 +1,13 @@
 import { Download, RefreshCw, Archive, FileText, Image as ImageIcon } from 'lucide-react';
-import { Modal } from './Modal';
-import { Button } from './Button';
-import { CategoryChip, EvidenceStatusDot } from './StatusBadge';
-import { useStore } from '../store';
-import { fmtDate } from '../lib/date';
-import { formatBytes } from '../lib/format';
-import type { EvidenceFile } from '../types';
+import { Modal } from '../ui/Modal';
+import { Button } from '../ui/Button';
+import { CategoryChip, EvidenceStatusDot } from '../ui/StatusBadge';
+import { useStore } from '../../store';
+import { api } from '../../lib/api';
+import { toast } from '../layout/Toast';
+import { fmtDate } from '../../lib/date';
+import { formatBytes } from '../../lib/format';
+import type { EvidenceFile } from '../../types';
 
 function Preview({ ev }: { ev: EvidenceFile }) {
   if (ev.kind === 'image') {
@@ -57,7 +59,7 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
   const comments = useStore((s) => s.comments);
   const archiveEvidence = useStore((s) => s.archiveEvidence);
   const replaceEvidence = useStore((s) => s.replaceEvidence);
-  const savePddDraft = useStore((s) => s.savePddDraft);
+
   const pdd = useStore((s) => s.pdds.find((p) => p.project_id === evidence?.project_id));
 
   if (!evidence) return null;
@@ -161,7 +163,7 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
           </Button>
           {evidence.kind === 'image' && evidence.status === 'active' && pdd && (
             <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={isCover}
-              onClick={() => savePddDraft(pdd.id, { ...pdd.section_data, cover_evidence_id: evidence.id }, pdd.evidence_ids)}>
+              onClick={() => void api.savePddDraft(pdd.id, { ...pdd.section_data, cover_evidence_id: evidence.id }, pdd.evidence_ids).catch(() => toast.error('Cannot set cover', 'PDD ล็อกแล้ว (แก้ได้เฉพาะสถานะ draft)'))}>
               <ImageIcon size={14} /> {isCover ? 'PDD cover ✓' : 'Set as PDD cover'}
             </Button>
           )}

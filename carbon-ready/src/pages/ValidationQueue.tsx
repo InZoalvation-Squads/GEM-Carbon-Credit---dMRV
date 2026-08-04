@@ -1,10 +1,10 @@
 import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
-import { PageHeader } from '../components/PageHeader';
-import { Card } from '../components/Card';
-import { Table, THead, TR, TH, TD } from '../components/Table';
-import { PddStatusBadge } from '../components/StatusBadge';
-import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
+import { PddStatusBadge } from '../components/ui/StatusBadge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { fmtDate } from '../lib/date';
 
 export function ValidationQueue() {

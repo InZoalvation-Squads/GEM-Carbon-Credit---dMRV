@@ -1,17 +1,20 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { ShieldCheck, FileJson, ExternalLink, Coins, GitBranch, Check } from 'lucide-react';
-import { Card, CardBody, CardHeader } from '../components/Card';
-import { Table, THead, TR, TH, TD } from '../components/Table';
-import { Badge } from '../components/Badge';
-import { Button } from '../components/Button';
-import { PageHeader } from '../components/PageHeader';
-import { EmptyState } from '../components/EmptyState';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
+import { Badge } from '../components/ui/Badge';
+import { Button } from '../components/ui/Button';
+import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useStore } from '../store';
+import { serverMode } from '../lib/server-api';
 import { MRV_APPROVAL_SCHEMA_V1 } from '../lib/guardian-schema';
 import { verifyCredential, type VcVerdict } from '../lib/vc';
 import { issuerIdentity } from '../lib/identity';
 import { fmtDateTime } from '../lib/date';
 import { formatNumber } from '../lib/format';
+import { displayHcs } from '../lib/guardian';
+import { api } from '../lib/api';
 import type { GuardianToken, VerifiableCredential } from '../types';
 import clsx from 'clsx';
 
@@ -24,7 +27,7 @@ export function Guardian() {
   const organization = useStore((s) => s.organization);
   const verifications = useStore((s) => s.verifications);
   const role = useStore((s) => s.currentUser.role);
-  const mintToken = useStore((s) => s.mintToken);
+
   const [tab, setTab] = useState<Tab>('schema');
 
   const isRegistry = role === 'admin'; // Standard Registry
@@ -39,14 +42,30 @@ export function Guardian() {
 
   return (
     <div>
-      <PageHeader title="Guardian" subtitle="Credential schema, issued credentials, minted VCU tokens and their trust chain. Simulated — not a live Hedera connection." />
+      <PageHeader
+        title="Guardian"
+        subtitle={serverMode()
+          ? 'Credential schema, issued credentials, minted VCU tokens and their trust chain — anchored live on Hedera testnet.'
+          : 'Credential schema, issued credentials, minted VCU tokens and their trust chain. Simulated — not a live Hedera connection.'}
+      />
 
       <Card className="mb-4 border-brand-200 bg-brand-50">
         <CardBody className="flex flex-wrap items-center gap-x-6 gap-y-1 py-3 text-sm">
-          <span className="flex items-center gap-2 font-medium text-brand-800"><ShieldCheck size={16} /> Guardian (mock)</span>
+          <span className="flex items-center gap-2 font-medium text-brand-800">
+            <ShieldCheck size={16} /> {serverMode() ? 'Hedera ⛓ live' : 'Guardian (mock)'}
+          </span>
           <span className="text-brand-700">Network: <strong>{config.network}</strong></span>
-          <span className="text-brand-700 font-mono text-xs">Topic {config.topic_id}</span>
-          <span className="text-brand-700 font-mono text-xs truncate">{issuerIdentity(organization.id).did}</span>
+          {serverMode() ? (
+            <>
+              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/token/0.0.9909017" target="_blank" rel="noreferrer">GEMVCU 0.0.9909017</a>
+              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/contract/0xEF87e486b77D6ed63BE632a731b73aE1225F1130" target="_blank" rel="noreferrer">ERC-1155 0xEF87…1130</a>
+            </>
+          ) : (
+            <>
+              <span className="text-brand-700 font-mono text-xs">Topic {config.topic_id}</span>
+              <span className="text-brand-700 font-mono text-xs truncate">{issuerIdentity(organization.id).did}</span>
+            </>
+          )}
         </CardBody>
       </Card>
 
@@ -68,7 +87,7 @@ export function Guardian() {
           verifications={verifications}
           isRegistry={isRegistry}
           mintedFor={mintedFor}
-          onMint={(id) => mintToken(id)}
+          onMint={(id) => void api.mintToken(id)}
         />
       )}
       {tab === 'tokens' && <TokenHistoryTab tokens={tokens} />}
@@ -107,7 +126,14 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
   onMint: (credentialId: string) => void;
 }) {
   // Offline Ed25519 check per credential — verdict appears in place of the button.
-  const [verdicts, setVerdicts] = useState<Record<string, VcVerdict>>({});
+  // Auto-verify every credential on render (and on every poll refresh):
+  // the verdict is derived state, not something the user should have to
+  // click for — and it can never go stale or reset.
+  const verdicts = useMemo<Record<string, VcVerdict>>(() => {
+    const out: Record<string, VcVerdict> = {};
+    for (const c of credentials) out[c.id] = verifyCredential(c);
+    return out;
+  }, [credentials]);
   if (credentials.length === 0) {
     return (
       <Card><CardBody className="p-0">
@@ -128,19 +154,15 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
                 <TD className="font-mono text-xs text-ink-900">{c.id}</TD>
                 <TD className="text-ink-700">{v?.project_id ?? (c.subject.project_id as string)}</TD>
                 <TD className="text-right">{Number.isFinite(Number(c.subject.reduction_tco2e)) ? `${formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e` : '—'}</TD>
-                <TD className="font-mono text-xs text-ink-500">{c.hcs.topic_id} · #{c.hcs.sequence_number}</TD>
+                <TD className="font-mono text-xs text-ink-500">{displayHcs(c).topic_id} · #{displayHcs(c).sequence_number}{displayHcs(c).real ? ' ⛓' : ''}</TD>
                 <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(c.issued_at)}</TD>
                 <TD>
                   {verdicts[c.id] === 'valid' ? (
                     <Badge tone="green" dot>Signature valid (Ed25519)</Badge>
                   ) : verdicts[c.id] === 'invalid' ? (
                     <Badge tone="red" dot>Signature INVALID</Badge>
-                  ) : verdicts[c.id] === 'unsigned' ? (
-                    <Badge tone="gray">Unsigned (seed data)</Badge>
                   ) : (
-                    <Button variant="secondary" onClick={() => setVerdicts((m) => ({ ...m, [c.id]: verifyCredential(c) }))}>
-                      <ShieldCheck size={14} /> Verify signature
-                    </Button>
+                    <Badge tone="gray">Unsigned (seed data)</Badge>
                   )}
                 </TD>
                 <TD className="text-right">
@@ -220,10 +242,10 @@ function TrustChainTab() {
   // Chronological lifecycle: PDD registered → verification approved → credential issued → token minted.
   const steps: ChainStep[] = [
     { label: 'PDD registered', detail: pdd
-        ? `${pdd.id} · ${pdd.methodology_snapshot}${pddCredential ? ` · VC ${pddCredential.id} · HCS ${pddCredential.hcs.topic_id} #${pddCredential.hcs.sequence_number}` : ''}${pdd.ipfs_cid ? ` · ipfs ${pdd.ipfs_cid}` : ''}`
+        ? `${pdd.id} · ${pdd.methodology_snapshot}${pddCredential ? ` · VC ${pddCredential.id} · HCS ${displayHcs(pddCredential).topic_id} #${displayHcs(pddCredential).sequence_number}` : ''}${pdd.ipfs_cid ? ` · ipfs ${pdd.ipfs_cid}` : ''}`
         : '—', at: pdd?.validated_at ?? null },
     { label: 'Verification approved', detail: verification ? `${verification.id} · ${verification.monitoring_period_start} → ${verification.monitoring_period_end}` : '—', at: verification?.locked_at ?? null },
-    { label: 'Credential issued', detail: credential ? `${credential.id} · HCS ${credential.hcs.topic_id} #${credential.hcs.sequence_number}` : '—', at: credential?.issued_at ?? null },
+    { label: 'Credential issued', detail: credential ? `${credential.id} · HCS ${displayHcs(credential).topic_id} #${displayHcs(credential).sequence_number}` : '—', at: credential?.issued_at ?? null },
     { label: 'Token minted', detail: `${token.token_id} · serial #${token.serial_number} · ${formatNumber(token.amount_tco2e, 2)} tCO₂e`, at: token.minted_at },
   ];
 

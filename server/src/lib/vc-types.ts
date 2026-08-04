@@ -27,6 +27,14 @@ export interface VerifiableCredential {
     verificationMethod: string;   // issuer did:key
     proofValue: string;           // hex signature over sha256(canonical(vc sans proof))
   };
+  // Real Hedera consensus coordinates, attached by the SERVER after signing
+  // (outside the signed envelope, like `proof`). Absent until anchored.
+  anchor?: {
+    topic_id: string;
+    sequence_number: number;
+    consensus_timestamp: string;
+    explorer_url: string;
+  } | null;
 }
 
 // A minted VCU token. In Guardian this is a separate step after the VC is issued:
@@ -47,4 +55,6 @@ export interface GuardianToken {
     sequence_number: number;
     explorer_url: string;
   };
+  /** Server-minted dual-standard detail: HTS serial range + ERC-1155 batch. Absent in local mode. */
+  batch?: Record<string, unknown> | null;
 }

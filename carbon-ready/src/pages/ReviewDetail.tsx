@@ -1,17 +1,20 @@
 import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { ChevronLeft, Lock, ShieldCheck, CheckCircle2, FileCheck2, MessageSquarePlus, Link2 } from 'lucide-react';
-import { Card, CardBody, CardHeader } from '../components/Card';
-import { Button } from '../components/Button';
-import { Textarea } from '../components/Textarea';
-import { Modal } from '../components/Modal';
-import { Badge } from '../components/Badge';
-import { StatusBadge, CategoryChip, FileKindIcon } from '../components/StatusBadge';
+import { Card, CardBody, CardHeader } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Textarea } from '../components/ui/Textarea';
+import { Modal } from '../components/ui/Modal';
+import { Badge } from '../components/ui/Badge';
+import { StatusBadge, CategoryChip, FileKindIcon } from '../components/ui/StatusBadge';
 import { useStore } from '../store';
+import { api } from '../lib/api';
 import { CATEGORY_LABEL, ROLE_LABEL } from '../lib/labels';
 import { fmtDate, fmtDateTime } from '../lib/date';
 import { formatTco2e } from '../lib/format';
 import type { AuditLog } from '../types';
+import { displayHcs } from '../lib/guardian';
+import { locationToCountryCode } from '../lib/geo';
 
 type Action = 'approve' | 'reject' | 'revision' | null;
 
@@ -35,13 +38,10 @@ export function ReviewDetail() {
   const comments = useStore((s) => s.comments.filter((c) => c.verification_id === id));
   const audit = useStore((s) => s.audit.filter((a) => a.entity_type === 'verification' && a.entity_id === id));
   const project = useStore((s) => s.projects.find((p) => p.id === v?.project_id));
+  const records = useStore((s) => s.records);
+  const factors = useStore((s) => s.factors);
 
-  const startReview = useStore((s) => s.startReview);
-  const requestRevision = useStore((s) => s.requestRevision);
-  const approveVerification = useStore((s) => s.approveVerification);
-  const rejectVerification = useStore((s) => s.rejectVerification);
-  const addComment = useStore((s) => s.addComment);
-  const anchorVerification = useStore((s) => s.anchorVerification);
+
   const credential = useStore((s) => s.credentials.find((c) => c.id === (v?.credential_id ?? '')));
 
   const [draft, setDraft] = useState('');
@@ -54,14 +54,29 @@ export function ReviewDetail() {
   }
 
   const pkgEvidence = evidence.filter((e) => v.evidence_ids.includes(e.id));
+  // --- VVB data check: recompute the claim from raw monitoring + current EF ---
+  const periodRecords = records
+    .filter((r) => r.project_id === v.project_id && r.record_date >= v.monitoring_period_start && r.record_date <= v.monitoring_period_end)
+    .sort((a, b) => a.record_date.localeCompare(b.record_date));
+  const totalKwh = periodRecords.reduce((s2, r) => s2 + r.generation_kwh, 0);
+  const country = locationToCountryCode(project?.location.split(',').pop()?.trim() ?? '');
+  const currentFactors = factors.filter((f) => f.country === country && f.is_current);
+  const ef = currentFactors.length
+    ? currentFactors.reduce((a, b) => (b.effective_date >= a.effective_date ? b : a)).factor_kgco2e_per_kwh
+    : null;
+  const computedKg = ef !== null ? totalKwh * ef : null;
+  const deltaPct = computedKg !== null && v.reduction_kgco2e > 0
+    ? Math.abs(computedKg - v.reduction_kgco2e) / v.reduction_kgco2e * 100
+    : null;
+  const claimMatches = deltaPct !== null && deltaPct <= 1;
   const locked = v.state === 'approved' || v.state === 'rejected';
   const coverage = v.required_categories.map((c) => ({ category: c, present: pkgEvidence.some((e) => e.category === c) }));
 
   const closeModal = () => { setAction(null); setNote(''); setConfirmed(false); };
-  const run = () => {
-    if (action === 'approve') approveVerification(v.id, note || undefined);
-    if (action === 'reject') rejectVerification(v.id, note);
-    if (action === 'revision') requestRevision(v.id, note);
+  const run = async () => {
+    if (action === 'approve') await api.approveVerification(v.id, note || undefined);
+    if (action === 'reject') await api.rejectVerification(v.id, note);
+    if (action === 'revision') await api.requestRevision(v.id, note);
     closeModal();
   };
 
@@ -85,7 +100,7 @@ export function ReviewDetail() {
           </div>
         </div>
         {v.state === 'submitted' && (
-          <Button onClick={() => startReview(v.id)}><ShieldCheck size={16} /> Start review</Button>
+          <Button onClick={() => void api.startReview(v.id)}><ShieldCheck size={16} /> Start review</Button>
         )}
       </div>
 
@@ -99,19 +114,19 @@ export function ReviewDetail() {
                   <div className="flex flex-wrap items-center gap-3">
                     <span>Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'} · evidence read-only.{' '}
                       <span className="font-mono text-xs">hash {v.hash_value}</span> · 🔒 anchoring pending.</span>
-                    <Button size="sm" onClick={() => anchorVerification(v.id)}>
+                    <Button size="sm" onClick={() => void api.anchorVerification(v.id)}>
                       <Link2 size={14} /> Anchor to Hedera Guardian
                     </Button>
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center gap-2 font-medium text-brand-800">⛓ Anchored on Hedera Guardian (simulated)</div>
+                    <div className="flex items-center gap-2 font-medium text-brand-800">⛓ Anchored on Hedera Guardian{credential?.anchor ? '' : ' (simulated)'}</div>
                     <div className="mt-1 grid gap-0.5 text-xs text-brand-700 font-mono">
                       <span>credential: {v.credential_id}</span>
                       <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {v.anchored_at ? fmtDateTime(v.anchored_at) : ''}</span>
-                      {credential && <a className="underline" href={credential.hcs.explorer_url} target="_blank" rel="noreferrer">View on HashScan (mock) ↗</a>}
+                      {credential && <a className="underline" href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer">View on HashScan{displayHcs(credential).real ? '' : ' (mock)'} ↗</a>}
                     </div>
-                    <div className="mt-1 text-[11px] text-ink-400">Simulated · not a live Hedera transaction.</div>
+                    {!credential?.anchor && <div className="mt-1 text-[11px] text-ink-400">Simulated · not a live Hedera transaction.</div>}
                   </div>
                 )
               ) : (
@@ -134,6 +149,49 @@ export function ReviewDetail() {
                 <div className="text-xs uppercase tracking-wide text-ink-400">Emission factor snapshot</div>
                 <div className="mt-0.5 font-medium text-ink-900">{v.factors_snapshot}</div>
               </div>
+            </CardBody>
+          </Card>
+
+          <Card>
+            <CardHeader title="Data check — ทวนสอบตัวเลขจากข้อมูลดิบ" />
+            <CardBody className="space-y-3">
+              {periodRecords.length === 0 ? (
+                <p className="text-sm text-amber-700">ไม่พบข้อมูล monitoring ในช่วงเวลานี้ — ตรวจสอบกับผู้พัฒนาก่อนอนุมัติ</p>
+              ) : (
+                <>
+                  <div className="max-h-44 overflow-y-auto rounded-lg border border-ink-100">
+                    <table className="w-full text-sm">
+                      <thead className="sticky top-0 bg-ink-50 text-left text-[11px] uppercase tracking-wide text-ink-400">
+                        <tr><th className="px-3 py-1.5">Date</th><th className="px-3 py-1.5 text-right">kWh</th></tr>
+                      </thead>
+                      <tbody>
+                        {periodRecords.map((r) => (
+                          <tr key={r.id} className="border-t border-ink-50">
+                            <td className="px-3 py-1.5 text-ink-700">{fmtDate(r.record_date)}</td>
+                            <td className="px-3 py-1.5 text-right font-medium text-ink-900">{r.generation_kwh.toLocaleString()}</td>
+                          </tr>
+                        ))}
+                        <tr className="border-t border-ink-200 bg-ink-50/60 font-semibold">
+                          <td className="px-3 py-1.5">รวม {periodRecords.length} รายการ</td>
+                          <td className="px-3 py-1.5 text-right">{totalKwh.toLocaleString()} kWh</td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="grid grid-cols-2 gap-3 text-sm">
+                    <Field label="EF ปัจจุบัน" value={ef !== null ? `${ef} kgCO₂e/kWh` : 'ไม่พบค่า EF'} />
+                    <Field label="คำนวณได้" value={computedKg !== null ? formatTco2e(computedKg) : '—'} />
+                  </div>
+                  {deltaPct !== null && (
+                    <div data-testid="claim-check" className={'flex items-center gap-2 rounded-lg px-3 py-2 text-sm ' + (claimMatches ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800')}>
+                      <CheckCircle2 size={16} className={claimMatches ? 'text-emerald-500' : 'text-amber-500'} />
+                      {claimMatches
+                        ? `ตัวเลขที่เคลม (${formatTco2e(v.reduction_kgco2e)}) ตรงกับที่คำนวณจากข้อมูลดิบ (ต่าง ${deltaPct.toFixed(2)}%)`
+                        : `ตัวเลขที่เคลมต่างจากที่คำนวณได้ ${deltaPct.toFixed(1)}% — ตรวจสอบก่อนอนุมัติ`}
+                    </div>
+                  )}
+                </>
+              )}
             </CardBody>
           </Card>
 
@@ -199,7 +257,7 @@ export function ReviewDetail() {
                   <Textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment…" />
                   <div className="mt-2 flex justify-end">
                     <Button size="sm" variant="secondary" disabled={!draft.trim()}
-                      onClick={() => { addComment(v.id, draft.trim()); setDraft(''); }}>
+                      onClick={() => { void api.addVerificationComment(v.id, draft.trim()); setDraft(''); }}>
                       <MessageSquarePlus size={14} /> Comment
                     </Button>
                   </div>

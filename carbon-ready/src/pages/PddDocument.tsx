@@ -2,18 +2,21 @@ import { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Printer, ArrowLeft, Lock, Eye, EyeOff, FileText } from 'lucide-react';
 import { useStore } from '../store';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
-import { PddStatusBadge } from '../components/StatusBadge';
-import { EmptyState } from '../components/EmptyState';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { PddStatusBadge } from '../components/ui/StatusBadge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { isFieldVisible, resolveComputed } from '../lib/pdd';
 import type { PddComputedSource } from '../types';
 import clsx from 'clsx';
+import { displayHcs } from '../lib/guardian';
+import { IpfsJsonModal } from '../components/evidence/IpfsJsonModal';
 
 export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: string; embedded?: boolean } = {}) {
   const params = useParams();
   const pddId = pddIdProp ?? params.pddId;
   const pdd = useStore((s) => s.pdds.find((p) => p.id === pddId));
+  const [showIpfs, setShowIpfs] = useState(false);
   const credential = useStore((s) => s.credentials.find((c) => c.id === pdd?.credential_id));
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
@@ -57,16 +60,27 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
           </div>
           <p className="mt-1 text-sm text-ink-500">{project.name} · {methodology.code} {methodology.version}</p>
           {pdd.content_hash && <p className="mt-1 font-mono text-xs text-ink-400">hash: {pdd.content_hash}</p>}
-          {pdd.ipfs_cid && <p className="font-mono text-xs text-ink-400">ipfs: {pdd.ipfs_cid}</p>}
+          {pdd.ipfs_cid && (
+            <p className="font-mono text-xs text-ink-400">
+              ipfs:{' '}
+              <button onClick={() => setShowIpfs(true)} className="text-brand-600 hover:underline">
+                {pdd.ipfs_cid}
+              </button>{' '}
+              <span className="text-ink-300">· คลิกเพื่อดู JSON + ตรวจ hash</span>
+            </p>
+          )}
           {credential && (
             <p className="font-mono text-xs text-ink-400">
               vc: {credential.id} ·{' '}
-              <a href={credential.hcs.explorer_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
-                HCS message #{credential.hcs.sequence_number}
+              <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
+                HCS message #{displayHcs(credential).sequence_number}{displayHcs(credential).real ? ' ⛓ on-chain' : ' (simulated)'}
               </a>
             </p>
           )}
         </header>
+        {showIpfs && pdd.ipfs_cid && (
+          <IpfsJsonModal cid={pdd.ipfs_cid} expectedHash={pdd.content_hash} onClose={() => setShowIpfs(false)} />
+        )}
 
         {methodology.pdd_sections.map((section) => (
           <section key={section.key}>

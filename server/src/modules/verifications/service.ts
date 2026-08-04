@@ -164,6 +164,25 @@ export async function createVerification(
     where: { id: actor.userId },
     select: { name: true },
   });
+  // Verra rule: monitoring periods of one project never overlap — a period
+  // can be claimed exactly once (double-counting guard). Rejected packages
+  // free their period up again.
+  const overlap = await prisma.verificationRequest.findFirst({
+    where: {
+      project_id: input.project_id,
+      state: { not: 'rejected' },
+      monitoring_period_start: { lte: input.monitoring_period_end },
+      monitoring_period_end: { gte: input.monitoring_period_start },
+    },
+    select: { id: true, monitoring_period_start: true, monitoring_period_end: true },
+  });
+  if (overlap) {
+    throw appError(
+      409,
+      'CONFLICT',
+      `Monitoring period overlaps package ${overlap.id} (${overlap.monitoring_period_start} – ${overlap.monitoring_period_end}) — a period can only be claimed once`,
+    );
+  }
   return prisma.verificationRequest.create({
     data: {
       id: uid('VR'),

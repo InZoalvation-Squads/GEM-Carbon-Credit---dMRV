@@ -124,6 +124,10 @@ model Project {
   commission_date String // ISO date
   status          ProjectStatus
   lifecycle_stage ProjectLifecycle
+  // Real HCS topic for this project's anchors (created lazily on first anchor).
+  hcs_topic_id    String?
+  // Per-project HTS credit token (name = project name), created on first mint.
+  hts_token_id    String?
   created_at      DateTime         @default(now())
   updated_at      DateTime         @updatedAt
 
@@ -133,9 +137,27 @@ model Project {
   verifications      VerificationRequest[]
   pdds               Pdd[]
   credentials        Credential[]
+  iot_device_maps    IotDeviceMap[]
 
   @@index([organization_id])
   @@map("projects")
+}
+
+// IoT device/plant → project mapping, managed from the IoT page (replaces the
+// IOT_DEVICE_MAP env pairs; env pairs still work and are merged in).
+model IotDeviceMap {
+  id         String   @id
+  // device/plant id in the EXTERNAL IoT database (e.g. plants.id)
+  device_id  String   @unique
+  project_id String
+  // display name snapshot from the IoT side, so the page reads well offline
+  label      String?
+  created_at DateTime @default(now())
+
+  project Project @relation(fields: [project_id], references: [id], onDelete: Cascade)
+
+  @@index([project_id])
+  @@map("iot_device_maps")
 }
 
 model MonitoringRecord {
@@ -277,8 +299,10 @@ model Pdd {
   submitted_at             DateTime?
   validated_at             DateTime? // = registered timestamp
   content_hash             String? // frozen at register
-  ipfs_cid                 String? // simulated IPFS CID, frozen at register
+  ipfs_cid                 String? // IPFS CID (real when a Kubo node is configured), frozen at register
   credential_id            String? // PDD Registration VC id
+  // Guardian policy trail { policy_id, tracking_id, submitted_at, approved_at? } — best-effort
+  guardian_ref             Json?
   rejection_reason         String?
 
   project     Project     @relation(fields: [project_id], references: [id])
@@ -297,6 +321,11 @@ model Credential {
   // derives this from payload.subject.project_id instead.
   project_id String
   payload    Json // the full signed VC object (incl. proof)
+  // Real on-chain anchor metadata { topic_id, sequence_number,
+  // consensus_timestamp, explorer_url } — written by the server AFTER the
+  // browser signed the VC, so it lives outside the signed payload. Null when
+  // anchoring is disabled or has not succeeded yet (retry endpoint).
+  anchor     Json?
   created_at DateTime @default(now())
 
   project Project        @relation(fields: [project_id], references: [id])
@@ -304,6 +333,15 @@ model Credential {
 
   @@index([project_id])
   @@map("credentials")
+}
+
+// Tiny key-value store for singleton platform state (e.g. the HTS VCU token
+// id created once on first mint). Not org-scoped — platform-level facts only.
+model AppState {
+  key   String @id
+  value String
+
+  @@map("app_state")
 }
 
 model GuardianToken {
@@ -318,6 +356,9 @@ model GuardianToken {
   minted_at               DateTime @default(now())
   minted_by_role          UserRole
   hcs                     Json // { topic_id, sequence_number, explorer_url }
+  // Dual-standard issuance detail: { serial_start, serial_end, units,
+  // erc1155: { address, id, amount, tx_hash } } — null for legacy/sim rows.
+  batch                   Json?
 
   credential Credential @relation(fields: [credential_id], references: [id])
 

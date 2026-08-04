@@ -57,6 +57,12 @@ function signVc(unsigned: Omit<VerifiableCredential, 'proof'>, signer: TestIssue
 // T-VER-S-01 v3.0 (copied from pdds.test.ts).
 const SOLAR = 'meth-tver-solar';
 const SOLAR_SECTION_DATA = {
+  project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา',
+  project_title_en: 'Solar Rooftop Power Generation Project',
+  project_owner: 'GreenGrid Asia',
+  project_scale: 'เล็กมาก', crediting_years: '7', crediting_start: '2025-04-01',
+  preparer_name: 'Anong Siriwan', coordinator_name: 'Kittipong Chaiyo',
+  registered_elsewhere: 'ไม่มี', degradation_pct: 0.4,
   technology: 'Solar PV rooftop', grid_connection: 'Grid-connected',
   baseline_scenario: 'Grid electricity displaced by on-site solar generation',
   barrier_type: 'Investment', investment_metric: 'IRR',
@@ -70,11 +76,12 @@ const SOLAR_SECTION_DATA = {
 // unsigned VC), so responses must carry them for offline re-verification.
 const CREDENTIAL_PUBLIC_KEYS = [
   'id', 'schema_id', 'issuer_did', 'issued_at', 'subject', 'package_hash', 'hcs',
-  'context', 'vc_type', 'proof',
+  'context', 'vc_type', 'proof', 'anchor',
 ];
 const TOKEN_PUBLIC_KEYS = [
   'id', 'token_id', 'serial_number', 'project_id', 'credential_id', 'amount_tco2e',
   'monitoring_period_start', 'monitoring_period_end', 'minted_at', 'minted_by_role', 'hcs',
+  'batch',
 ];
 
 describe('credentials module', () => {

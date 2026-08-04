@@ -22,6 +22,9 @@ import {
   serializeCredential,
   serializeToken,
 } from './service.js';
+import { anchorBestEffort, anchorCredentialOnChain, anchorMintOnChain, mintRealToken } from './anchor.js';
+import { approvePddInBackground, guardianEnabled } from '../../lib/guardian-client.js';
+import { appError } from '../../lib/errors.js';
 
 // Exactly the SPA VerifiableCredential shape (lib/vc-types.ts) — with the
 // proof REQUIRED: an unsigned VC is a 400 at the edge, not a 422. Unknown keys
@@ -82,9 +85,17 @@ export async function credentialsRoutes(app: FastifyInstance): Promise<void> {
     const { id } = idParams.parse(req.params);
     const vc = VcBody.parse(req.body ?? {});
     const result = await anchorVerification(app.prisma, actorFromRequest(req), id, vc);
+    // Real HCS write happens AFTER the transaction committed — best-effort so
+    // a flaky testnet never rolls back a valid credential. Refetch to pick up
+    // the anchor + propagated verification coordinates.
+    await anchorBestEffort(() => anchorCredentialOnChain(app.prisma, result.credential.id), req.log);
+    const [credential, verification] = await Promise.all([
+      app.prisma.credential.findUniqueOrThrow({ where: { id: result.credential.id } }),
+      app.prisma.verificationRequest.findUniqueOrThrow({ where: { id: result.verification.id } }),
+    ]);
     return reply.code(201).send({
-      verification: serializeVerification(result.verification),
-      credential: serializeCredential(result.credential),
+      verification: serializeVerification(verification),
+      credential: serializeCredential(credential),
     });
   });
 
@@ -92,9 +103,18 @@ export async function credentialsRoutes(app: FastifyInstance): Promise<void> {
     const { id } = idParams.parse(req.params);
     const vc = VcBody.parse(req.body ?? {});
     const result = await anchorPddCredential(app.prisma, actorFromRequest(req), id, vc);
+    await anchorBestEffort(() => anchorCredentialOnChain(app.prisma, result.credential.id), req.log);
+    // The VC anchor is our Standard-Registry approval moment — mirror it into
+    // the Guardian policy (fires Guardian's own mint). The PP document needs
+    // its Hedera round-trip (~1–2 min) before it can be approved, so this
+    // runs in the background and never delays the response.
+    if (guardianEnabled()) {
+      approvePddInBackground(app.prisma, result.pdd.id, req.log);
+    }
+    const credential = await app.prisma.credential.findUniqueOrThrow({ where: { id: result.credential.id } });
     return reply.code(201).send({
       pdd: serializePdd(result.pdd),
-      credential: serializeCredential(result.credential),
+      credential: serializeCredential(credential),
     });
   });
 
@@ -102,7 +122,30 @@ export async function credentialsRoutes(app: FastifyInstance): Promise<void> {
     const { id } = idParams.parse(req.params);
     const body = TokenBody.parse(req.body ?? {});
     const token = await mintToken(app.prisma, actorFromRequest(req), id, body);
-    return reply.code(201).send({ token: serializeToken(token) });
+    // Real HTS serial first (replaces the browser's simulated token_id/serial),
+    // then the HCS anchor message for the mint event — both best-effort.
+    await anchorBestEffort(() => mintRealToken(app.prisma, token.id), req.log);
+    await anchorBestEffort(() => anchorMintOnChain(app.prisma, token.id), req.log);
+    const fresh = await app.prisma.guardianToken.findUniqueOrThrow({ where: { id: token.id } });
+    return reply.code(201).send({ token: serializeToken(fresh) });
+  });
+
+  // Retry a failed/deferred on-chain anchor. Idempotent: an already-anchored
+  // credential returns its stored receipt without another HCS submit.
+  app.post('/credentials/:id/anchor', { preHandler: anchorer }, async (req) => {
+    const { id } = idParams.parse(req.params);
+    const row = await app.prisma.credential.findFirst({
+      where: { id, project: { organization_id: req.user.org } },
+    });
+    if (!row) throw appError(404, 'NOT_FOUND', 'Credential not found');
+    try {
+      await anchorCredentialOnChain(app.prisma, id);
+    } catch (err) {
+      req.log.warn({ err: String(err) }, 'hedera anchor retry failed');
+      throw appError(502, 'INTERNAL', 'Hedera anchoring failed — try again shortly');
+    }
+    const fresh = await app.prisma.credential.findUniqueOrThrow({ where: { id } });
+    return { credential: serializeCredential(fresh) };
   });
 
   app.get('/credentials', { preHandler: [app.authenticate] }, async (req) => {

@@ -1,8 +1,9 @@
 import { useEffect, useRef, useState } from 'react';
-import { useStore } from '../store';
-import { Menu, Bell, Moon, Globe, Check, ChevronDown, ShieldCheck, FolderKanban, Gauge, Settings } from 'lucide-react';
-import type { UserRole } from '../types';
-import { ROLE_LABEL } from '../lib/labels';
+import { useNavigate } from 'react-router-dom';
+import { useStore } from '../../store';
+import { Menu, Bell, Moon, Globe, Check, ChevronDown, ShieldCheck, FolderKanban, Gauge, Settings, LogOut } from 'lucide-react';
+import type { UserRole } from '../../types';
+import { ROLE_LABEL } from '../../lib/labels';
 import { toast } from './Toast';
 import clsx from 'clsx';
 
@@ -18,6 +19,8 @@ const ROLES: { value: UserRole; label: string; desc: string; icon: typeof Shield
 export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const user = useStore((s) => s.currentUser);
   const setRole = useStore((s) => s.setRole);
+  const logout = useStore((s) => s.logout);
+  const navigate = useNavigate();
   const initials = user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
 
   const [open, setOpen] = useState(false);
@@ -47,7 +50,7 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   }
 
   return (
-    <header className="relative z-30 h-16 shrink-0 bg-header-gradient text-white border-b border-black/20 px-3 md:px-6 flex items-center justify-between">
+    <header className="relative z-30 h-16 shrink-0 bg-header-gradient text-white border-b border-black/20 px-3 md:px-6 flex items-center justify-between print:hidden">
       {/* Left: menu + brand */}
       <div className="flex items-center gap-2 md:gap-3">
         <button
@@ -161,6 +164,17 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
                   </button>
                 );
               })}
+              <div className="my-1 h-px bg-ink-100" />
+              <button
+                role="menuitem"
+                onClick={() => { setOpen(false); logout(); navigate('/login'); }}
+                className="flex w-full items-center gap-3 rounded-lg px-2.5 py-2 text-left text-[13px] font-medium text-ink-700 transition-colors hover:bg-ink-50"
+              >
+                <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-ink-100 text-ink-500 ring-1 ring-ink-200">
+                  <LogOut size={16} />
+                </span>
+                Sign out
+              </button>
             </div>
           )}
         </div>

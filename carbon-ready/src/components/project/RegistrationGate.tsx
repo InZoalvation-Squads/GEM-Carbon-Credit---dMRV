@@ -1,9 +1,9 @@
 import type { ReactNode } from 'react';
 import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
-import { useStore } from '../store';
-import { EmptyState } from './EmptyState';
-import { Button } from './Button';
+import { useStore } from '../../store';
+import { EmptyState } from '../ui/EmptyState';
+import { Button } from '../ui/Button';
 
 /** Renders children only when the project is registered; otherwise blocks dMRV with a link to the wizard. */
 export function RegistrationGate({ projectId, children }: { projectId: string; children: ReactNode }) {

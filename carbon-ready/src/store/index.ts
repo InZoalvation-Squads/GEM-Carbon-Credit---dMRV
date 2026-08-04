@@ -41,6 +41,8 @@ interface AppState {
   // wholesale (server is the source of truth); failed slice names land in
   // hydration_errors — partial hydration is allowed (UI wiring later).
   hydrateFromServer: () => Promise<void>;
+  /** Lightweight periodic re-sync of the collaboration-volatile slices only. */
+  refreshFromServer: () => Promise<void>;
   hydration_errors: string[];
   organization: Organization;
   projects: Project[];
@@ -67,6 +69,18 @@ interface AppState {
   startValidation: (pdd_id: UUID) => void;
   requestPddRevision: (pdd_id: UUID, summary: string) => void;
   registerProject: (pdd_id: UUID) => boolean;
+  /** Server mode: overlay the server-registered PDD + its anchored credential onto the local store. */
+  applyServerRegistration: (pdd: ProjectDesignDocument, credential: VerifiableCredential) => void;
+  /** Server mode: overlay any server-returned PDD (Gate-1 transitions) + derive the project lifecycle. */
+  applyServerPdd: (pdd: ProjectDesignDocument) => void;
+  /** Server mode: insert a server-created review comment. */
+  ingestComment: (comment: VerificationComment) => void;
+  /** Server mode: overlay the server-anchored verification + credential. */
+  applyServerVerificationAnchor: (verification: VerificationRequest, credential: VerifiableCredential) => void;
+  /** Server mode: overlay any server-returned verification (review transitions). */
+  applyServerVerification: (verification: VerificationRequest) => void;
+  /** Server mode: overlay a server-minted token (real HTS coordinates). */
+  applyServerMint: (token: GuardianToken) => void;
   rejectPdd: (pdd_id: UUID, reason: string) => void;
   addPddComment: (pdd_id: UUID, body: string, section_key?: string) => void;
   pddByProject: (project_id: UUID) => ProjectDesignDocument | undefined;
@@ -85,10 +99,16 @@ interface AppState {
 
   // Sprint 2 — Evidence
   uploadEvidence: (project_id: UUID, input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string; content_hash?: string }) => EvidenceFile;
+  /** Insert a server-created evidence row (already persisted remotely) into the local store. */
+  ingestEvidence: (file: EvidenceFile) => void;
   replaceEvidence: (evidence_id: UUID, input: { file_name?: string; file_size: number; content_hash?: string }) => EvidenceFile | undefined;
   archiveEvidence: (evidence_id: UUID) => void;
 
   // Sprint 2 — Verification workflow
+  createVerification: (input: {
+    project_id: UUID; monitoring_period_start: string; monitoring_period_end: string;
+    reduction_kgco2e: number; factors_snapshot: string; evidence_ids: UUID[];
+  }) => VerificationRequest;
   submitVerification: (id: UUID) => void;
   startReview: (id: UUID) => void;
   requestRevision: (id: UUID, summary: string) => void;
@@ -271,6 +291,24 @@ export const useStore = create<AppState>()(
         // failed slice names are kept for later UI wiring (toast/banner).
         set({ hydration_errors: failed });
       },
+      refreshFromServer: async () => {
+        // Volatile slices only — reference data (methodologies, factors) and
+        // per-project heavy fetches (records, evidence) stay on the login
+        // hydration; this runs every few seconds so it must stay cheap.
+        const tasks: Array<Promise<void>> = [
+          projectsApi.list().then((projects) => set({ projects })),
+          (async () => {
+            const [inflight, drafts, registered, rejected] = await Promise.all([
+              pddsApi.list(), pddsApi.list('draft'), pddsApi.list('registered'), pddsApi.list('rejected'),
+            ]);
+            set({ pdds: [...inflight, ...drafts, ...registered, ...rejected] });
+          })(),
+          verificationsApi.list().then((verifications) => set({ verifications })),
+          credentialsApi.list().then((credentials) => set({ credentials })),
+          tokensApi.list().then((tokens) => set({ tokens })),
+        ];
+        await Promise.allSettled(tasks); // best-effort — a flaky poll never throws
+      },
       hydration_errors: [],
       organization: seedOrg,
       // App boots with only the imported real solar fleet. Emission factors and the
@@ -423,6 +461,9 @@ export const useStore = create<AppState>()(
         get().audit_write('EVIDENCE_UPLOADED', 'evidence', ev.id, { file_name: ev.file_name, category: ev.category }, { new_value: { version_number: 1, file_size: ev.file_size } });
         return ev;
       },
+      ingestEvidence: (file) => {
+        set((s) => ({ evidence: [file, ...s.evidence.filter((e) => e.id !== file.id)] }));
+      },
 
       replaceEvidence: (evidence_id, input) => {
         const prev = get().evidence.find((e) => e.id === evidence_id && e.status === 'active');
@@ -449,6 +490,24 @@ export const useStore = create<AppState>()(
       },
 
       // ---------------- Sprint 2: Verification ----------------
+      createVerification: (input) => {
+        const u = get().currentUser;
+        const v: VerificationRequest = {
+          id: uid('VR'), project_id: input.project_id, created_by: u.id, owner_name: u.name,
+          assigned_verifier_name: 'Daniel Okoye', state: 'draft',
+          monitoring_period_start: input.monitoring_period_start,
+          monitoring_period_end: input.monitoring_period_end,
+          reduction_kgco2e: input.reduction_kgco2e, factors_snapshot: input.factors_snapshot,
+          evidence_ids: input.evidence_ids,
+          required_categories: ['meter_reading', 'utility_bill'],
+          submitted_at: null, locked_at: null, sla_target_days: 14,
+          hash_value: null, credential_id: null, anchored_at: null,
+          hcs_topic_id: null, hcs_sequence_number: null,
+        };
+        set((s) => ({ verifications: [v, ...s.verifications] }));
+        return v;
+      },
+
       submitVerification: (id) => {
         set((s) => ({ verifications: s.verifications.map((v) => (v.id === id ? { ...v, state: 'submitted', submitted_at: v.submitted_at ?? new Date().toISOString() } : v)) }));
         get().audit_write('VERIFICATION_SUBMITTED', 'verification', id, {}, { previous_value: { state: 'draft' }, new_value: { state: 'submitted' } });
@@ -662,6 +721,62 @@ export const useStore = create<AppState>()(
           { methodology: snapshot, credential_id: vc.id, ipfs_cid, topic_id: vc.hcs.topic_id, sequence_number: vc.hcs.sequence_number },
           { previous_value: { state: pdd.state }, new_value: { state: 'registered', content_hash, ipfs_cid, credential_id: vc.id } });
         return true;
+      },
+
+      applyServerRegistration: (pdd, credential) => {
+        set((s) => ({
+          pdds: s.pdds.map((p) => (p.id === pdd.id ? { ...p, ...pdd } : p)),
+          projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: 'registered' as const } : p)),
+          credentials: [credential, ...s.credentials.filter((c) => c.id !== credential.id)],
+        }));
+        const hcs = credential.anchor ?? credential.hcs;
+        get().audit_write('PROJECT_REGISTERED', 'pdd', pdd.id,
+          { methodology: pdd.methodology_snapshot, credential_id: credential.id, ipfs_cid: pdd.ipfs_cid, topic_id: hcs.topic_id, sequence_number: hcs.sequence_number },
+          { new_value: { state: 'registered', content_hash: pdd.content_hash, ipfs_cid: pdd.ipfs_cid, credential_id: credential.id } });
+      },
+
+      applyServerPdd: (pdd) => {
+        const stage =
+          pdd.state === 'registered' ? 'registered' :
+          pdd.state === 'rejected' ? 'rejected' :
+          pdd.state === 'draft' || pdd.state === 'revision_required' ? 'pdd_draft' :
+          'under_validation';
+        set((s) => ({
+          pdds: s.pdds.some((p) => p.id === pdd.id)
+            ? s.pdds.map((p) => (p.id === pdd.id ? { ...p, ...pdd } : p))
+            : [pdd, ...s.pdds],
+          projects: s.projects.map((p) => (p.id === pdd.project_id ? { ...p, lifecycle_stage: stage as Project['lifecycle_stage'] } : p)),
+        }));
+      },
+
+      ingestComment: (comment) => {
+        set((s) => ({ comments: [...s.comments.filter((c) => c.id !== comment.id), comment] }));
+      },
+
+      applyServerVerification: (verification) => {
+        set((s) => ({
+          verifications: s.verifications.some((v) => v.id === verification.id)
+            ? s.verifications.map((v) => (v.id === verification.id ? { ...v, ...verification } : v))
+            : [verification, ...s.verifications],
+        }));
+      },
+
+      applyServerVerificationAnchor: (verification, credential) => {
+        set((s) => ({
+          verifications: s.verifications.map((v) => (v.id === verification.id ? { ...v, ...verification } : v)),
+          credentials: [credential, ...s.credentials.filter((c) => c.id !== credential.id)],
+        }));
+        const hcs = credential.anchor ?? credential.hcs;
+        get().audit_write('VERIFICATION_ANCHORED', 'verification', verification.id,
+          { credential_id: credential.id, topic_id: hcs.topic_id, sequence_number: hcs.sequence_number },
+          { previous_value: { anchored: false }, new_value: { credential_id: credential.id, hcs_topic_id: hcs.topic_id, hcs_sequence_number: hcs.sequence_number } });
+      },
+
+      applyServerMint: (token) => {
+        set((s) => ({ tokens: [token, ...s.tokens.filter((t) => t.id !== token.id)] }));
+        get().audit_write('TOKEN_MINTED', 'token', token.id,
+          { token_id: token.token_id, serial_number: token.serial_number, amount_tco2e: token.amount_tco2e, credential_id: token.credential_id },
+          { new_value: { serial_number: token.serial_number, amount_tco2e: token.amount_tco2e } });
       },
 
       rejectPdd: (pdd_id, reason) => {

@@ -3,12 +3,12 @@ import { useParams, useNavigate, Link } from 'react-router-dom';
 import { FileText } from 'lucide-react';
 import { useStore } from '../store';
 import { api } from '../lib/api';
-import { PageHeader } from '../components/PageHeader';
-import { Card } from '../components/Card';
-import { Button } from '../components/Button';
-import { Textarea } from '../components/Textarea';
-import { PddStatusBadge } from '../components/StatusBadge';
-import { EmptyState } from '../components/EmptyState';
+import { PageHeader } from '../components/layout/PageHeader';
+import { Card } from '../components/ui/Card';
+import { Button } from '../components/ui/Button';
+import { Textarea } from '../components/ui/Textarea';
+import { PddStatusBadge } from '../components/ui/StatusBadge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { isFieldVisible, resolveComputed, validatePdd } from '../lib/pdd';
 import type { PddComputedSource } from '../types';
 

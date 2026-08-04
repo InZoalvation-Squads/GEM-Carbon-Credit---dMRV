@@ -1,7 +1,7 @@
 import { describe, it, expect, beforeEach } from 'vitest';
 import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
-import { RegistrationGate } from '../components/RegistrationGate';
+import { RegistrationGate } from '../components/project/RegistrationGate';
 import { PddDocument } from '../pages/PddDocument';
 import { Registration } from '../pages/Registration';
 import { VERRA_VM0042_METHODOLOGY } from '../data/methodologies';
@@ -50,15 +50,40 @@ describe('Registration entry — project list scoped to selected methodology', (
     );
   }
 
-  it('lists a draft project only under its own methodology', () => {
-    // prj-0004 (Ubon Regenerative Rice) is a pdd_draft under the VM0042 methodology.
-    // The default selection is Solar, so the draft must be hidden.
+  it('offers exactly two cards: solar then forestry', () => {
     renderEntry();
-    expect(screen.queryByRole('option', { name: 'Ubon Regenerative Rice' })).toBeNull();
+    const cards = screen.getAllByRole('button', { name: /T-VER|VM00|AR-ACM/ });
+    expect(cards).toHaveLength(2);
+    expect(cards[0]).toHaveTextContent('T-VER-S-01');
+    expect(cards[1]).toHaveTextContent('T-VER-F-01');
+    expect(screen.queryByText(VERRA_VM0042_METHODOLOGY.code)).toBeNull();
+  });
 
-    // Switching to VM0042 (its own methodology) must reveal it.
-    fireEvent.change(screen.getByLabelText('Methodology'), { target: { value: VERRA_VM0042_METHODOLOGY.id } });
-    expect(screen.getByRole('option', { name: 'Ubon Regenerative Rice' })).toBeInTheDocument();
+  it('clicking a card pops up the modal; with no eligible projects it opens straight on the create form', () => {
+    renderEntry();
+    expect(screen.queryByText(/Start PDD —/)).toBeNull();
+
+    // Every fixture project is registered or bound to another methodology, so
+    // the solar track has nothing eligible → create-project form comes first.
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
+    expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Ubon Regenerative Rice/ })).toBeNull();
+  });
+
+  it('create & start: makes the project, opens its PDD editor', async () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-F-01/ }));
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'ป่าชุมชนทดสอบ' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Nan, Thailand' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start PDD/ }));
+
+    await screen.findByText(/Register: ป่าชุมชนทดสอบ/);
+    const st = useStore.getState();
+    const project = st.projects.find((p) => p.name === 'ป่าชุมชนทดสอบ')!;
+    expect(project.capacity_kwp).toBe(0); // land-based prefill
+    const pdd = st.pdds.find((d) => d.project_id === project.id)!;
+    expect(pdd.methodology_id).toBe('meth-tver-forestry');
   });
 });
 

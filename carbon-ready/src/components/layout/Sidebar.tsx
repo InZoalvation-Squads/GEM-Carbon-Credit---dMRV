@@ -2,12 +2,14 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, FolderKanban, Upload, Calculator, Gauge,
   ScrollText, ClipboardCheck, Link2, Building2,
-  FileText, FilePlus2, ShieldCheck,
+  FileText, FilePlus2, ShieldCheck, BookOpen, Cable,
 } from 'lucide-react';
 import clsx from 'clsx';
-import { useStore } from '../store';
+import { useStore } from '../../store';
+import type { UserRole } from '../../types';
 
-type Item = { to: string; label: string; icon: typeof LayoutDashboard };
+// `roles` lists which roles see the item. Omit to show it to everyone.
+type Item = { to: string; label: string; icon: typeof LayoutDashboard; roles?: UserRole[] };
 type Group = { heading: string; items: Item[] };
 
 const groups: Group[] = [
@@ -15,35 +17,45 @@ const groups: Group[] = [
     heading: 'Registration',
     items: [
       { to: '/methodologies', label: 'Methodologies',   icon: FileText },
-      { to: '/registration',  label: 'Register Project', icon: FilePlus2 },
-      { to: '/validation',    label: 'Validation Queue', icon: ShieldCheck },
+      { to: '/registration',  label: 'Register Project', icon: FilePlus2, roles: ['project_owner', 'esg_manager'] },
+      { to: '/validation',    label: 'Validation Queue', icon: ShieldCheck, roles: ['verifier', 'admin'] },
     ],
   },
   {
     heading: 'Overview',
-    items: [{ to: '/dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    items: [
+      { to: '/dashboard',    label: 'Dashboard',    icon: LayoutDashboard },
+      { to: '/how-it-works', label: 'How it works', icon: BookOpen },
+    ],
   },
   {
     heading: 'Measure & Report',
     items: [
       { to: '/projects',         label: 'Projects',         icon: FolderKanban },
-      { to: '/upload',           label: 'Upload',           icon: Upload },
-      { to: '/calculations',     label: 'Calculations',     icon: Calculator },
-      { to: '/emission-factors', label: 'Emission Factors', icon: Gauge },
+      { to: '/upload',           label: 'Upload',           icon: Upload,      roles: ['project_owner', 'esg_manager'] },
+      { to: '/iot',              label: 'IoT Mapping',      icon: Cable,       roles: ['project_owner', 'esg_manager', 'admin'] },
+      { to: '/calculations',     label: 'Calculations',     icon: Calculator,  roles: ['project_owner', 'esg_manager'] },
+      { to: '/emission-factors', label: 'Emission Factors', icon: Gauge,       roles: ['esg_manager', 'admin'] },
     ],
   },
   {
     heading: 'Verify & Anchor',
     items: [
-      { to: '/verifications', label: 'Verifications', icon: ClipboardCheck },
-      { to: '/guardian',      label: 'Guardian',      icon: Link2 },
-      { to: '/audit-log',     label: 'Audit Log',     icon: ScrollText },
+      { to: '/verifications', label: 'Verifications', icon: ClipboardCheck, roles: ['project_owner', 'verifier'] },
+      { to: '/guardian',      label: 'Guardian',      icon: Link2,          roles: ['verifier', 'admin'] },
+      { to: '/audit-log',     label: 'Audit Log',     icon: ScrollText,     roles: ['admin', 'esg_manager'] },
     ],
   },
 ];
 
 export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
   const org = useStore((s) => s.organization);
+  const role = useStore((s) => s.currentUser.role);
+
+  // Keep only items visible to the current role, then drop groups left empty.
+  const visibleGroups = groups
+    .map((g) => ({ ...g, items: g.items.filter((i) => !i.roles || i.roles.includes(role)) }))
+    .filter((g) => g.items.length > 0);
 
   return (
     <>
@@ -57,14 +69,14 @@ export function Sidebar({ open, onClose }: { open: boolean; onClose: () => void 
       />
       <aside
         className={clsx(
-          'fixed top-16 bottom-0 left-0 md:static z-40 w-64 md:h-full flex-col',
+          'fixed top-16 bottom-0 left-0 md:static z-40 w-64 md:h-full flex-col print:hidden',
           'bg-ink-50 border-r border-ink-200',
           'transition-transform md:translate-x-0',
           open ? 'translate-x-0 flex' : '-translate-x-full hidden md:flex',
         )}
       >
         <nav className="flex-1 overflow-y-auto px-3 py-5 space-y-6">
-          {groups.map((group) => (
+          {visibleGroups.map((group) => (
             <div key={group.heading}>
               <div className="px-3 pb-1.5 text-[10px] font-semibold uppercase tracking-[0.14em] text-ink-400">
                 {group.heading}

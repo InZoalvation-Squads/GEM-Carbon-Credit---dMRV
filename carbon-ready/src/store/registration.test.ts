@@ -49,6 +49,39 @@ describe('registration store', () => {
     expect(after.projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('registered');
   });
 
+  it('applyServerRegistration overlays server-frozen fields and prepends the anchored credential', () => {
+    const s = useStore.getState();
+    const pdd = s.pdds.find((p) => p.state !== 'registered')!;
+    const anchored = {
+      id: 'urn:vc:server1', schema_id: 'pdd-registration-v1', issuer_did: 'did:key:zX',
+      issued_at: '2026-08-04T00:00:00Z', subject: { pdd_id: pdd.id, project_id: pdd.project_id },
+      package_hash: 'sha256-feed', hcs: { topic_id: '0.0.480100', sequence_number: 1, consensus_timestamp: '2026-08-04T00:00:00Z', explorer_url: 'sim' },
+      anchor: { topic_id: '0.0.999', sequence_number: 5, consensus_timestamp: '2026-08-04T00:00:01Z', explorer_url: 'https://hashscan.io/testnet/topic/0.0.999/message/5' },
+    };
+    s.applyServerRegistration(
+      { ...pdd, state: 'registered', content_hash: 'sha256-feed', ipfs_cid: 'bafkreix', credential_id: 'urn:vc:server1' },
+      anchored as never,
+    );
+    const st = useStore.getState();
+    const updated = st.pdds.find((p) => p.id === pdd.id)!;
+    expect(updated.state).toBe('registered');
+    expect(updated.ipfs_cid).toBe('bafkreix');
+    expect(st.projects.find((p) => p.id === pdd.project_id)?.lifecycle_stage).toBe('registered');
+    expect(st.credentials[0].id).toBe('urn:vc:server1');
+    expect(st.credentials[0].anchor?.topic_id).toBe('0.0.999');
+  });
+
+  it('applyServerPdd overlays the row and derives project lifecycle', () => {
+    const s = useStore.getState();
+    const pdd = s.pdds.find((p) => p.state !== 'registered')!;
+    s.applyServerPdd({ ...pdd, state: 'under_validation' });
+    expect(useStore.getState().projects.find((p) => p.id === pdd.project_id)?.lifecycle_stage).toBe('under_validation');
+    s.applyServerPdd({ ...pdd, state: 'revision_required' });
+    expect(useStore.getState().projects.find((p) => p.id === pdd.project_id)?.lifecycle_stage).toBe('pdd_draft');
+    s.applyServerPdd({ ...pdd, state: 'registered' });
+    expect(useStore.getState().projects.find((p) => p.id === pdd.project_id)?.lifecycle_stage).toBe('registered');
+  });
+
   it('registerProject refuses an incomplete PDD', () => {
     const s = useStore.getState();
     const pdd = s.pddByProject('prj-0004')!;   // seed draft is incomplete

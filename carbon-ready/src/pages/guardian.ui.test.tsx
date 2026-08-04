@@ -27,11 +27,11 @@ describe('Guardian page', () => {
 });
 
 describe('Guardian signature verification', () => {
-  it('reports the seed credential as unsigned when Verify signature is clicked', () => {
+  it('reports the seed credential as unsigned automatically (no click needed)', () => {
     render(<MemoryRouter><Guardian /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
-    fireEvent.click(screen.getByRole('button', { name: /Verify signature/i }));
     expect(screen.getByText('Unsigned (seed data)')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: /Verify signature/i })).toBeNull();
   });
 
   it('verifies a freshly anchored credential as Ed25519-valid', () => {
@@ -46,7 +46,6 @@ describe('Guardian signature verification', () => {
 
     render(<MemoryRouter><Guardian /></MemoryRouter>);
     fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
-    fireEvent.click(screen.getAllByRole('button', { name: /Verify signature/i })[0]);
     expect(screen.getByText('Signature valid (Ed25519)')).toBeInTheDocument();
   });
 });

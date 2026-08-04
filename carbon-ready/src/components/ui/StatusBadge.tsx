@@ -1,8 +1,8 @@
 import { FileSpreadsheet, FileText, Image as ImageIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { Badge } from './Badge';
-import { CATEGORY_LABEL, STATE_LABEL } from '../lib/labels';
-import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState } from '../types';
+import { CATEGORY_LABEL, STATE_LABEL } from '../../lib/labels';
+import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState } from '../../types';
 
 type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet';
 

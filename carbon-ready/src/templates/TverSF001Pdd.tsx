@@ -2,8 +2,8 @@ import { useEffect, useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
-import { Button } from '../components/Button';
-import { EmptyState } from '../components/EmptyState';
+import { Button } from '../components/ui/Button';
+import { EmptyState } from '../components/ui/EmptyState';
 import { computeYearlyTable, computeEcPj, resolveComputed } from '../lib/pdd';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import type { EvidenceFile, PddComputedSource } from '../types';
@@ -71,13 +71,24 @@ function Footer() {
   );
 }
 
+/**
+ * One form page. Rendered as a table so the TGO header (thead) and footer
+ * (tfoot) repeat on every printed sheet when a section overflows one page —
+ * the official form carries them on every page.
+ */
 function Page({ children }: { children: ReactNode }) {
   return (
-    <section className="doc-page">
-      <HeaderBox />
-      {children}
-      <Footer />
-    </section>
+    <table className="doc-page page-frame">
+      <thead>
+        <tr><td><HeaderBox /></td></tr>
+      </thead>
+      <tbody>
+        <tr><td>{children}</td></tr>
+      </tbody>
+      <tfoot>
+        <tr><td><Footer /></td></tr>
+      </tfoot>
+    </table>
   );
 }
 
@@ -86,12 +97,17 @@ export function pddSiteImages(evidence: EvidenceFile[], projectId: string): Evid
   return evidence.filter((e) => e.project_id === projectId && e.kind === 'image' && e.status === 'active');
 }
 
+/** Cover photo: the explicitly chosen evidence (section_data.cover_evidence_id), else the first site image. */
+export function pickCoverImage(images: EvidenceFile[], coverId?: unknown): EvidenceFile | undefined {
+  return images.find((img) => img.id === coverId) ?? images[0];
+}
+
 /**
- * ภาพประกอบการติดตั้ง — image evidence rendered as numbered figures.
- * Bytes only exist behind the server API, so figures render in server mode
- * only; local-store mode carries evidence metadata without file content.
+ * Object URLs for a project's site-photo evidence. Bytes only exist behind
+ * the server API, so URLs resolve in server mode only; local-store mode
+ * carries evidence metadata without file content.
  */
-function EvidenceFigures({ projectId }: { projectId: string }) {
+function useSiteImages(projectId: string) {
   const evidence = useStore((s) => s.evidence);
   const images = pddSiteImages(evidence, projectId);
   const [urls, setUrls] = useState<Record<string, string>>({});
@@ -117,7 +133,13 @@ function EvidenceFigures({ projectId }: { projectId: string }) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId, images.length]);
 
-  const shown = images.filter((img) => urls[img.id]);
+  return { images, urls };
+}
+
+/** ภาพประกอบการติดตั้ง — image evidence rendered as numbered figures (the cover photo is not repeated). */
+function EvidenceFigures({ projectId, excludeId }: { projectId: string; excludeId?: string }) {
+  const { images, urls } = useSiteImages(projectId);
+  const shown = images.filter((img) => urls[img.id] && img.id !== excludeId);
   if (shown.length === 0) return null;
   return (
     <div className="mt-3">
@@ -136,6 +158,40 @@ function EvidenceFigures({ projectId }: { projectId: string }) {
   );
 }
 
+/**
+ * หน้าปก — logo top-left, standard name top-right, document title centered,
+ * site photo, developer name. The official cover carries no header box or
+ * TGO footer, so it does not use the Page frame.
+ */
+function CoverPage({ projectId, developer, coverId }: { projectId: string; developer: string; coverId?: string }) {
+  const { images, urls } = useSiteImages(projectId);
+  const cover = images.find((img) => img.id === coverId && urls[img.id]);
+  return (
+    <section className="doc-page cover-page flex flex-col">
+      <div className="flex items-start justify-between">
+        <img src="/tgo-logo-notext.svg" alt="T-VER" className="h-16 w-auto" />
+        <div className="text-right text-[12px] leading-relaxed">
+          โครงการลดก๊าซเรือนกระจกภาคสมัครใจตามมาตรฐานของประเทศไทย<br />
+          (Standard T-VER)
+        </div>
+      </div>
+      <div className="mt-20 space-y-6 text-center text-[26px] font-bold">
+        <p>เอกสารข้อเสนอโครงการ</p>
+        <p>(Project Design Document: PDD)</p>
+        <p className="text-[22px]">แบบเดี่ยว</p>
+      </div>
+      {cover && (
+        <img
+          src={urls[cover.id]}
+          alt={cover.description ?? cover.file_name}
+          className="cover-photo mx-auto mt-12 w-[92%] object-cover"
+        />
+      )}
+      <div className="mt-16 text-center text-[26px]">{developer}</div>
+    </section>
+  );
+}
+
 export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const params = useParams();
   const pddId = pddIdProp ?? params.pddId;
@@ -143,6 +199,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
   const factors = useStore((s) => s.factors);
+  const allEvidence = useStore((s) => s.evidence);
 
   if (!pdd || !methodology || !project) {
     return <EmptyState title="PDD not found" hint="This document does not exist." />;
@@ -174,6 +231,12 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   };
   const years = table?.years ?? Number(str('crediting_years')) ?? 7;
   const creditingLabel = `${str('crediting_years')} ปี (เริ่ม ${thaiDate(d.crediting_start)})`;
+  const siteImages = pddSiteImages(allEvidence, project.id);
+  // Explicitly chosen cover leaves the section-1 figures (the official doc
+  // never repeats it); a fallback first-image cover stays in the figures so
+  // no installation photo silently disappears.
+  const explicitCover = siteImages.find((img) => img.id === d.cover_evidence_id);
+  const coverImage = pickCoverImage(siteImages, d.cover_evidence_id);
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -186,7 +249,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
       <div className="tver-doc bg-white p-8 text-[13px] leading-relaxed text-black shadow print:p-0 print:shadow-none">
 
-        {/* ============ หน้าปก: รายละเอียดโครงการ ============ */}
+        {/* ============ หน้าปก ============ */}
+        <CoverPage projectId={project.id} developer={str('project_owner')} coverId={coverImage?.id} />
+
+        {/* ============ รายละเอียดโครงการ ============ */}
         <Page>
           <SectionBar>รายละเอียดโครงการ</SectionBar>
           <table className="doc-table w-full">
@@ -234,8 +300,18 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                   <Check on={has('project_scale', 'ใหญ่')}>ใหญ่</Check>
                 </td>
               </tr>
+            </tbody>
+          </table>
+        </Page>
+
+        {/* ============ รายละเอียดโครงการ (ต่อ) — the official form splits this
+            table across two pages and repeats the section bar ============ */}
+        <Page>
+          <SectionBar>รายละเอียดโครงการ</SectionBar>
+          <table className="doc-table w-full">
+            <tbody>
               <tr>
-                <td className="font-bold">ระเบียบวิธีการลดก๊าซเรือนกระจก และเครื่องมือคำนวณที่เลือกใช้</td>
+                <td className="w-44 font-bold">ระเบียบวิธีการลดก๊าซเรือนกระจก และเครื่องมือคำนวณที่เลือกใช้</td>
                 <td>{methodology.code} {methodology.name} ({methodology.version})</td>
               </tr>
               <tr>
@@ -354,7 +430,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
-          <EvidenceFigures projectId={project.id} />
+          <EvidenceFigures projectId={project.id} excludeId={explicitCover?.id} />
 
           <p className="mt-3 font-bold underline">1.3 การนับซ้ำ</p>
           <p className="indent-8">
@@ -576,7 +652,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="pl-8">ไม่มีพารามิเตอร์ที่ไม่ต้องติดตาม ที่ใช้ในการคำนวณตามระเบียบวิธีการลดก๊าซเรือนกระจกที่เลือกใช้</p>
 
           <p className="mt-3 font-bold underline">4.3 พารามิเตอร์ที่ต้องติดตามผล</p>
-          <table className="doc-table mt-1 w-full">
+          <table className="doc-table keep-together mt-1 w-full">
             <tbody>
               <tr><td className="w-40 bg-[#f2f2f2] font-bold">พารามิเตอร์</td><td>EF<sub>EC,PJ,y</sub></td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>tCO₂/MWh</td></tr>
@@ -585,7 +661,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>ใช้ค่าที่ อบก. ประกาศตามปีของช่วงระยะเวลาที่ขอรับรองคาร์บอนเครดิต หากปีนั้นยังไม่ประกาศ ให้ใช้ค่าล่าสุดแทน</td></tr>
             </tbody>
           </table>
-          <table className="doc-table mt-3 w-full">
+          <table className="doc-table keep-together mt-3 w-full">
             <tbody>
               <tr><td className="w-40 bg-[#f2f2f2] font-bold">พารามิเตอร์</td><td>EG<sub>Consumer,PJ,y</sub></td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>kWh/year</td></tr>
@@ -594,7 +670,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>{str('measurement_method')} — ความถี่ {str('monitoring_frequency')}</td></tr>
             </tbody>
           </table>
-          <table className="doc-table mt-3 w-full">
+          <table className="doc-table keep-together mt-3 w-full">
             <tbody>
               <tr><td className="w-40 bg-[#f2f2f2] font-bold">พารามิเตอร์</td><td>EC<sub>PJ,y</sub></td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>kWh/year</td></tr>
@@ -640,15 +716,37 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
       </div>
 
       <style>{`
-        .tver-doc { font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', 'Tahoma', sans-serif; }
+        .tver-doc { font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', 'Tahoma', sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
         .tver-doc .doc-table { border-collapse: collapse; width: 100%; }
         .tver-doc .doc-table td, .tver-doc .doc-table th { border: 1px solid #333; padding: 4px 8px; vertical-align: top; }
+        .tver-doc .page-frame { width: 100%; border-collapse: collapse; }
+        .tver-doc .page-frame > thead > tr > td,
+        .tver-doc .page-frame > tbody > tr > td,
+        .tver-doc .page-frame > tfoot > tr > td {
+          border: 0;
+          /* 2px right inset — a 100%-wide collapsed table flush with the frame
+             cell loses its 1px right border to subpixel clipping when printed */
+          padding: 0 2px 0 0;
+          vertical-align: top;
+        }
         .tver-doc .doc-page { margin-bottom: 2rem; }
+        .tver-doc .cover-photo { max-height: 110mm; }
         @media print {
           @page { size: A4; margin: 14mm 12mm; }
           body { background: white; }
           .tver-doc .doc-page { break-after: page; margin-bottom: 0; }
           .tver-doc .doc-page:last-child { break-after: auto; }
+          /* fill the printable A4 area (297mm − 2×14mm margins, minus a
+             rounding buffer) so the tbody row stretches and pushes the
+             tfoot footer to the bottom edge of every sheet */
+          .tver-doc .page-frame { height: 265mm; }
+          /* never split a table row, figure or parameter card across sheets */
+          .tver-doc .doc-table tr { break-inside: avoid; }
+          .tver-doc figure, .tver-doc .keep-together { break-inside: avoid; }
+          /* keep section headings attached to the content that follows */
+          .tver-doc p.underline { break-after: avoid; break-inside: avoid; }
+          /* site photos: cap height so one figure never overflows a sheet */
+          .tver-doc figure img { max-height: 85mm; object-fit: cover; }
         }
       `}</style>
     </div>
