@@ -1,7 +1,7 @@
 # File Cleanup & Rearrangement Design
 
 **Date:** 2026-08-05  
-**Status:** Draft — awaiting user review  
+**Status:** Implemented  
 **Approach:** A — Light cleanup (approved)
 
 ## Goal
@@ -87,14 +87,14 @@ docs/
     dMRV-User-Guide.pdf
     dMRV-Working-Doc.md
     dMRV-Working-Doc.pdf
-  reports/                # from carbon-ready/docs/reports/
+  reports/                # from docs/reports/
     forestry-workflow-th.html
     forestry-workflow-th.pdf
     progress-update-2026-07-24-th.html
     tver-s01-generation-report.md
   superpowers/
-    plans/                # union of docs/ + carbon-ready/docs/superpowers/plans
-    specs/                # union of docs/ + carbon-ready/docs/superpowers/specs
+    plans/                # union of docs/ + docs/superpowers/plans
+    specs/                # union of docs/ + docs/superpowers/specs
 ```
 
 After move, remove emptied `carbon-ready/docs/` tree (or leave a one-line README pointing to `../../docs` if any tooling expects that path — prefer delete if nothing references it).

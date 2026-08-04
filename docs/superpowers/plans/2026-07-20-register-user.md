@@ -8,7 +8,7 @@
 
 **Tech Stack:** React 18 + TypeScript, react-router-dom, zustand (persist), Tailwind, vitest + @testing-library/react.
 
-**Spec:** `carbon-ready/docs/superpowers/specs/2026-07-20-register-user-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-20-register-user-design.md`
 
 All commands run from `carbon-ready/`.
 

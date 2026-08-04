@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, zustand, vitest + @testing-library/react.
 
-**Spec:** `carbon-ready/docs/superpowers/specs/2026-07-20-selective-disclosure-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-20-selective-disclosure-design.md`
 
 All commands run from `carbon-ready/`.
 

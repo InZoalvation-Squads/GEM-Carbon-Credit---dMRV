@@ -300,8 +300,8 @@ npm test     # vitest run — 32 tests
 
 ## 15. อ้างอิง / References
 
-- Sprint 1 spec: `../../docs/superpowers/specs/2026-05-27-carbon-ready-sprint-1-design.md`
-- Sprint 1 plan: `../../docs/superpowers/plans/2026-05-27-carbon-ready-sprint-1.md`
+- Sprint 1 spec: `../superpowers/specs/2026-05-27-carbon-ready-sprint-1-design.md`
+- Sprint 1 plan: `../superpowers/plans/2026-05-27-carbon-ready-sprint-1.md`
 - Sprint 2 planning pack (PRD · user stories · DB · API · UX · security · backlog · AC · Hedera): `/Users/oppabig/dmrv-sprint2/docs/`
 - App README: `../README.md`
 

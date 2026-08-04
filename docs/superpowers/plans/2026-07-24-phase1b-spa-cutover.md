@@ -53,5 +53,5 @@
 ### Task 6: Live E2E smoke + docs
 
 - [ ] With the real server running locally (`cd server && npm run dev`, real DB): `VITE_API_BASE_URL=http://localhost:4000 npm run dev`, walk register→login→project→PDD→register→monitoring→verification→approve→anchor→mint→audit verify in the browser via curl-level checks or a scripted playthrough against the API where UI automation is impractical; record results.
-- [ ] Update `carbon-ready/docs/dMRV-Working-Doc.md` §12 (mock-seams section) to reflect server mode; note demo mode remains default.
+- [ ] Update `docs/guides/dMRV-Working-Doc.md` §12 (mock-seams section) to reflect server mode; note demo mode remains default.
 - [ ] Full: SPA `npm test` + `tsc -b` + build; server `npm test`. Commit `docs(spa): phase 1b notes` + final review of the whole 1b range.

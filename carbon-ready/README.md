@@ -72,7 +72,7 @@ Covers `lib/csv.ts` (13 cases) and `lib/calc.ts` (12 cases) — the pure-functio
 
 ## Docs
 
-- **Working document (Sprint 1 + 2 + 3, bilingual):** `docs/dMRV-Working-Doc.md`
+- **Working document (Sprint 1 + 2 + 3, bilingual):** `../docs/guides/dMRV-Working-Doc.md`
 - Sprint 1 spec: `../docs/superpowers/specs/2026-05-27-carbon-ready-sprint-1-design.md`
 - Sprint 1 plan: `../docs/superpowers/plans/2026-05-27-carbon-ready-sprint-1.md`
 - Sprint 3 spec: `../docs/superpowers/specs/2026-05-28-carbon-ready-sprint-3-design.md`

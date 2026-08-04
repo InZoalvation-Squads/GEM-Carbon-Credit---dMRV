@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, zustand, vitest.
 
-**Spec:** `carbon-ready/docs/superpowers/specs/2026-07-20-pdd-guardian-anchor-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-20-pdd-guardian-anchor-design.md`
 
 All commands run from `carbon-ready/`.
 

@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 24, Fastify 5, TypeScript (strict), Prisma, Postgres 18 (`100.119.217.61:5432` — connection VERIFIED working, empty DB, CREATE ok), argon2, @fastify/jwt, @fastify/multipart, @fastify/rate-limit, @fastify/cors, zod, vitest.
 
-**Spec:** `carbon-ready/docs/superpowers/specs/2026-07-22-phase1-backend-design.md` — read it first; it fixes layout, auth rules, error envelope, and what stays client-side (VC signing/mint stay in the browser; server stores signed objects).
+**Spec:** `docs/superpowers/specs/2026-07-22-phase1-backend-design.md` — read it first; it fixes layout, auth rules, error envelope, and what stays client-side (VC signing/mint stay in the browser; server stores signed objects).
 
 **Conventions for every task:**
 - Work dir `server/` (create at repo root). Never touch `carbon-ready/` except where a task says to copy a lib file OUT of it.

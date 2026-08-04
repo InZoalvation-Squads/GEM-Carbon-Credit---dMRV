@@ -1,7 +1,7 @@
 # คู่มือ Deploy Hedera Guardian บนเครื่อง 100.119.217.61
 
 > เป้าหมาย: ให้ `https://guardian.makill.xyz` ใช้งานได้จริง เพื่อให้ Carbon Ready
-> เชื่อม Phase 2 ตาม `carbon-ready/docs/superpowers/specs/2026-07-22-guardian-api-migration-design.md`
+> เชื่อม Phase 2 ตาม `docs/superpowers/specs/2026-07-22-guardian-api-migration-design.md`
 
 ## สิ่งที่ตรวจพบบนเครื่องปัจจุบัน (2026-07-22)
 

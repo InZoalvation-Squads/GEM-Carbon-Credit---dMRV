@@ -8,7 +8,7 @@
 
 **Tech Stack:** TypeScript, zustand, vitest.
 
-**Spec:** `carbon-ready/docs/superpowers/specs/2026-07-20-project-topics-trustchain-design.md`
+**Spec:** `docs/superpowers/specs/2026-07-20-project-topics-trustchain-design.md`
 
 All commands run from `carbon-ready/`.
 
