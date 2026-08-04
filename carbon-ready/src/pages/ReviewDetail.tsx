@@ -7,11 +7,12 @@ import { Textarea } from '../components/ui/Textarea';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { StatusBadge, CategoryChip, FileKindIcon } from '../components/ui/StatusBadge';
+import { HashChip } from '../components/ui/HashChip';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { CATEGORY_LABEL, ROLE_LABEL } from '../lib/labels';
 import { fmtDate, fmtDateTime } from '../lib/date';
-import { formatTco2e } from '../lib/format';
+import { formatNumber, formatTco2e } from '../lib/format';
 import type { AuditLog } from '../types';
 import { displayHcs } from '../lib/guardian';
 import { locationToCountryCode } from '../lib/geo';
@@ -48,6 +49,13 @@ export function ReviewDetail() {
   const [action, setAction] = useState<Action>(null);
   const [note, setNote] = useState('');
   const [confirmed, setConfirmed] = useState(false);
+  // One in-flight network action at a time — approve/reject/anchor are
+  // irreversible, so the buttons must lock while the request runs.
+  const [busy, setBusy] = useState<null | 'action' | 'start' | 'anchor' | 'comment'>(null);
+  async function track(key: NonNullable<typeof busy>, fn: () => Promise<unknown>) {
+    setBusy(key);
+    try { await fn(); } finally { setBusy(null); }
+  }
 
   if (!v) {
     return <div className="text-sm text-ink-500">Package not found. <Link to="/verifications" className="text-brand-700 underline">Back to queue</Link></div>;
@@ -73,12 +81,13 @@ export function ReviewDetail() {
   const coverage = v.required_categories.map((c) => ({ category: c, present: pkgEvidence.some((e) => e.category === c) }));
 
   const closeModal = () => { setAction(null); setNote(''); setConfirmed(false); };
-  const run = async () => {
+  const pkgLabel = project?.name ?? v.id;
+  const run = () => track('action', async () => {
     if (action === 'approve') await api.approveVerification(v.id, note || undefined);
     if (action === 'reject') await api.rejectVerification(v.id, note);
     if (action === 'revision') await api.requestRevision(v.id, note);
     closeModal();
-  };
+  });
 
   return (
     <div>
@@ -90,17 +99,17 @@ export function ReviewDetail() {
         <div>
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-semibold text-ink-900">
-              <span className="font-mono text-lg text-brand-700">{v.id}</span> · {fmtDate(v.monitoring_period_start)} – {fmtDate(v.monitoring_period_end)}
+              {pkgLabel} <span className="font-normal text-ink-500">· {fmtDate(v.monitoring_period_start)} – {fmtDate(v.monitoring_period_end)}</span>
             </h1>
             <StatusBadge state={v.state} />
           </div>
           <div className="mt-1 text-sm text-ink-500">
-            {project?.name} · Owner {v.owner_name} · Verifier {v.assigned_verifier_name} ·{' '}
+            <span className="font-mono text-xs">{v.id}</span> · Owner {v.owner_name} · Verifier {v.assigned_verifier_name} ·{' '}
             <span className="font-medium text-ink-900">{formatTco2e(v.reduction_kgco2e)}</span> claimed
           </div>
         </div>
         {v.state === 'submitted' && (
-          <Button onClick={() => void api.startReview(v.id)}><ShieldCheck size={16} /> Start review</Button>
+          <Button loading={busy === 'start'} onClick={() => void track('start', () => api.startReview(v.id))}><ShieldCheck size={16} /> Start review</Button>
         )}
       </div>
 
@@ -112,9 +121,9 @@ export function ReviewDetail() {
               {v.state === 'approved' ? (
                 v.credential_id == null ? (
                   <div className="flex flex-wrap items-center gap-3">
-                    <span>Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'} · evidence read-only.{' '}
-                      <span className="font-mono text-xs">hash {v.hash_value}</span> · 🔒 anchoring pending.</span>
-                    <Button size="sm" onClick={() => void api.anchorVerification(v.id)}>
+                    <span className="inline-flex flex-wrap items-center gap-1">Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'} · evidence read-only ·{' '}
+                      {v.hash_value && <HashChip value={v.hash_value} />} · 🔒 anchoring pending.</span>
+                    <Button size="sm" loading={busy === 'anchor'} onClick={() => void track('anchor', () => api.anchorVerification(v.id))}>
                       <Link2 size={14} /> Anchor to Hedera Guardian
                     </Button>
                   </div>
@@ -122,7 +131,7 @@ export function ReviewDetail() {
                   <div>
                     <div className="flex items-center gap-2 font-medium text-brand-800">⛓ Anchored on Hedera Guardian{credential?.anchor ? '' : ' (simulated)'}</div>
                     <div className="mt-1 grid gap-0.5 text-xs text-brand-700 font-mono">
-                      <span>credential: {v.credential_id}</span>
+                      <span className="inline-flex items-center gap-1">credential: <HashChip value={v.credential_id} /></span>
                       <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {v.anchored_at ? fmtDateTime(v.anchored_at) : ''}</span>
                       {credential && <a className="underline" href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer">View on HashScan{displayHcs(credential).real ? '' : ' (mock)'} ↗</a>}
                     </div>
@@ -168,18 +177,18 @@ export function ReviewDetail() {
                         {periodRecords.map((r) => (
                           <tr key={r.id} className="border-t border-ink-50">
                             <td className="px-3 py-1.5 text-ink-700">{fmtDate(r.record_date)}</td>
-                            <td className="px-3 py-1.5 text-right font-medium text-ink-900">{r.generation_kwh.toLocaleString()}</td>
+                            <td className="px-3 py-1.5 text-right font-medium text-ink-900">{formatNumber(r.generation_kwh, 1)}</td>
                           </tr>
                         ))}
                         <tr className="border-t border-ink-200 bg-ink-50/60 font-semibold">
                           <td className="px-3 py-1.5">รวม {periodRecords.length} รายการ</td>
-                          <td className="px-3 py-1.5 text-right">{totalKwh.toLocaleString()} kWh</td>
+                          <td className="px-3 py-1.5 text-right">{formatNumber(totalKwh, 1)} kWh</td>
                         </tr>
                       </tbody>
                     </table>
                   </div>
                   <div className="grid grid-cols-2 gap-3 text-sm">
-                    <Field label="EF ปัจจุบัน" value={ef !== null ? `${ef} kgCO₂e/kWh` : 'ไม่พบค่า EF'} />
+                    <Field label="EF ปัจจุบัน" value={ef !== null ? `${formatNumber(ef, 4)} kgCO₂e/kWh` : 'ไม่พบค่า EF'} />
                     <Field label="คำนวณได้" value={computedKg !== null ? formatTco2e(computedKg) : '—'} />
                   </div>
                   {deltaPct !== null && (
@@ -256,8 +265,8 @@ export function ReviewDetail() {
                 <div className="border-t border-ink-100 p-4">
                   <Textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment…" />
                   <div className="mt-2 flex justify-end">
-                    <Button size="sm" variant="secondary" disabled={!draft.trim()}
-                      onClick={() => { void api.addVerificationComment(v.id, draft.trim()); setDraft(''); }}>
+                    <Button size="sm" variant="secondary" disabled={!draft.trim()} loading={busy === 'comment'}
+                      onClick={() => void track('comment', async () => { await api.addVerificationComment(v.id, draft.trim()); setDraft(''); })}>
                       <MessageSquarePlus size={14} /> Comment
                     </Button>
                   </div>
@@ -305,7 +314,7 @@ export function ReviewDetail() {
 
       {/* Action modal */}
       <Modal open={action !== null} onClose={closeModal} title={
-        action === 'approve' ? `Approve ${v.id}` : action === 'reject' ? `Reject ${v.id}` : 'Request revision'
+        action === 'approve' ? `Approve ${pkgLabel}` : action === 'reject' ? `Reject ${pkgLabel}` : 'Request revision'
       }>
         {action === 'approve' && (
           <div className="space-y-4">
@@ -322,7 +331,7 @@ export function ReviewDetail() {
             </label>
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={closeModal}>Cancel</Button>
-              <Button onClick={run} disabled={!confirmed}><ShieldCheck size={16} /> Approve</Button>
+              <Button onClick={run} disabled={!confirmed} loading={busy === 'action'}><ShieldCheck size={16} /> Approve</Button>
             </div>
           </div>
         )}
@@ -332,7 +341,7 @@ export function ReviewDetail() {
             <Textarea label="What needs to change? (required)" rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={closeModal}>Cancel</Button>
-              <Button onClick={run} disabled={!note.trim()}>Send revision request</Button>
+              <Button onClick={run} disabled={!note.trim()} loading={busy === 'action'}>Send revision request</Button>
             </div>
           </div>
         )}
@@ -342,7 +351,7 @@ export function ReviewDetail() {
             <Textarea label="Reason for rejection (required)" rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={closeModal}>Cancel</Button>
-              <Button variant="danger" onClick={run} disabled={!note.trim()}>Reject package</Button>
+              <Button variant="danger" onClick={run} disabled={!note.trim()} loading={busy === 'action'}>Reject package</Button>
             </div>
           </div>
         )}

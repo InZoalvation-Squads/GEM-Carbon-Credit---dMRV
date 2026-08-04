@@ -7,10 +7,11 @@ import { PageHeader } from '../components/layout/PageHeader';
 import { KpiCard } from '../components/ui/KpiCard';
 import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
 import { RegistrationGate } from '../components/project/RegistrationGate';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { formatNumber } from '../lib/format';
-import { fmtDate } from '../lib/date';
+import { fmtDate, monthLabel } from '../lib/date';
 import type { CalculationOutput } from '../lib/calc';
 import { Calculator, Leaf, Zap } from 'lucide-react';
 
@@ -54,12 +55,22 @@ export function Calculations() {
           <Card className="mb-4 p-4 text-sm">
             <span className="font-medium">Emission Factor:</span>{' '}
             {efUsed.country} / {efUsed.source} v{efUsed.version} —{' '}
-            <span className="font-mono">{efUsed.factor_kgco2e_per_kwh} kgCO₂e/kWh</span>{' '}
+            <span className="font-mono">{formatNumber(efUsed.factor_kgco2e_per_kwh, 4)} kgCO₂e/kWh</span>{' '}
             <span className="text-ink-500">(effective {fmtDate(efUsed.effective_date)})</span>
           </Card>
         )}
 
-        {result && (
+        {result && result.daily.length === 0 && !loading && (
+          <Card>
+            <EmptyState
+              icon={<Calculator size={28} />}
+              title="No monitoring data yet"
+              hint="Upload a CSV or sync IoT data for this project — reductions are computed from daily generation records."
+            />
+          </Card>
+        )}
+
+        {result && result.daily.length > 0 && (
           <>
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
               <KpiCard label="Total Generation" value={`${formatNumber(result.totals.generation_kwh, 1)} kWh`} icon={<Zap size={20} />} />
@@ -98,7 +109,7 @@ export function Calculations() {
                     <THead><TR><TH>Month</TH><TH className="text-right">kWh</TH><TH className="text-right">tCO₂e</TH></TR></THead>
                     <tbody>
                       {result.monthly.map((m) => (
-                        <TR key={m.period}><TD>{m.period}</TD><TD className="text-right">{formatNumber(m.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(m.reduction_kgco2e / 1000, 3)}</TD></TR>
+                        <TR key={m.period}><TD>{monthLabel(m.period)}</TD><TD className="text-right">{formatNumber(m.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(m.reduction_kgco2e / 1000, 3)}</TD></TR>
                       ))}
                     </tbody>
                   </Table>

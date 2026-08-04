@@ -57,7 +57,8 @@ export function Guardian() {
           <span className="text-brand-700">Network: <strong>{config.network}</strong></span>
           {serverMode() ? (
             <>
-              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/token/0.0.9909017" target="_blank" rel="noreferrer">GEMVCU 0.0.9909017</a>
+              {/* Tokens are minted per project — the treasury account page lists them all. */}
+              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/account/0.0.9651712" target="_blank" rel="noreferrer">Treasury 0.0.9651712</a>
               <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/contract/0xEF87e486b77D6ed63BE632a731b73aE1225F1130" target="_blank" rel="noreferrer">ERC-1155 0xEF87…1130</a>
             </>
           ) : (
@@ -125,6 +126,8 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
   mintedFor: (credentialId: string) => GuardianToken | undefined;
   onMint: (credentialId: string) => void;
 }) {
+  const projects = useStore((s) => s.projects);
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? id;
   // Offline Ed25519 check per credential — verdict appears in place of the button.
   // Auto-verify every credential on render (and on every poll refresh):
   // the verdict is derived state, not something the user should have to
@@ -149,10 +152,14 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
           {credentials.map((c) => {
             const v = verifications.find((x) => x.id === (c.subject.verification_id as string));
             const token = mintedFor(c.id);
+            const pid = v?.project_id ?? (c.subject.project_id as string);
             return (
               <TR key={c.id}>
                 <TD className="font-mono text-xs text-ink-900">{c.id}</TD>
-                <TD className="text-ink-700">{v?.project_id ?? (c.subject.project_id as string)}</TD>
+                <TD>
+                  <div className="text-ink-700">{projectName(pid)}</div>
+                  <div className="font-mono text-[11px] text-ink-400">{pid}</div>
+                </TD>
                 <TD className="text-right">{Number.isFinite(Number(c.subject.reduction_tco2e)) ? `${formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e` : '—'}</TD>
                 <TD className="font-mono text-xs text-ink-500">{displayHcs(c).topic_id} · #{displayHcs(c).sequence_number}{displayHcs(c).real ? ' ⛓' : ''}</TD>
                 <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(c.issued_at)}</TD>
@@ -188,6 +195,8 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
 }
 
 function TokenHistoryTab({ tokens }: { tokens: GuardianToken[] }) {
+  const projects = useStore((s) => s.projects);
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? id;
   if (tokens.length === 0) {
     return (
       <Card><CardBody className="p-0">
@@ -204,10 +213,14 @@ function TokenHistoryTab({ tokens }: { tokens: GuardianToken[] }) {
             <TR key={t.id}>
               <TD className="font-mono text-xs text-ink-900">#{t.serial_number}</TD>
               <TD className="font-mono text-xs text-ink-500">{t.token_id}</TD>
-              <TD className="text-ink-700">{t.project_id}</TD>
+              <TD>
+                <div className="text-ink-700">{projectName(t.project_id)}</div>
+                <div className="font-mono text-[11px] text-ink-400">{t.project_id}</div>
+              </TD>
               <TD className="text-right font-medium">{formatNumber(t.amount_tco2e, 2)} tCO₂e</TD>
               <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(t.minted_at)}</TD>
-              <TD className="text-right"><a className="inline-flex items-center gap-1 text-brand-700 hover:underline text-xs" href={t.hcs.explorer_url} target="_blank" rel="noreferrer">HashScan <ExternalLink size={12} /></a></TD>
+              {/* Server-minted rows store the project TOPIC as explorer_url — link the token page itself. */}
+              <TD className="text-right"><a className="inline-flex items-center gap-1 text-brand-700 hover:underline text-xs" href={`https://hashscan.io/testnet/token/${t.token_id}`} target="_blank" rel="noreferrer">HashScan <ExternalLink size={12} /></a></TD>
             </TR>
           ))}
         </tbody>
@@ -223,6 +236,8 @@ function TrustChainTab() {
   const credentials = useStore((s) => s.credentials);
   const verifications = useStore((s) => s.verifications);
   const pdds = useStore((s) => s.pdds);
+  const projects = useStore((s) => s.projects);
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name ?? id;
   const [selectedId, setSelectedId] = useState<string>(tokens[0]?.id ?? '');
 
   if (tokens.length === 0) {
@@ -257,7 +272,7 @@ function TrustChainTab() {
           <span className="mb-1 block text-[13px] font-medium text-ink-700">Token</span>
           <select value={token.id} onChange={(e) => setSelectedId(e.target.value)}
             className="w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm">
-            {tokens.map((t) => <option key={t.id} value={t.id}>#{t.serial_number} · {t.project_id} · {formatNumber(t.amount_tco2e, 2)} tCO₂e</option>)}
+            {tokens.map((t) => <option key={t.id} value={t.id}>#{t.serial_number} · {projectName(t.project_id)} · {formatNumber(t.amount_tco2e, 2)} tCO₂e</option>)}
           </select>
         </label>
 

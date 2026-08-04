@@ -26,7 +26,10 @@ export function buildApprovalSubject(v: VerificationRequest, evidence: EvidenceF
     project_id: v.project_id,
     monitoring_period_start: v.monitoring_period_start,
     monitoring_period_end: v.monitoring_period_end,
-    reduction_tco2e: v.reduction_kgco2e / 1000,
+    // toFixed(4) kills IEEE-754 division tails (3567.9/1000 → 3.5679000000000003):
+    // the signed canonical text must survive the DB's ~15-significant-digit
+    // jsonb round-trip byte-for-byte, or the Ed25519 proof breaks on read-back.
+    reduction_tco2e: Number((v.reduction_kgco2e / 1000).toFixed(4)),
     factors_snapshot: v.factors_snapshot,
     evidence: linked,
     approval_role: 'verifier',

@@ -1,10 +1,10 @@
-import { useEffect, useState, type ReactNode } from 'react';
+import { Fragment, useEffect, useState, type ReactNode } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { computeYearlyTable, computeEcPj, resolveComputed } from '../lib/pdd';
+import { computeFinancialTable, computeYearlyTable, computeEcPj, resolveComputed } from '../lib/pdd';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import type { EvidenceFile, PddComputedSource } from '../types';
 
@@ -89,6 +89,78 @@ function Page({ children }: { children: ReactNode }) {
         <tr><td><Footer /></td></tr>
       </tfoot>
     </table>
+  );
+}
+
+/** สารบัญ — the official form's contents page (print pagination is dynamic, so no page numbers). */
+function TocPage() {
+  const items = [
+    'ส่วนที่ 1 รายละเอียดโครงการ',
+    'ส่วนที่ 2 ระเบียบวิธีลดก๊าซเรือนกระจกภาคสมัครใจ',
+    'ส่วนที่ 3 การคำนวณการลดก๊าซเรือนกระจก',
+    'ส่วนที่ 4 แผนการติดตามผลการดำเนินโครงการ',
+    'ภาคผนวก เอกสาร/หลักฐานประกอบ',
+  ];
+  return (
+    <Page>
+      <p className="text-center text-[16px] font-bold">สารบัญ</p>
+      <div data-testid="toc" className="mx-auto mt-6 w-[85%]">
+        {items.map((t) => (
+          <p key={t} className="mb-3 border-b border-dotted border-[#999] pb-0.5">{t}</p>
+        ))}
+      </div>
+    </Page>
+  );
+}
+
+/**
+ * รูปที่ 1 / ผังจุดตรวจวัด — the project-boundary block diagram: solar system
+ * and meters inside a dashed boundary, consumer and PEA grid outside.
+ */
+function BoundaryDiagram({ capacityKwp, owner }: { capacityKwp: string; owner: string }) {
+  const box = 'border border-black bg-white px-2 py-1.5 text-center';
+  return (
+    <div data-testid="boundary-diagram" className="keep-together mx-auto my-2 flex w-[95%] items-stretch gap-2 text-[11px]">
+      <div className="relative flex-1 border-2 border-dashed border-black p-3 pt-4">
+        <span className="absolute -top-2 left-3 bg-white px-1">ขอบเขตโครงการ</span>
+        <div className="flex items-center gap-1.5">
+          <div className={`${box} w-36`}>ระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ {capacityKwp} kW</div>
+          <span>→</span>
+          <div className={box}>มิเตอร์</div>
+          <span className="flex-1 text-center">EG<sub>Consumer,PJ,y</sub> →</span>
+        </div>
+        <div className="mt-3 flex items-center justify-end gap-1.5">
+          <div className={box}>ใช้เองในโครงการ</div>
+          <span>←</span>
+          <div className={box}>มิเตอร์</div>
+          <span className="text-center">← EC<sub>PJ,y</sub></span>
+        </div>
+      </div>
+      <div className="flex w-32 flex-col justify-between py-2">
+        <div className={box}>ผู้ใช้ไฟฟ้า<br />({owner})</div>
+        <div className="text-center">↑<br />ระบบสายส่ง PEA</div>
+      </div>
+    </div>
+  );
+}
+
+/** แผนผังขั้นตอนการจัดเก็บข้อมูลและ QA/QC — four-step data-flow boxes. */
+function DataFlowDiagram({ measurement }: { measurement: string }) {
+  const steps = [
+    `ไฟฟ้าที่ผลิตได้: ${measurement} · ไฟฟ้าที่ใช้ในโครงการ: คำนวณจากพิกัดกำลังไฟฟ้าของอุปกรณ์และบันทึกชั่วโมงการทำงาน`,
+    'ข้อมูลจะถูกรวบรวมเป็นรายเดือนและตรวจสอบโดยเจ้าหน้าที่ที่ได้รับมอบหมาย',
+    'ข้อมูลจะถูกทวนสอบโดยพนักงานระดับหัวหน้างานขึ้นไป',
+    'ข้อมูลจะถูกส่งให้ทีมงานผู้ได้รับมอบหมายในการดำเนินโครงการ T-VER จัดทำรายงานติดตามผลต่อไป',
+  ];
+  return (
+    <div data-testid="dataflow-diagram" className="keep-together mx-auto my-2 flex w-full items-stretch gap-1 text-[10.5px]">
+      {steps.map((t, i) => (
+        <Fragment key={i}>
+          {i > 0 && <span className="self-center">→</span>}
+          <div className="flex-1 border border-black p-1.5">{t}</div>
+        </Fragment>
+      ))}
+    </div>
   );
 }
 
@@ -208,6 +280,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const d = pdd.section_data as Record<string, unknown>;
   const ctx = { project, factors, sectionData: d };
   const table = computeYearlyTable(ctx);
+  const fin = computeFinancialTable(ctx);
   const comp = (source: PddComputedSource) => resolveComputed(source, ctx);
   const ef = comp('grid_factor');
   const str = (k: string) => {
@@ -237,6 +310,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   // no installation photo silently disappears.
   const explicitCover = siteImages.find((img) => img.id === d.cover_evidence_id);
   const coverImage = pickCoverImage(siteImages, d.cover_evidence_id);
+  // Section-1 figures = site images minus an explicitly chosen cover; the
+  // monitoring diagrams continue that numbering (MCRU: photos 1-7 → 8, 9).
+  const figureCount = siteImages.filter((img) => img.id !== explicitCover?.id).length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -363,6 +439,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </table>
         </Page>
 
+        {/* ============ สารบัญ ============ */}
+        <TocPage />
+
         {/* ============ ส่วนที่ 1 รายละเอียดโครงการ ============ */}
         <Page>
           <SectionBar>ส่วนที่ 1 รายละเอียดโครงการ</SectionBar>
@@ -384,6 +463,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(project.capacity_kwp)} kWp
             ({str('technology')}, {str('grid_connection')}) เพื่อทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
           </p>
+          <BoundaryDiagram capacityKwp={fmt(project.capacity_kwp)} owner={ownerName} />
+          <p className="text-center font-bold">รูปที่ 1 ขอบเขตของโครงการ</p>
           {equipmentSpecs.length > 0 && (
             <>
               <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
@@ -647,6 +728,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             ความถี่: {str('monitoring_frequency')}
           </p>
           <p className="mt-1 indent-8">QA/QC: {str('qaqc_procedure')}</p>
+          <BoundaryDiagram capacityKwp={fmt(project.capacity_kwp)} owner={ownerName} />
+          <p className="text-center font-bold">ภาพที่ {figureCount + 1} รูปแสดงผังจุดตรวจวัด พร้อมข้อมูล/ตัวแปรที่จัดเก็บ</p>
+          <DataFlowDiagram measurement={str('measurement_method')} />
+          <p className="text-center font-bold">ภาพที่ {figureCount + 2} แผนผังขั้นตอนการจัดเก็บข้อมูล และกระบวนการควบคุมคุณภาพ</p>
 
           <p className="mt-3 font-bold underline">4.2 พารามิเตอร์ที่ไม่ต้องติดตามผล</p>
           <p className="pl-8">ไม่มีพารามิเตอร์ที่ไม่ต้องติดตาม ที่ใช้ในการคำนวณตามระเบียบวิธีการลดก๊าซเรือนกระจกที่เลือกใช้</p>
@@ -711,6 +796,96 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 </tr>
               </tbody>
             </table>
+          </Page>
+        )}
+
+        {/* ============ ภาคผนวก — ปริมาณไฟฟ้าคาดการณ์รายปี ============ */}
+        {table && (
+          <Page>
+            <p className="text-center font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี</p>
+            <table className="doc-table mt-2 w-full" data-testid="forecast-table">
+              <thead>
+                <tr className="bg-[#e7f0e0] text-center font-bold">
+                  <td>ปีที่</td><td>ปริมาณการผลิตไฟฟ้าจากระบบ Solar Rooftop (kWh)</td><td>%การเสื่อมของแผงฯ</td>
+                </tr>
+              </thead>
+              <tbody>
+                {table.rows.map((r) => (
+                  <tr key={r.year}>
+                    <td className="text-center">{r.year}</td>
+                    <td className="text-right">{fmtInt(r.generation_kwh)}</td>
+                    <td className="text-center">{fmt(Number(d.degradation_pct ?? 0))}%</td>
+                  </tr>
+                ))}
+                <tr className="font-bold">
+                  <td className="text-center">รวม</td>
+                  <td className="text-right">{fmtInt(table.rows.reduce((a, r) => a + r.generation_kwh, 0))}</td>
+                  <td className="text-center">{fmt(Number(d.degradation_pct ?? 0) * table.rows.length)}%</td>
+                </tr>
+                <tr className="font-bold">
+                  <td className="text-center">เฉลี่ยต่อปี</td>
+                  <td className="text-right">{fmtInt(Math.round(table.rows.reduce((a, r) => a + r.generation_kwh, 0) / table.rows.length))}</td>
+                  <td className="text-center">{fmt(Number(d.degradation_pct ?? 0))}%</td>
+                </tr>
+              </tbody>
+            </table>
+          </Page>
+        )}
+
+        {/* ============ ภาคผนวก — การประเมินทางด้านการเงิน (รูปแบบ PEA) ============ */}
+        {fin && (
+          <Page>
+            <p className="text-center font-bold">รายละเอียดโครงการ Solar PV จากการประเมินทางด้านการเงินของระบบผลิตไฟฟ้า</p>
+            <table className="doc-table mt-2 w-full text-[10.5px]" data-testid="financial-summary">
+              <tbody>
+                <tr>
+                  <td className="font-bold">ขนาดติดตั้ง Solar Rooftop</td><td>{fmt(project.capacity_kwp)} kWp</td>
+                  <td className="font-bold">เงินลงทุน</td><td className="text-right">{fmtInt(fin.investment_thb)} บาท</td>
+                </tr>
+                <tr>
+                  <td className="font-bold">อัตราค่าไฟฟ้าเฉลี่ย</td><td>{fmt(fin.price_thb_kwh)} บาท/kWh</td>
+                  <td className="font-bold">อัตราคิดลด (Discount Rate)</td><td className="text-right">{fmt(fin.discount_rate_pct)}%</td>
+                </tr>
+                <tr>
+                  <td className="font-bold">ผลตอบแทนที่ได้รับ (IRR)</td><td>{fin.irr_pct === null ? '-' : `${fmt(fin.irr_pct)}%`}</td>
+                  <td className="font-bold">ระยะเวลาคุ้มทุน ประมาณ</td><td className="text-right">{fin.payback_years === null ? '-' : `${fmt(fin.payback_years)} ปี`}</td>
+                </tr>
+              </tbody>
+            </table>
+            <table className="doc-table mt-2 w-full text-[9.5px]" data-testid="financial-table">
+              <thead>
+                <tr className="bg-[#f2f2f2] text-center font-bold">
+                  <td>Year</td><td>Discount Factor {fmt(fin.discount_rate_pct)}%</td>
+                  <td>Annual Generation (kWh/y)</td><td>Total Benefit (THB)</td>
+                  <td>Total Cost (THB)</td><td>SNPV</td><td>AC.SNPV</td>
+                </tr>
+              </thead>
+              <tbody>
+                {fin.rows.map((r) => (
+                  <tr key={r.year} className={r.cum_snpv_thb < 0 ? 'text-[#b00]' : ''}>
+                    <td className="text-center">{r.year}</td>
+                    <td className="text-center">{r.discount_factor.toFixed(3)}</td>
+                    <td className="text-right">{r.generation_kwh === null ? '-' : fmtInt(r.generation_kwh)}</td>
+                    <td className="text-right">{r.benefit_thb === 0 ? '-' : fmtInt(r.benefit_thb)}</td>
+                    <td className="text-right">{r.cost_thb === 0 ? '-' : fmtInt(r.cost_thb)}</td>
+                    <td className="text-right">{fmtInt(r.snpv_thb)}</td>
+                    <td className="text-right">{fmtInt(r.cum_snpv_thb)}</td>
+                  </tr>
+                ))}
+                <tr className="font-bold">
+                  <td colSpan={3} className="text-center">Sum</td>
+                  <td className="text-right">{fmtInt(fin.totals.benefit_thb)}</td>
+                  <td className="text-right">{fmtInt(fin.totals.cost_thb)}</td>
+                  <td />
+                  <td className="text-right">{fmtInt(fin.totals.npv_thb)}</td>
+                </tr>
+              </tbody>
+            </table>
+            <p className="mt-1 text-[10px] text-[#555]">
+              หมายเหตุ: คำนวณจากข้อมูลโครงการจริง (เงินลงทุน {fmt(Number(d.investment_mthb ?? 0))} ล้านบาท, เสื่อมสภาพแผง {fmt(Number(d.degradation_pct ?? 0))}%/ปี)
+              ด้วยสมมติฐานมาตรฐานการประเมินของ กฟภ.: ค่าไฟ {fmt(fin.price_thb_kwh)} บาท/kWh · O&M ปีที่ {fin.om_start_year} เป็นต้นไป {fmtInt(fin.om_cost_thb_year)} บาท/ปี ·
+              มูลค่าซาก {fmtInt(fin.scrap_thb)} บาท ในปีที่ {fin.lifetime_years}
+            </p>
           </Page>
         )}
       </div>

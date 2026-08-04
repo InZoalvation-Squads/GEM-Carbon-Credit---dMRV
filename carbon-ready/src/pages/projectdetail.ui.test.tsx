@@ -37,3 +37,36 @@ describe('ProjectDetail — PDD Document tab for auditors', () => {
     expect(screen.getByRole('button', { name: /Print|Export/i })).toBeInTheDocument();
   });
 });
+
+describe('ProjectDetail — readable labels and record count', () => {
+  it('shows the monitoring source as a label, not the raw enum', async () => {
+    const { useStore } = await import('../store');
+    useStore.setState((s) => ({
+      records: [...s.records, {
+        id: 'mon-iot-x', project_id: 'prj-0001', record_date: '2026-06-01',
+        generation_kwh: 100, source: 'iot_sync', uploaded_at: '2026-06-02T00:00:00Z',
+      }],
+    }));
+    renderProject('prj-0001');
+    expect(screen.getAllByText('IoT Sync').length).toBeGreaterThan(0);
+    expect(screen.queryByText('iot_sync')).toBeNull();
+  });
+
+  it('shows the project status as a label, not the lowercase enum', () => {
+    renderProject('prj-0001'); // fixture status "active"
+    expect(screen.getByText('Active')).toBeInTheDocument();
+    expect(screen.queryByText('active')).toBeNull();
+  });
+
+  it('tells the user when the table is truncated (showing 50 of N)', async () => {
+    const { useStore } = await import('../store');
+    const many = Array.from({ length: 60 }, (_, i) => ({
+      id: `mon-many-${i}`, project_id: 'prj-0001',
+      record_date: `2026-03-${String((i % 28) + 1).padStart(2, '0')}`,
+      generation_kwh: 10, source: 'csv_upload', uploaded_at: '2026-06-02T00:00:00Z',
+    }));
+    useStore.setState((s) => ({ records: [...s.records.filter((r) => r.project_id !== 'prj-0001'), ...many] }));
+    renderProject('prj-0001');
+    expect(screen.getByText(/Showing 50 of 60/i)).toBeInTheDocument();
+  });
+});

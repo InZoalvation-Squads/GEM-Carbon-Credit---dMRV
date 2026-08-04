@@ -52,3 +52,30 @@ describe('Projects — create an ARR / land-based project', () => {
     expect(screen.getByText('Must be ≥ 0')).toBeInTheDocument();
   });
 });
+
+describe('Projects — readable status labels and safe create', () => {
+  it('status badges and the filter dropdown use labels, not raw enums', () => {
+    renderProjects();
+    // Fixture prj-0003 is status "draft" → badge must read "Draft".
+    expect(screen.getAllByText('Draft').length).toBeGreaterThan(0);
+    expect(screen.queryByText('draft')).toBeNull();
+    expect(screen.getAllByRole('option', { name: 'Active' }).length).toBeGreaterThan(0);
+  });
+
+  it('locks the Create Project button while the request is in flight', async () => {
+    const { api } = await import('../lib/api');
+    const { vi } = await import('vitest');
+    const { waitFor } = await import('@testing-library/react');
+    vi.spyOn(api, 'createProject').mockImplementation(() => new Promise(() => {}));
+    renderProjects();
+    openCreateModal();
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'X Solar' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Trat, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '10' } });
+    const create = screen.getByRole('button', { name: /Create Project/i });
+    fireEvent.click(create);
+    await waitFor(() => expect(create).toBeDisabled());
+    expect(api.createProject).toHaveBeenCalledTimes(1);
+    vi.restoreAllMocks();
+  });
+});

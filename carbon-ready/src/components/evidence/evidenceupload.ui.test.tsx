@@ -9,8 +9,8 @@ import type { EvidenceFile } from '../../types';
 // Server mode: real files must reach the server's multipart endpoint and the
 // returned row (with the server id) must land in the store, so the official
 // document can fetch its bytes back via /evidence/:id/file.
-vi.mock('../lib/server-api', async (importOriginal) => {
-  const actual = await importOriginal<typeof import('../lib/server-api')>();
+vi.mock('../../lib/server-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../../lib/server-api')>();
   return {
     ...actual,
     serverMode: () => true,

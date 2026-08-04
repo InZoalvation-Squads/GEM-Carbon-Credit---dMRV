@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeYearlyTable } from './pdd';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeFinancialTable, computeYearlyTable } from './pdd';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -256,5 +256,73 @@ describe('resolveComputed — official-form sources', () => {
     expect(resolveComputed('be_annual', ctx)).toBe(445.93);
     expect(resolveComputed('pe_annual', ctx)).toBe(2.72);
     expect(resolveComputed('er_annual', ctx)).toBe(443);
+  });
+});
+
+describe('computeYearlyTable — generation forecast matches the MCRU appendix (p.23)', () => {
+  const ctx = { project: PROJECT, factors: TGO_FACTORS, sectionData: MCRU_DATA };
+  it('reproduces the yearly kWh series, total and average', () => {
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows.map((r) => r.generation_kwh)).toEqual([963915, 960059, 956219, 952394, 948584, 944790, 941011]);
+    const total = t.rows.reduce((s, r) => s + r.generation_kwh, 0);
+    expect(total).toBe(6_666_972);
+    expect(Math.round(total / t.rows.length)).toBe(952_425);
+  });
+});
+
+describe('computeFinancialTable — PEA-style 25-year cash flow', () => {
+  const ctx = {
+    project: PROJECT, factors: TGO_FACTORS,
+    sectionData: { ...MCRU_DATA, investment_mthb: 30 },
+  };
+
+  it('builds year 0 as the investment outlay', () => {
+    const f = computeFinancialTable(ctx)!;
+    expect(f.rows[0].year).toBe(0);
+    expect(f.rows[0].cost_thb).toBe(30_000_000);
+    expect(f.rows[0].benefit_thb).toBe(0);
+    expect(f.rows[0].cum_snpv_thb).toBe(-30_000_000);
+    expect(f.rows).toHaveLength(26); // year 0 + 25 operating years
+  });
+
+  it('year 1: benefit = generation × 4.18 THB/kWh at discount factor 1/1.07', () => {
+    const f = computeFinancialTable(ctx)!;
+    const y1 = f.rows[1];
+    expect(y1.generation_kwh).toBe(963_915);
+    expect(y1.benefit_thb).toBeCloseTo(963_915 * 4.18, 0);
+    expect(y1.discount_factor).toBeCloseTo(1 / 1.07, 4);
+    expect(y1.cost_thb).toBe(0); // O&M free until year 7 (PEA default)
+  });
+
+  it('O&M starts in year 7 and the final year adds the scrap value (5% of investment)', () => {
+    const f = computeFinancialTable(ctx)!;
+    expect(f.rows[6].cost_thb).toBe(0);
+    expect(f.rows[7].cost_thb).toBe(300_000);
+    expect(f.rows[25].cost_thb).toBe(300_000);
+    expect(f.scrap_thb).toBe(1_500_000);
+    const gen25 = f.rows[25].generation_kwh!;
+    expect(f.rows[25].benefit_thb).toBeCloseTo(gen25 * 4.18 + 1_500_000, 0);
+  });
+
+  it('derives IRR and payback in the PEA evaluation ballpark (11.65% / 7.45 yr)', () => {
+    const f = computeFinancialTable(ctx)!;
+    expect(f.irr_pct).toBeGreaterThan(10);
+    expect(f.irr_pct).toBeLessThan(14);
+    expect(f.payback_years).toBeGreaterThan(6.5);
+    expect(f.payback_years).toBeLessThan(8.5);
+  });
+
+  it('scales the default O&M to 1% of investment for small systems', () => {
+    const small = computeFinancialTable({
+      project: PROJECT, factors: TGO_FACTORS,
+      sectionData: { ...MCRU_DATA, investment_mthb: 1.2, year1_generation_kwh: 52481 },
+    })!;
+    expect(small.om_cost_thb_year).toBe(12_000); // 1% of 1.2M — not the 667-kWp 300k
+    expect(small.irr_pct).not.toBeNull();
+    expect(small.irr_pct!).toBeGreaterThan(0);
+  });
+
+  it('returns null without an investment figure', () => {
+    expect(computeFinancialTable({ project: PROJECT, factors: TGO_FACTORS, sectionData: MCRU_DATA })).toBeNull();
   });
 });

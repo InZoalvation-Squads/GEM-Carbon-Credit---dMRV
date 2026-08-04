@@ -6,10 +6,12 @@ import { Badge } from '../components/ui/Badge';
 import { Select } from '../components/ui/Select';
 import { Input } from '../components/ui/Input';
 import { PageHeader } from '../components/layout/PageHeader';
+import { EmptyState } from '../components/ui/EmptyState';
+import { HashChip } from '../components/ui/HashChip';
 import { useStore } from '../store';
 import { auditRowHash } from '../store/audit';
 import { fmtDateTime } from '../lib/date';
-import { ROLE_LABEL } from '../lib/labels';
+import { ACTION_LABEL, ENTITY_LABEL, ROLE_LABEL } from '../lib/labels';
 import type { AuditAction, AuditLog, EntityType } from '../types';
 
 const ACTIONS: AuditAction[] = [
@@ -17,8 +19,10 @@ const ACTIONS: AuditAction[] = [
   'EVIDENCE_UPLOADED', 'EVIDENCE_REPLACED', 'EVIDENCE_ARCHIVED',
   'VERIFICATION_SUBMITTED', 'REVIEW_STARTED', 'COMMENT_ADDED', 'REVISION_REQUESTED',
   'VERIFICATION_APPROVED', 'VERIFICATION_REJECTED', 'VERIFICATION_ANCHORED',
+  'METHODOLOGY_SELECTED', 'METHODOLOGY_IMPORTED', 'PDD_SUBMITTED', 'VALIDATION_STARTED',
+  'PDD_REVISION_REQUESTED', 'PROJECT_REGISTERED', 'PDD_REJECTED', 'TOKEN_MINTED',
 ];
-const ENTITIES: EntityType[] = ['project', 'monitoring', 'factor', 'calculation', 'evidence', 'verification'];
+const ENTITIES: EntityType[] = ['project', 'monitoring', 'factor', 'calculation', 'evidence', 'verification', 'methodology', 'pdd', 'token'];
 
 const TONE: Partial<Record<AuditAction, 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet'>> = {
   PROJECT_CREATED: 'green',
@@ -36,6 +40,14 @@ const TONE: Partial<Record<AuditAction, 'green' | 'amber' | 'red' | 'gray' | 'bl
   VERIFICATION_APPROVED: 'green',
   VERIFICATION_REJECTED: 'red',
   VERIFICATION_ANCHORED: 'green',
+  METHODOLOGY_SELECTED: 'blue',
+  METHODOLOGY_IMPORTED: 'blue',
+  PDD_SUBMITTED: 'blue',
+  VALIDATION_STARTED: 'violet',
+  PDD_REVISION_REQUESTED: 'amber',
+  PROJECT_REGISTERED: 'green',
+  PDD_REJECTED: 'red',
+  TOKEN_MINTED: 'green',
 };
 
 // Recompute the chain (oldest→newest) and confirm each row_hash matches.
@@ -66,10 +78,47 @@ function verifyChain(audit: AuditLog[]): { ok: boolean; checked: number } {
 export function AuditLogPage() {
   const audit = useStore((s) => s.audit);
   const user = useStore((s) => s.currentUser);
+  const projects = useStore((s) => s.projects);
+  const pdds = useStore((s) => s.pdds);
+  const verifications = useStore((s) => s.verifications);
+  const evidence = useStore((s) => s.evidence);
+  const methodologies = useStore((s) => s.methodologies);
+  const factors = useStore((s) => s.factors);
   const [action, setAction] = useState<'' | AuditAction>('');
   const [entity, setEntity] = useState<'' | EntityType>('');
   const [from, setFrom] = useState('');
   const [to, setTo] = useState('');
+
+  // Best-effort join entity_id → something a reviewer can recognise. Rows for
+  // monitoring/calculation carry the PROJECT id as entity_id (see audit_write
+  // call sites), so those resolve through the project list too.
+  const projectName = (id: string) => projects.find((p) => p.id === id)?.name;
+  function entityName(a: AuditLog): string | null {
+    switch (a.entity_type) {
+      case 'project':
+      case 'monitoring':
+      case 'calculation':
+        return projectName(a.entity_id) ?? null;
+      case 'pdd': {
+        const pdd = pdds.find((p) => p.id === a.entity_id);
+        return pdd ? projectName(pdd.project_id) ?? null : null;
+      }
+      case 'verification': {
+        const v = verifications.find((x) => x.id === a.entity_id);
+        return v ? projectName(v.project_id) ?? null : null;
+      }
+      case 'evidence':
+        return evidence.find((e) => e.id === a.entity_id)?.file_name ?? null;
+      case 'methodology':
+        return methodologies.find((m) => m.id === a.entity_id)?.name ?? null;
+      case 'factor': {
+        const f = factors.find((x) => x.id === a.entity_id);
+        return f ? `${f.country} · ${f.source} v${f.version}` : null;
+      }
+      default:
+        return null;
+    }
+  }
 
   const integrity = useMemo(() => verifyChain(audit), [audit]);
 
@@ -101,11 +150,11 @@ export function AuditLogPage() {
       <Card className="mb-4 p-4 grid grid-cols-1 sm:grid-cols-4 gap-3">
         <Select label="Action" value={action} onChange={(e) => setAction(e.target.value as AuditAction | '')}>
           <option value="">All actions</option>
-          {ACTIONS.map((a) => <option key={a} value={a}>{a}</option>)}
+          {ACTIONS.map((a) => <option key={a} value={a}>{ACTION_LABEL[a]}</option>)}
         </Select>
         <Select label="Entity" value={entity} onChange={(e) => setEntity(e.target.value as EntityType | '')}>
           <option value="">All entities</option>
-          {ENTITIES.map((e) => <option key={e} value={e}>{e}</option>)}
+          {ENTITIES.map((e) => <option key={e} value={e}>{ENTITY_LABEL[e]}</option>)}
         </Select>
         <Input label="From" type="date" value={from} onChange={(e) => setFrom(e.target.value)} />
         <Input label="To" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
@@ -117,14 +166,21 @@ export function AuditLogPage() {
             <THead><TR><TH>Timestamp</TH><TH>Role</TH><TH>Action</TH><TH>Entity</TH><TH>Change</TH><TH className="hidden lg:table-cell">row_hash</TH></TR></THead>
             <tbody>
               {filtered.length === 0 && (
-                <tr><td colSpan={6} className="px-5 py-8 text-center text-ink-500">No matching entries</td></tr>
+                <tr><td colSpan={6} className="p-0">
+                  <EmptyState title="No matching entries" hint="Try widening the date range or clearing the action/entity filters." />
+                </td></tr>
               )}
-              {filtered.map((a) => (
+              {filtered.map((a) => {
+                const name = entityName(a);
+                return (
                 <TR key={a.id}>
                   <TD className="whitespace-nowrap text-xs text-ink-500">{fmtDateTime(a.created_at)}</TD>
                   <TD className="text-ink-600">{a.user_role ? ROLE_LABEL[a.user_role] : (user.id === a.user_id ? user.name : '—')}</TD>
-                  <TD><Badge tone={TONE[a.action] ?? 'gray'}>{a.action}</Badge></TD>
-                  <TD className="text-ink-500">{a.entity_type}</TD>
+                  <TD><Badge tone={TONE[a.action] ?? 'gray'}>{ACTION_LABEL[a.action] ?? a.action}</Badge></TD>
+                  <TD>
+                    <div className="text-[11px] uppercase tracking-wide text-ink-400">{ENTITY_LABEL[a.entity_type] ?? a.entity_type}</div>
+                    {name && <div className="text-ink-700">{name}</div>}
+                  </TD>
                   <TD>
                     {a.previous_value || a.new_value ? (
                       <Diff prev={a.previous_value} next={a.new_value} />
@@ -132,9 +188,10 @@ export function AuditLogPage() {
                       <pre className="text-xs whitespace-pre-wrap break-all max-w-xs text-ink-500">{JSON.stringify(a.payload)}</pre>
                     )}
                   </TD>
-                  <TD className="hidden lg:table-cell font-mono text-[11px] text-ink-400">{a.row_hash ?? '—'}</TD>
+                  <TD className="hidden lg:table-cell">{a.row_hash ? <HashChip value={a.row_hash} /> : <span className="text-ink-400">—</span>}</TD>
                 </TR>
-              ))}
+                );
+              })}
             </tbody>
           </Table>
         </CardBody>

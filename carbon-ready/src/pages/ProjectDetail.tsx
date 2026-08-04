@@ -12,6 +12,7 @@ import { PddDocument } from './PddDocument';
 import { EmptyState } from '../components/ui/EmptyState';
 import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
+import { PROJECT_STATUS_LABEL, sourceLabel } from '../lib/labels';
 import { ChevronLeft, Upload as UploadIcon, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { RegistrationGate } from '../components/project/RegistrationGate';
@@ -39,14 +40,14 @@ export function ProjectDetail() {
       </div>
       <PageHeader
         title={project.name}
-        subtitle={`${project.location} • ${project.capacity_kwp} kWp • commissioned ${fmtDate(project.commission_date)}`}
+        subtitle={`${project.location} • ${formatNumber(project.capacity_kwp, 2)} kWp • commissioned ${fmtDate(project.commission_date)}`}
         action={<Link to="/upload"><Button><UploadIcon size={16} /> Upload Data</Button></Link>}
       />
 
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-6">
         <Card className="p-5">
           <div className="text-xs uppercase tracking-wide text-ink-500">Status</div>
-          <div className="mt-2"><Badge tone={project.status === 'active' ? 'green' : 'gray'}>{project.status}</Badge></div>
+          <div className="mt-2"><Badge tone={project.status === 'active' ? 'green' : 'gray'}>{PROJECT_STATUS_LABEL[project.status]}</Badge></div>
         </Card>
         <Card className="p-5">
           <div className="text-xs uppercase tracking-wide text-ink-500">Records</div>
@@ -103,6 +104,7 @@ export function ProjectDetail() {
                 {records.length === 0 ? (
                   <div className="px-5 py-12 text-center text-sm text-ink-500">No records uploaded yet.</div>
                 ) : (
+                  <>
                   <Table>
                     <THead><TR><TH>Date</TH><TH className="text-right">Generation (kWh)</TH><TH>Source</TH></TR></THead>
                     <tbody>
@@ -110,11 +112,17 @@ export function ProjectDetail() {
                         <TR key={r.id}>
                           <TD>{fmtDate(r.record_date)}</TD>
                           <TD className="text-right">{formatNumber(r.generation_kwh, 1)}</TD>
-                          <TD className="text-ink-500">{r.source}</TD>
+                          <TD className="text-ink-500">{sourceLabel(r.source)}</TD>
                         </TR>
                       ))}
                     </tbody>
                   </Table>
+                  {records.length > 50 && (
+                    <div className="border-t border-ink-100 px-5 py-2 text-xs text-ink-400">
+                      Showing 50 of {records.length} records (newest first) — use Calculations for full-period rollups.
+                    </div>
+                  )}
+                  </>
                 )}
               </CardBody>
             </Card>

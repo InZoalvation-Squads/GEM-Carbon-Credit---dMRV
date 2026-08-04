@@ -6,6 +6,7 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { PddStatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
+import { HashChip } from '../components/ui/HashChip';
 import { isFieldVisible, resolveComputed } from '../lib/pdd';
 import type { PddComputedSource } from '../types';
 import clsx from 'clsx';
@@ -59,19 +60,19 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
             <PddStatusBadge state={pdd.state} />
           </div>
           <p className="mt-1 text-sm text-ink-500">{project.name} · {methodology.code} {methodology.version}</p>
-          {pdd.content_hash && <p className="mt-1 font-mono text-xs text-ink-400">hash: {pdd.content_hash}</p>}
+          {pdd.content_hash && <p className="mt-1 flex items-center gap-1 font-mono text-xs text-ink-400">hash: <HashChip value={pdd.content_hash} /></p>}
           {pdd.ipfs_cid && (
             <p className="font-mono text-xs text-ink-400">
               ipfs:{' '}
-              <button onClick={() => setShowIpfs(true)} className="text-brand-600 hover:underline">
-                {pdd.ipfs_cid}
+              <button onClick={() => setShowIpfs(true)} title={pdd.ipfs_cid} className="text-brand-600 hover:underline">
+                {pdd.ipfs_cid.length > 24 ? `${pdd.ipfs_cid.slice(0, 14)}…${pdd.ipfs_cid.slice(-6)}` : pdd.ipfs_cid}
               </button>{' '}
               <span className="text-ink-300">· คลิกเพื่อดู JSON + ตรวจ hash</span>
             </p>
           )}
           {credential && (
-            <p className="font-mono text-xs text-ink-400">
-              vc: {credential.id} ·{' '}
+            <p className="flex flex-wrap items-center gap-1 font-mono text-xs text-ink-400">
+              vc: <HashChip value={credential.id} /> ·{' '}
               <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
                 HCS message #{displayHcs(credential).sequence_number}{displayHcs(credential).real ? ' ⛓ on-chain' : ' (simulated)'}
               </a>

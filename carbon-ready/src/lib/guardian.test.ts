@@ -30,6 +30,19 @@ describe('buildApprovalSubject', () => {
       { id: 'ev-b', content_hash: 'sha256-bbb' },
     ]);
   });
+
+  it('emits a storage-stable reduction_tco2e — no float tail beyond 15 significant digits', () => {
+    // 3567.9 / 1000 = 3.5679000000000003 in IEEE-754. The DB layer (Prisma →
+    // jsonb) renders doubles at ~15 significant digits, so a 17-digit float
+    // changes on the round-trip and breaks the Ed25519 proof signed over it.
+    const s = buildApprovalSubject({ ...v, reduction_kgco2e: 3567.9 }, ev);
+    expect(s.reduction_tco2e).toBe(3.5679);
+    expect(String(s.reduction_tco2e)).toBe('3.5679');
+    // Survives the observed lossy layer: re-parsing at 15 significant digits
+    // must yield the identical float (what jsonb round-trips must preserve).
+    const n = s.reduction_tco2e as number;
+    expect(Number(n.toPrecision(15))).toBe(n);
+  });
 });
 
 describe('issueCredential', () => {

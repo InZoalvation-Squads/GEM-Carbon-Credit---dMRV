@@ -128,8 +128,24 @@ export interface PddYearlyTable {
 }
 
 /**
+ * Yearly kWh forecast exactly as the PEA/TGO appendix chains it: each year is
+ * ROUNDED to whole kWh, then the next year degrades from that rounded value
+ * (963,915 → 960,059 → … → 941,011; pure pow() drifts +1 kWh by year 5).
+ */
+export function generationForecast(gen1: number, degradationPct: number, years: number): number[] {
+  const d = degradationPct / 100;
+  const rows: number[] = [];
+  let g = Math.round(gen1);
+  for (let y = 1; y <= years; y++) {
+    if (y > 1) g = Math.round(g * (1 - d));
+    rows.push(g);
+  }
+  return rows;
+}
+
+/**
  * Crediting-period table exactly as the TGO form computes it:
- * gen_y = gen_1 × (1 − d)^(y−1); BE_y = gen_y × EF ÷ 1000 (2 dp);
+ * gen_y chained-rounded per generationForecast; BE_y = gen_y × EF ÷ 1000 (2 dp);
  * PE constant from the consumers table; ER_y = floor(BE_y − PE − LE) — the
  * form truncates yearly ER to whole tCO2e (448.59 → 448).
  */
@@ -137,14 +153,15 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const ef = gridFactor(ctx);
   if (ef === null) return null;
   const years = numOrNull(ctx.sectionData.crediting_years) ?? 7;
-  const d = (numOrNull(ctx.sectionData.degradation_pct) ?? 0) / 100;
+  const d = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
   const gen1 = year1GenerationKwh(ctx);
   const pe = round2((computeEcPj(ctx.sectionData.consumers) * ef) / 1000);
+  const gens = generationForecast(gen1, d, years);
   const rows: PddYearlyRow[] = [];
   for (let y = 1; y <= years; y++) {
-    const gen = gen1 * Math.pow(1 - d, y - 1);
+    const gen = gens[y - 1];
     const be = round2((gen * ef) / 1000);
-    rows.push({ year: y, generation_kwh: Math.round(gen), be, pe, le: 0, er: Math.floor(be - pe) });
+    rows.push({ year: y, generation_kwh: gen, be, pe, le: 0, er: Math.floor(be - pe) });
   }
   const totals = {
     be: round2(rows.reduce((a, r) => a + r.be, 0)),
@@ -154,6 +171,115 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   };
   const avg = { be: round2(totals.be / years), pe, le: 0, er: Math.round(totals.er / years) };
   return { rows, totals, avg, ef, years };
+}
+
+// ---------------------------------------------------------------------------
+// PEA-style financial evaluation (official-form appendix)
+// ---------------------------------------------------------------------------
+
+export interface FinancialRow {
+  year: number;                    // 0 = investment outlay
+  discount_factor: number;
+  generation_kwh: number | null;   // null for year 0
+  benefit_thb: number;             // generation × price (+ scrap in the final year)
+  cost_thb: number;                // investment at year 0, O&M afterwards
+  snpv_thb: number;                // (benefit − cost) × discount factor
+  cum_snpv_thb: number;
+}
+
+export interface FinancialTable {
+  rows: FinancialRow[];
+  investment_thb: number;
+  price_thb_kwh: number;
+  discount_rate_pct: number;
+  om_cost_thb_year: number;
+  om_start_year: number;
+  lifetime_years: number;
+  scrap_thb: number;
+  totals: { benefit_thb: number; cost_thb: number; npv_thb: number };
+  irr_pct: number | null;
+  payback_years: number | null;
+}
+
+// PEA solar-evaluation defaults (their standard sheet): 4.18 THB/kWh average
+// tariff, 7% discount rate, free O&M for the first 6 years then 1% of the
+// investment per year (300k THB on the 30M-THB MCRU sheet), 25-year plant
+// life, 5%-of-investment scrap value in the final year.
+const FIN_DEFAULTS = { price: 4.18, discount: 7, omPctOfInvestment: 1, omStart: 7, lifetime: 25, scrapPct: 5 };
+
+/** Internal-rate-of-return by bisection over the yearly net cash flows. */
+function irrFromFlows(flows: number[]): number | null {
+  const npvAt = (r: number) => flows.reduce((s, f, y) => s + f / Math.pow(1 + r, y), 0);
+  let lo = 1e-9, hi = 1;
+  if (npvAt(lo) < 0 || npvAt(hi) > 0) return null; // no sign change in (0, 100%]
+  for (let i = 0; i < 100; i++) {
+    const mid = (lo + hi) / 2;
+    if (npvAt(mid) > 0) lo = mid; else hi = mid;
+  }
+  return ((lo + hi) / 2) * 100;
+}
+
+/**
+ * The official-form financial appendix: 25-year discounted cash flow in the
+ * PEA evaluation format. Inputs come from section_data with PEA defaults for
+ * anything not provided; returns null without an investment figure or
+ * a usable year-1 generation estimate.
+ */
+export function computeFinancialTable(ctx: ComputeContext): FinancialTable | null {
+  const investMthb = numOrNull(ctx.sectionData.investment_mthb);
+  if (investMthb === null || investMthb <= 0) return null;
+  const gen1 = year1GenerationKwh(ctx);
+  if (!Number.isFinite(gen1) || gen1 <= 0) return null;
+
+  const investment = investMthb * 1_000_000;
+  const price = numOrNull(ctx.sectionData.elec_price_thb_kwh) ?? FIN_DEFAULTS.price;
+  const discountPct = numOrNull(ctx.sectionData.discount_rate_pct) ?? FIN_DEFAULTS.discount;
+  const om = numOrNull(ctx.sectionData.om_cost_thb_year)
+    ?? Math.round(investment * (FIN_DEFAULTS.omPctOfInvestment / 100));
+  const omStart = numOrNull(ctx.sectionData.om_start_year) ?? FIN_DEFAULTS.omStart;
+  const lifetime = numOrNull(ctx.sectionData.lifetime_years) ?? FIN_DEFAULTS.lifetime;
+  const scrap = numOrNull(ctx.sectionData.scrap_value_thb)
+    ?? Math.round(investment * (FIN_DEFAULTS.scrapPct / 100));
+  const degradation = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
+
+  const gens = generationForecast(gen1, degradation, lifetime);
+  const r = discountPct / 100;
+  const rows: FinancialRow[] = [{
+    year: 0, discount_factor: 1, generation_kwh: null,
+    benefit_thb: 0, cost_thb: investment, snpv_thb: -investment, cum_snpv_thb: -investment,
+  }];
+  let cum = -investment;
+  for (let y = 1; y <= lifetime; y++) {
+    const df = 1 / Math.pow(1 + r, y);
+    const gen = gens[y - 1];
+    const benefit = gen * price + (y === lifetime ? scrap : 0);
+    const cost = y >= omStart ? om : 0;
+    const snpv = (benefit - cost) * df;
+    cum += snpv;
+    rows.push({ year: y, discount_factor: df, generation_kwh: gen, benefit_thb: benefit, cost_thb: cost, snpv_thb: snpv, cum_snpv_thb: cum });
+  }
+
+  const flows = rows.map((row) => row.benefit_thb - row.cost_thb);
+  // Undiscounted payback, interpolated within the crossing year.
+  let payback: number | null = null;
+  let running = 0;
+  for (let y = 0; y < flows.length; y++) {
+    const next = running + flows[y];
+    if (running < 0 && next >= 0) { payback = y - 1 + -running / flows[y]; break; }
+    running = next;
+  }
+
+  return {
+    rows, investment_thb: investment, price_thb_kwh: price, discount_rate_pct: discountPct,
+    om_cost_thb_year: om, om_start_year: omStart, lifetime_years: lifetime, scrap_thb: scrap,
+    totals: {
+      benefit_thb: rows.reduce((s, row) => s + row.benefit_thb, 0),
+      cost_thb: rows.reduce((s, row) => s + row.cost_thb, 0),
+      npv_thb: cum,
+    },
+    irr_pct: irrFromFlows(flows),
+    payback_years: payback,
+  };
 }
 
 export interface DisclosureSplit {

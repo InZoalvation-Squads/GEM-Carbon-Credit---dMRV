@@ -33,20 +33,56 @@ const avgKwh = totalKwh / records.length;
 const year1 = Math.round(avgKwh * 365);
 console.log(`✅ real data ${records.length} วัน · เฉลี่ย ${avgKwh.toFixed(1)} kWh/วัน · ปีแรกประมาณ ${year1.toLocaleString()} kWh`);
 
-// upload the REAL generation data as supporting evidence for the VVB
-const csv = ['record_date,generation_kwh,source',
-  ...records.map((r) => `${r.record_date},${r.generation_kwh},${r.source}`)].join('\n');
+// upload the REAL generation data as supporting evidence for the VVB.
+// Evidence storage only accepts pdf/png/jpg/xlsx, so render the daily table
+// as a dependency-free PDF (base-14 Helvetica → ASCII content only).
+function makePdf(title, lines) {
+  const esc = (s) => s.replace(/[\\()]/g, (c) => `\\${c}`);
+  const pages = [];
+  for (let i = 0; i < lines.length; i += 58) pages.push(lines.slice(i, i + 58));
+  const objs = []; // 1-indexed bodies, object number = index + 1
+  const pageObjNums = pages.map((_, i) => 4 + i * 2);
+  objs.push(`<< /Type /Catalog /Pages 2 0 R >>`);
+  objs.push(`<< /Type /Pages /Kids [${pageObjNums.map((n) => `${n} 0 R`).join(' ')}] /Count ${pages.length} >>`);
+  objs.push(`<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>`);
+  pages.forEach((pageLines, i) => {
+    const rows = pageLines.map((l) => `(${esc(l)}) Tj T*`).join('\n');
+    const stream = `BT /F1 12 Tf 50 800 Td 14 TL (${esc(title)}${pages.length > 1 ? ` - page ${i + 1}/${pages.length}` : ''}) Tj T*\n/F1 9 Tf 11 TL\n${rows}\nET`;
+    objs.push(`<< /Type /Page /Parent 2 0 R /MediaBox [0 0 595 842] /Resources << /Font << /F1 3 0 R >> >> /Contents ${5 + i * 2} 0 R >>`);
+    objs.push(`<< /Length ${stream.length} >>\nstream\n${stream}\nendstream`);
+  });
+  let out = '%PDF-1.4\n';
+  const offsets = [];
+  objs.forEach((body, i) => {
+    offsets.push(out.length);
+    out += `${i + 1} 0 obj\n${body}\nendobj\n`;
+  });
+  const xref = out.length;
+  out += `xref\n0 ${objs.length + 1}\n0000000000 65535 f \n`;
+  out += offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('');
+  out += `trailer\n<< /Size ${objs.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF`;
+  return Buffer.from(out, 'latin1');
+}
+
+const tableLines = [
+  `Project: Trat Community College Solar Rooftop (${project.capacity_kwp} kWp)`,
+  `Source: automatic IoT sync (daily_plant_efficiency), 7% monitoring deduction applied`,
+  `Period: ${records[0].record_date} to ${records[records.length - 1].record_date} · ${records.length} days · total ${totalKwh.toFixed(2)} kWh`,
+  '',
+  'record_date        generation_kwh    source',
+  ...records.map((r) => `${r.record_date.padEnd(19)}${String(r.generation_kwh).padEnd(18)}${r.source}`),
+];
 const form = new FormData();
 form.append('category', 'supporting_evidence');
 form.append('description', `ข้อมูลผลิตไฟฟ้าจริงรายวันจากระบบ IoT (${records.length} วัน, หักตามแผน monitoring 7% แล้ว)`);
-form.append('file', new Blob([csv], { type: 'text/csv' }), 'trat-iot-generation.csv');
+form.append('file', new Blob([makePdf('Daily Generation Report - IoT Synced Data', tableLines)], { type: 'application/pdf' }), 'trat-iot-generation.pdf');
 const evRes = await fetch(`${API}/projects/${project.id}/evidence`, {
   method: 'POST', headers: { authorization: `Bearer ${owner}` }, body: form,
 });
 const evJson = await evRes.json();
-if (!evRes.ok) throw new Error(`evidence upload → ${evRes.status}`);
+if (!evRes.ok) throw new Error(`evidence upload → ${evRes.status}: ${JSON.stringify(evJson).slice(0, 200)}`);
 const ev = [evJson.evidence.id];
-console.log('✅ evidence: real IoT generation CSV');
+console.log('✅ evidence: real IoT generation PDF');
 
 const { pdd } = await call('POST', `/projects/${project.id}/pdd`, owner, { methodology_id: 'meth-tver-solar' });
 console.log('✅ pdd', pdd.id);

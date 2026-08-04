@@ -4,6 +4,8 @@ import { useStore } from '../../store';
 import { Menu, Bell, Moon, Globe, Check, ChevronDown, ShieldCheck, FolderKanban, Gauge, Settings, LogOut } from 'lucide-react';
 import type { UserRole } from '../../types';
 import { ROLE_LABEL } from '../../lib/labels';
+import { serverMode } from '../../lib/server-api';
+import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../data/accounts';
 import { toast } from './Toast';
 import clsx from 'clsx';
 
@@ -19,6 +21,7 @@ const ROLES: { value: UserRole; label: string; desc: string; icon: typeof Shield
 export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
   const user = useStore((s) => s.currentUser);
   const setRole = useStore((s) => s.setRole);
+  const login = useStore((s) => s.login);
   const logout = useStore((s) => s.logout);
   const navigate = useNavigate();
   const initials = user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -42,11 +45,23 @@ export function TopBar({ onOpenSidebar }: { onOpenSidebar: () => void }) {
 
   const current = ROLES.find((r) => r.value === user.role);
 
-  function pick(role: UserRole) {
+  async function pick(role: UserRole) {
     setOpen(false);
     if (role === user.role) return;
+    const label = ROLES.find((r) => r.value === role)?.label;
+    // Server mode: the API authorizes from the JWT, so flipping client state
+    // alone leaves the old role's token behind (every action would 403).
+    // Re-authenticate as the demo account that really holds the target role.
+    if (serverMode()) {
+      const demo = DEMO_ACCOUNTS.find((a) => a.role === role);
+      if (!demo) return;
+      const res = await login(demo.email, DEMO_PASSWORD);
+      if (res.ok) toast.info('Role switched', `Signed in as ${demo.name} — ${label}.`);
+      else toast.error('Role switch failed', res.error ?? 'Could not sign in to the demo account.');
+      return;
+    }
     setRole(role);
-    toast.info('Role switched', `You are now acting as ${ROLES.find((r) => r.value === role)?.label}.`);
+    toast.info('Role switched', `You are now acting as ${label}.`);
   }
 
   return (

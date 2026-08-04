@@ -184,11 +184,12 @@ describe('TverSF001Pdd — fallbacks', () => {
     expect(screen.getByText(/ยังคำนวณไม่ได้/)).toBeInTheDocument();
   });
 
-  it('empty consumers table hides the appendix page entirely', () => {
+  it('empty consumers table hides the electricity-consumers appendix page', () => {
     seedMcruData({ consumers: [] });
     renderDoc();
     expect(screen.queryByTestId('ecpj-total')).toBeNull();
-    expect(screen.queryByText(/ภาคผนวก/)).toBeNull();
+    // The forecast/financial appendix pages do not depend on consumers.
+    expect(screen.queryByText(/รายการอุปกรณ์ไฟฟ้าและประมาณการไฟฟ้า/)).toBeNull();
   });
 
   it('unknown pdd id renders the not-found empty state, not a crash', () => {
@@ -249,5 +250,63 @@ describe('TverSF001Pdd — evidence figures', () => {
     renderDoc();
     expect(screen.queryByText('ภาพประกอบการติดตั้ง')).toBeNull();
     expect(document.querySelector('figure')).toBeNull();
+  });
+});
+
+describe('TverSF001Pdd — reference-completeness additions', () => {
+  it('renders a table of contents page listing all four parts and the appendix', () => {
+    seedOfficialData();
+    renderDoc();
+    expect(screen.getByText('สารบัญ')).toBeInTheDocument();
+    const toc = screen.getByTestId('toc');
+    expect(toc.textContent).toContain('ส่วนที่ 1 รายละเอียดโครงการ');
+    expect(toc.textContent).toContain('ส่วนที่ 4 แผนการติดตามผลการดำเนินโครงการ');
+    expect(toc.textContent).toContain('ภาคผนวก');
+  });
+
+  it('renders the project-boundary diagram in 1.2 and reuses it as the monitoring measurement diagram', () => {
+    seedOfficialData();
+    renderDoc();
+    const diagrams = screen.getAllByTestId('boundary-diagram');
+    expect(diagrams.length).toBe(2); // รูปที่ 1 (section 1.2) + ผังจุดตรวจวัด (section 4.1)
+    expect(diagrams[0].textContent).toContain('มิเตอร์');
+    expect(diagrams[0].textContent).toContain('ระบบสายส่ง');
+    expect(screen.getByText(/รูปที่ 1 ขอบเขตของโครงการ/)).toBeInTheDocument();
+  });
+
+  it('renders the QA/QC data-flow diagram in section 4.1', () => {
+    seedOfficialData();
+    renderDoc();
+    const flow = screen.getByTestId('dataflow-diagram');
+    expect(flow.textContent).toContain('ทวนสอบ');
+    expect(screen.getByText(/แผนผังขั้นตอนการจัดเก็บข้อมูล/)).toBeInTheDocument();
+  });
+
+  it('renders the yearly generation forecast appendix matching the chained-rounded series', () => {
+    seedOfficialData();
+    renderDoc();
+    const t = screen.getByTestId('forecast-table');
+    expect(t.textContent).toContain('963,915');
+    expect(t.textContent).toContain('948,584'); // chained rounding (pow drifts to 948,585)
+    expect(t.textContent).toContain('6,666,972');
+    expect(t.textContent).toContain('952,425');
+  });
+
+  it('renders the PEA financial appendix with IRR and payback', () => {
+    seedOfficialData();
+    renderDoc();
+    const fin = screen.getByTestId('financial-table');
+    expect(fin).toBeInTheDocument();
+    expect(fin.textContent).toContain('30,000,000');           // investment outlay
+    expect(screen.getByTestId('financial-summary').textContent).toMatch(/ผลตอบแทน.*%/);
+    expect(screen.getByTestId('financial-summary').textContent).toMatch(/คุ้มทุน/);
+  });
+
+  it('omits the financial appendix when no investment figure exists', () => {
+    const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+    seedOfficialData();
+    delete pdd.section_data.investment_mthb;
+    renderDoc();
+    expect(screen.queryByTestId('financial-table')).toBeNull();
   });
 });

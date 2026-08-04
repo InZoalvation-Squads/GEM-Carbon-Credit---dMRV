@@ -1,4 +1,12 @@
-import { describe, it, expect, beforeEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+
+// Controllable server-mode switch: the Guardian banner renders live-chain
+// links only in server mode; everything else in this file runs local-mode.
+const serverModeRef = { value: false };
+vi.mock('../lib/server-api', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/server-api')>();
+  return { ...actual, serverMode: () => serverModeRef.value };
+});
 import { render, screen, fireEvent, within } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { Guardian } from './Guardian';
@@ -143,5 +151,58 @@ describe('ReviewDetail anchoring', () => {
     expect(screen.getByText(/Anchored on Hedera Guardian/i)).toBeInTheDocument();
     const banner = screen.getByText(/Anchored on Hedera Guardian/i).closest('div')!;
     expect(within(banner).queryByRole('button', { name: /Anchor to Hedera Guardian/i })).not.toBeInTheDocument();
+  });
+});
+
+describe('Guardian — project names instead of raw ids', () => {
+  it('credential registry shows the project name (id stays as secondary text)', () => {
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    // VR-1000 belongs to prj-0001 — the human-readable name must be visible.
+    expect(screen.getByText('Pune Rooftop Phase 1')).toBeInTheDocument();
+  });
+
+  it('token history shows the project name', () => {
+    useStore.getState().mintToken('urn:vc:vr1000seed');
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    expect(screen.getByText('Pune Rooftop Phase 1')).toBeInTheDocument();
+  });
+
+  it('trust chain token picker labels tokens with the project name', () => {
+    useStore.getState().mintToken('urn:vc:vr1000seed');
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+    expect(screen.getByRole('option', { name: /Pune Rooftop Phase 1/ })).toBeInTheDocument();
+  });
+});
+
+describe('Guardian — HashScan links target the right objects', () => {
+  it('a token row links to the TOKEN page even when the stored explorer_url is a topic (server-minted rows)', () => {
+    useStore.getState().mintToken('urn:vc:vr1000seed');
+    // Server-minted tokens store the project TOPIC as explorer_url — the row
+    // must still link to the token page derived from token_id.
+    useStore.setState((s) => ({
+      tokens: s.tokens.map((t) => ({
+        ...t,
+        token_id: '0.0.9918402',
+        hcs: { ...t.hcs, explorer_url: 'https://hashscan.io/testnet/topic/0.0.9917724' },
+      })),
+    }));
+    render(<MemoryRouter><Guardian /></MemoryRouter>);
+    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    const link = screen.getByRole('link', { name: /HashScan/i });
+    expect(link.getAttribute('href')).toBe('https://hashscan.io/testnet/token/0.0.9918402');
+  });
+
+  it('the header links the treasury account that holds every project token', () => {
+    serverModeRef.value = true;
+    try {
+      render(<MemoryRouter><Guardian /></MemoryRouter>);
+      expect(screen.getByRole('link', { name: /Treasury 0\.0\.9651712/ }))
+        .toHaveAttribute('href', 'https://hashscan.io/testnet/account/0.0.9651712');
+    } finally {
+      serverModeRef.value = false;
+    }
   });
 });

@@ -11,7 +11,12 @@ export function ValidationQueue() {
   const navigate = useNavigate();
   const queue = useStore((s) => s.validationQueue());
   const projects = useStore((s) => s.projects);
+  const methodologies = useStore((s) => s.methodologies);
   const projName = (id: string) => projects.find((p) => p.id === id)?.name ?? id;
+  const methLabel = (methodologyId: string, snapshot: string) => {
+    const m = methodologies.find((x) => x.id === methodologyId);
+    return m ? `${m.code} ${m.version}` : snapshot || '—';
+  };
 
   return (
     <div>
@@ -22,14 +27,18 @@ export function ValidationQueue() {
         ) : (
           <Table>
             <THead>
-              <TR><TH>PDD</TH><TH>Project</TH><TH>Methodology</TH><TH>State</TH><TH>Submitted</TH><TH>Validator</TH></TR>
+              <TR><TH>Project</TH><TH>Methodology</TH><TH>State</TH><TH>Submitted</TH><TH>Validator</TH></TR>
             </THead>
             <tbody>
               {queue.map((p) => (
                 <TR key={p.id} hover>
-                  <TD className="font-mono text-sm"><button className="text-brand-700 hover:underline" onClick={() => navigate(`/validation/${p.id}`)}>{p.id}</button></TD>
-                  <TD className="font-medium">{projName(p.project_id)}</TD>
-                  <TD>{p.methodology_snapshot || '—'}</TD>
+                  <TD>
+                    <button className="text-left" onClick={() => navigate(`/validation/${p.id}`)}>
+                      <div className="font-medium text-brand-700 hover:underline">{projName(p.project_id)}</div>
+                      <div className="font-mono text-[11px] text-ink-400">{p.id}</div>
+                    </button>
+                  </TD>
+                  <TD>{methLabel(p.methodology_id, p.methodology_snapshot)}</TD>
                   <TD><PddStatusBadge state={p.state} /></TD>
                   <TD>{p.submitted_at ? fmtDate(p.submitted_at.slice(0, 10)) : '—'}</TD>
                   <TD>{p.assigned_validator_name}</TD>

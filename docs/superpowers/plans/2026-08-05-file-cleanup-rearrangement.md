@@ -12,23 +12,23 @@
 
 ### Task 1: Move components into folders
 
-- [ ] Create `ui/`, `layout/`, `evidence/`, `project/`
-- [ ] `git mv` files per design spec
-- [ ] Fix cross-component relative imports inside moved files
+- [x] Create `ui/`, `layout/`, `evidence/`, `project/`
+- [x] `git mv` files per design spec
+- [x] Fix cross-component relative imports inside moved files
 
 ### Task 2: Update consumer imports
 
-- [ ] Update pages, layouts, lib, templates, and tests to new paths
+- [x] Update pages, layouts, lib, templates, and tests to new paths
 
 ### Task 3: Consolidate docs
 
-- [ ] `git mv` guides → `docs/guides/`
-- [ ] `git mv` reports → `docs/reports/`
-- [ ] `git mv` carbon-ready superpowers plans/specs into root `docs/superpowers/`
-- [ ] Update README / deploy doc pointers
-- [ ] Remove empty `carbon-ready/docs`
+- [x] `git mv` guides → `docs/guides/`
+- [x] `git mv` reports → `docs/reports/`
+- [x] `git mv` carbon-ready superpowers plans/specs into root `docs/superpowers/`
+- [x] Update README / deploy doc pointers
+- [x] Remove empty `carbon-ready/docs`
 
 ### Task 4: Verify
 
-- [ ] Run vitest in carbon-ready
-- [ ] Confirm folder layout matches design
+- [x] Run vitest in carbon-ready
+- [x] Confirm folder layout matches design

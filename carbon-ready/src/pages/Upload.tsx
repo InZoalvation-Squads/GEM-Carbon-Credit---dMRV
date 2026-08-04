@@ -13,6 +13,16 @@ import { api } from '../lib/api';
 import type { CsvValidationResult } from '../types';
 import { CheckCircle2, AlertTriangle } from 'lucide-react';
 
+// Row-rejection codes from lib/csv.ts explained in plain language — the code
+// itself stays visible (small) so support can still reference it.
+const REJECT_REASON: Record<string, string> = {
+  MISSING_DATE: 'Date is missing',
+  INVALID_DATE: 'Invalid date — use YYYY-MM-DD',
+  INVALID_NUMBER: 'Value is not a number',
+  NEGATIVE_VALUE: 'Negative values are not allowed',
+  DUPLICATE_DATE: 'This date was already uploaded',
+};
+
 export function UploadPage() {
   const projects = useStore((s) => s.projects);
   const records = useStore((s) => s.records);
@@ -39,11 +49,17 @@ export function UploadPage() {
     setSubmitted(null);
   };
 
+  const [confirming, setConfirming] = useState(false);
   const confirm = async () => {
     if (!pendingText || !projectId) return;
-    const result = await api.uploadMonitoringCsv(projectId, pendingText);
-    setSubmitted({ accepted: result.accepted.length, rejected: result.rejected.length });
-    setPreview(null); setPendingText(null);
+    setConfirming(true);
+    try {
+      const result = await api.uploadMonitoringCsv(projectId, pendingText);
+      setSubmitted({ accepted: result.accepted.length, rejected: result.rejected.length });
+      setPreview(null); setPendingText(null);
+    } finally {
+      setConfirming(false);
+    }
   };
 
   const reset = () => { setPreview(null); setPendingText(null); setSubmitted(null); };
@@ -74,23 +90,33 @@ export function UploadPage() {
                 <Badge tone={preview.rejected.length ? 'red' : 'gray'}><AlertTriangle size={12} /> {preview.rejected.length} rejected</Badge>
               </div>
               {preview.rejected.length > 0 && (
+                <>
                 <Table>
-                  <THead><TR><TH>Row</TH><TH>Code</TH><TH>Date</TH><TH>Value</TH></TR></THead>
+                  <THead><TR><TH>Row</TH><TH>Problem</TH><TH>Date</TH><TH>Value</TH></TR></THead>
                   <tbody>
                     {preview.rejected.slice(0, 50).map((r, i) => (
                       <TR key={i}>
                         <TD>{r.row}</TD>
-                        <TD className="font-mono text-xs">{r.code}</TD>
+                        <TD>
+                          <div className="text-ink-800">{REJECT_REASON[r.code] ?? r.code}</div>
+                          <div className="font-mono text-[11px] text-ink-400">{r.code}</div>
+                        </TD>
                         <TD>{r.date ?? '—'}</TD>
                         <TD>{r.value ?? '—'}</TD>
                       </TR>
                     ))}
                   </tbody>
                 </Table>
+                {preview.rejected.length > 50 && (
+                  <div className="mt-2 text-xs text-ink-400">
+                    Showing 50 of {preview.rejected.length} rejected rows — fix the issues above and re-upload to see the rest.
+                  </div>
+                )}
+                </>
               )}
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="secondary" onClick={reset}>Cancel</Button>
-                <Button onClick={confirm} disabled={preview.accepted.length === 0}>Confirm Upload {preview.accepted.length} rows</Button>
+                <Button onClick={confirm} loading={confirming} disabled={preview.accepted.length === 0}>Confirm Upload {preview.accepted.length} rows</Button>
               </div>
             </CardBody>
           </Card>
@@ -100,7 +126,7 @@ export function UploadPage() {
           <Card className="mb-4">
             <CardBody>
               <div className="text-sm">
-                <span className="font-medium">Upload complete.</span> {submitted.accepted} rows saved, {submitted.rejected} rejected.
+                <span className="font-medium">Upload complete.</span> {submitted.accepted.toLocaleString()} rows saved, {submitted.rejected.toLocaleString()} rejected.
               </div>
               <div className="mt-3"><Button variant="secondary" onClick={reset}>Upload another file</Button></div>
             </CardBody>

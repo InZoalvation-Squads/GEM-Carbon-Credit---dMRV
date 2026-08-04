@@ -7,6 +7,7 @@ import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { KpiCard } from '../components/ui/KpiCard';
 import { PageHeader } from '../components/layout/PageHeader';
 import { StatusBadge } from '../components/ui/StatusBadge';
+import { EmptyState } from '../components/ui/EmptyState';
 import { useStore } from '../store';
 import { RequestVerificationModal } from '../components/evidence/RequestVerificationModal';
 import { STATE_LABEL } from '../lib/labels';
@@ -80,7 +81,7 @@ export function Verifications() {
             <THead>
               <TR>
                 <TH>Package</TH>
-                <TH className="hidden md:table-cell">Project</TH>
+                <TH className="hidden md:table-cell">Owner</TH>
                 <TH>State</TH>
                 <TH className="hidden sm:table-cell text-right">Reduction</TH>
                 <TH>SLA</TH>
@@ -88,6 +89,11 @@ export function Verifications() {
               </TR>
             </THead>
             <tbody>
+              {rows.length === 0 && (
+                <tr><td colSpan={6} className="p-0">
+                  <EmptyState title="No packages match this filter" hint="Try another state chip above, or request a new verification from a registered project." />
+                </td></tr>
+              )}
               {rows.map((v) => {
                 const sla = v.locked_at ? null : slaDays(v.submitted_at);
                 const breached = sla != null && sla >= v.sla_target_days;
@@ -95,15 +101,15 @@ export function Verifications() {
                   <TR key={v.id} className="cursor-pointer hover:bg-brand-50/40" >
                     <TD>
                       <button onClick={() => navigate(`/verifications/${v.id}`)} className="text-left">
-                        <span className="font-mono text-xs font-semibold text-brand-700">{v.id}</span>
-                        <div className="font-medium text-ink-900">
+                        <div className="font-medium text-ink-900">{projectName.get(v.project_id) ?? v.project_id}</div>
+                        <div className="text-[12px] text-ink-500">
                           {fmtDate(v.monitoring_period_start)} – {fmtDate(v.monitoring_period_end)}
                         </div>
+                        <span className="font-mono text-[11px] text-ink-400">{v.id}</span>
                       </button>
                     </TD>
                     <TD className="hidden md:table-cell">
-                      <div className="font-medium text-ink-900">{projectName.get(v.project_id) ?? v.project_id}</div>
-                      <div className="text-[12px] text-ink-500">{v.owner_name}</div>
+                      <div className="text-ink-700">{v.owner_name}</div>
                     </TD>
                     <TD><StatusBadge state={v.state} /></TD>
                     <TD className="hidden sm:table-cell text-right font-medium">{formatTco2e(v.reduction_kgco2e)}</TD>
@@ -111,7 +117,7 @@ export function Verifications() {
                       {sla == null ? (
                         <span className="text-ink-300">—</span>
                       ) : (
-                        <span className={breached ? 'font-medium text-red-600' : 'text-ink-600'}>{sla}d / {v.sla_target_days}d</span>
+                        <span className={breached ? 'font-medium text-red-600' : 'text-ink-600'}>{sla}d <span className="text-ink-400">/ target {v.sla_target_days}d</span></span>
                       )}
                     </TD>
                     <TD className="text-right">

@@ -8,8 +8,11 @@ import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Textarea } from '../components/ui/Textarea';
 import { PddStatusBadge } from '../components/ui/StatusBadge';
+import { toast } from '../components/layout/Toast';
 import { EmptyState } from '../components/ui/EmptyState';
 import { isFieldVisible, resolveComputed, validatePdd } from '../lib/pdd';
+import { ROLE_LABEL } from '../lib/labels';
+import { fmtDateTime } from '../lib/date';
 import type { PddComputedSource } from '../types';
 
 export function ValidationDetail() {
@@ -21,6 +24,13 @@ export function ValidationDetail() {
   const factors = useStore((s) => s.factors);
   const comments = useStore((s) => s.comments.filter((c) => c.verification_id === pddId));
   const [note, setNote] = useState('');
+  // Approve/reject/revision are one-shot regulatory actions — lock the
+  // buttons while a request is in flight.
+  const [busy, setBusy] = useState<null | 'start' | 'approve' | 'revise' | 'reject' | 'comment'>(null);
+  async function track(key: NonNullable<typeof busy>, fn: () => Promise<void>) {
+    setBusy(key);
+    try { await fn(); } finally { setBusy(null); }
+  }
 
   if (!pdd || !methodology || !project) return <EmptyState title="PDD not found" hint="This validation item does not exist." />;
   const ctx = { project, factors, sectionData: pdd.section_data };
@@ -35,20 +45,25 @@ export function ValidationDetail() {
     return String(v);
   }
 
-  async function start() { await api.startValidation(pdd!.id); }
-  async function approve() { const ok = await api.registerProject(pdd!.id); if (ok) navigate('/validation'); }
-  async function revise() { if (!note.trim()) return; await api.requestPddRevision(pdd!.id, note.trim()); navigate('/validation'); }
-  async function reject() { if (!note.trim()) return; await api.rejectPdd(pdd!.id, note.trim()); navigate('/validation'); }
-  async function comment() { if (!note.trim()) return; await api.addPddComment(pdd!.id, note.trim()); setNote(''); }
+  // Surface server rejections (403 role mismatch, expired session, …) —
+  // an unhandled rejection here looks like a dead button to the VVB.
+  function fail(err: unknown) {
+    toast.error('Action failed', err instanceof Error ? err.message : 'The server rejected the request.');
+  }
+  const start = () => track('start', async () => { try { await api.startValidation(pdd!.id); } catch (err) { fail(err); } });
+  const approve = () => track('approve', async () => { const ok = await api.registerProject(pdd!.id); if (ok) navigate('/validation'); });
+  const revise = () => track('revise', async () => { if (!note.trim()) return; try { await api.requestPddRevision(pdd!.id, note.trim()); navigate('/validation'); } catch (err) { fail(err); } });
+  const reject = () => track('reject', async () => { if (!note.trim()) return; try { await api.rejectPdd(pdd!.id, note.trim()); navigate('/validation'); } catch (err) { fail(err); } });
+  const comment = () => track('comment', async () => { if (!note.trim()) return; try { await api.addPddComment(pdd!.id, note.trim()); setNote(''); } catch (err) { fail(err); } });
 
   return (
     <div>
-      <PageHeader title={`Validate ${pdd.id}`} subtitle={`${project.name} · ${methodology.code} ${methodology.version}`}
+      <PageHeader title={`Validate ${project.name}`} subtitle={`${pdd.id} · ${methodology.code} ${methodology.version}`}
         action={<Link to={`/registration/${pdd.id}/document`}><Button variant="ghost"><FileText size={16} /> Full document</Button></Link>} />
 
       <div className="mb-4 flex items-center gap-3">
         <PddStatusBadge state={pdd.state} />
-        {pdd.state === 'submitted' && <Button onClick={start}>Start validation</Button>}
+        {pdd.state === 'submitted' && <Button onClick={start} loading={busy === 'start'}>Start validation</Button>}
       </div>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-3">
@@ -88,17 +103,21 @@ export function ValidationDetail() {
               {comments.length === 0 && <p className="text-sm text-ink-400">No comments yet.</p>}
               {comments.map((c) => (
                 <div key={c.id} className="rounded-lg bg-ink-50 p-2 text-sm">
-                  <div className="text-xs text-ink-500">{c.author_name} · {c.author_role}</div>
-                  <div className="text-ink-800">{c.body}</div>
+                  <div className="flex flex-wrap items-center gap-1.5 text-xs text-ink-500">
+                    <span className="font-medium text-ink-700">{c.author_name}</span>
+                    <span>· {ROLE_LABEL[c.author_role]}</span>
+                    <span className="text-ink-400">· {fmtDateTime(c.created_at)}</span>
+                  </div>
+                  <div className="mt-0.5 text-ink-800">{c.body}</div>
                 </div>
               ))}
             </div>
             <Textarea placeholder="Add a note, request, or rejection reason…" value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="mt-2 flex flex-wrap gap-2">
-              <Button variant="ghost" onClick={comment} disabled={!note.trim()}>Comment</Button>
-              {canAct && <Button onClick={approve} disabled={!check.ok}>Approve → Register</Button>}
-              {canAct && <Button variant="ghost" onClick={revise} disabled={!note.trim()}>Request revision</Button>}
-              {canAct && <Button variant="ghost" onClick={reject} disabled={!note.trim()}>Reject</Button>}
+              <Button variant="ghost" onClick={comment} disabled={!note.trim()} loading={busy === 'comment'}>Comment</Button>
+              {canAct && <Button onClick={approve} disabled={!check.ok} loading={busy === 'approve'}>Approve → Register</Button>}
+              {canAct && <Button variant="ghost" onClick={revise} disabled={!note.trim()} loading={busy === 'revise'}>Request revision</Button>}
+              {canAct && <Button variant="ghost" onClick={reject} disabled={!note.trim()} loading={busy === 'reject'}>Reject</Button>}
             </div>
             {!check.ok && canAct && <p className="mt-2 text-xs text-ink-400">Approve is disabled until all required fields are complete.</p>}
           </Card>

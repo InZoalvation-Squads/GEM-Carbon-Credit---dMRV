@@ -6,6 +6,7 @@ import { DailyGenerationChart } from '../components/charts/DailyGenerationChart'
 import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
 import { useDashboardSummary } from '../store/selectors';
 import { useStore } from '../store';
+import { ACTION_LABEL } from '../lib/labels';
 import { formatKwh, formatNumber } from '../lib/format';
 import { fmtDateTime } from '../lib/date';
 import { Zap, Leaf, FolderKanban, Clock, Activity } from 'lucide-react';
@@ -56,8 +57,8 @@ export function Dashboard() {
                 {audit.map((a) => (
                   <li key={a.id} className="relative pl-6">
                     <span className="absolute left-0 top-1 h-2.5 w-2.5 rounded-full bg-brand-500 ring-4 ring-brand-50" />
-                    <div className="text-sm font-medium capitalize text-ink-900">
-                      {a.action.replace(/_/g, ' ').toLowerCase()}
+                    <div className="text-sm font-medium text-ink-900">
+                      {ACTION_LABEL[a.action] ?? a.action}
                     </div>
                     <div className="mt-0.5 text-xs text-ink-400">{fmtDateTime(a.created_at)}</div>
                   </li>

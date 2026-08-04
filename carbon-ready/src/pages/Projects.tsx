@@ -14,6 +14,8 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { api } from '../lib/api';
 import { useStore } from '../store';
 import { fmtDate } from '../lib/date';
+import { formatNumber } from '../lib/format';
+import { PROJECT_STATUS_LABEL } from '../lib/labels';
 import type { Project, ProjectStatus } from '../types';
 
 const STATUSES: ProjectStatus[] = ['draft', 'active', 'suspended', 'retired'];
@@ -48,7 +50,7 @@ export function Projects() {
         <Input placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} />
         <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as ProjectStatus | '')}>
           <option value="">All statuses</option>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>)}
         </Select>
       </Card>
 
@@ -71,7 +73,7 @@ export function Projects() {
                   <TR key={p.id}>
                     <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-brand-700">{p.name}</Link></TD>
                     <TD>{p.location}</TD>
-                    <TD className="text-right">{p.capacity_kwp} kWp</TD>
+                    <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
                     <TD><StatusBadge status={p.status} /></TD>
                     <TD>{fmtDate(p.commission_date)}</TD>
                     <TD>{lu ? fmtDate(lu.slice(0, 10)) : '—'}</TD>
@@ -96,7 +98,7 @@ export function Projects() {
 
 function StatusBadge({ status }: { status: ProjectStatus }) {
   const tone = status === 'active' ? 'green' : status === 'draft' ? 'gray' : status === 'suspended' ? 'amber' : 'red';
-  return <Badge tone={tone as 'green' | 'gray' | 'amber' | 'red'}>{status}</Badge>;
+  return <Badge tone={tone as 'green' | 'gray' | 'amber' | 'red'}>{PROJECT_STATUS_LABEL[status]}</Badge>;
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -104,6 +106,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     name: '', location: '', capacity_kwp: '', commission_date: new Date().toISOString().slice(0, 10), status: 'draft' as ProjectStatus,
   });
   const [errors, setErrors] = useState<Record<string, string>>({});
+  const [busy, setBusy] = useState(false);
   const submit = async () => {
     const errs: Record<string, string> = {};
     if (!form.name.trim()) errs.name = 'Required';
@@ -112,11 +115,16 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
     const cap = Number(form.capacity_kwp);
     if (form.capacity_kwp === '' || Number.isNaN(cap) || cap < 0) errs.capacity_kwp = 'Must be ≥ 0';
     if (Object.keys(errs).length) { setErrors(errs); return; }
-    await api.createProject({
-      name: form.name.trim(), location: form.location.trim(), capacity_kwp: cap,
-      commission_date: form.commission_date, status: form.status,
-    });
-    onClose();
+    setBusy(true);
+    try {
+      await api.createProject({
+        name: form.name.trim(), location: form.location.trim(), capacity_kwp: cap,
+        commission_date: form.commission_date, status: form.status,
+      });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <Modal open onClose={onClose} title="New Project">
@@ -127,11 +135,11 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         <p className="-mt-2 text-xs text-ink-400">Use 0 for land-based projects (forestry, ARR) with no installed capacity.</p>
         <Input label="Commission Date" type="date" value={form.commission_date} onChange={(e) => setForm({ ...form, commission_date: e.target.value })} />
         <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>)}
         </Select>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit}>Create Project</Button>
+          <Button onClick={submit} loading={busy}>Create Project</Button>
         </div>
       </div>
     </Modal>
@@ -144,12 +152,18 @@ function EditProjectDrawer({ project, onClose }: { project: Project; onClose: ()
     capacity_kwp: String(project.capacity_kwp),
     commission_date: project.commission_date, status: project.status,
   });
+  const [busy, setBusy] = useState(false);
   const submit = async () => {
-    await api.updateProject(project.id, {
-      name: form.name.trim(), location: form.location.trim(),
-      capacity_kwp: Number(form.capacity_kwp), commission_date: form.commission_date, status: form.status,
-    });
-    onClose();
+    setBusy(true);
+    try {
+      await api.updateProject(project.id, {
+        name: form.name.trim(), location: form.location.trim(),
+        capacity_kwp: Number(form.capacity_kwp), commission_date: form.commission_date, status: form.status,
+      });
+      onClose();
+    } finally {
+      setBusy(false);
+    }
   };
   return (
     <Drawer open onClose={onClose} title={`Edit ${project.name}`}>
@@ -159,11 +173,11 @@ function EditProjectDrawer({ project, onClose }: { project: Project; onClose: ()
         <Input label="Capacity (kWp)" type="number" inputMode="decimal" value={form.capacity_kwp} onChange={(e) => setForm({ ...form, capacity_kwp: e.target.value })} />
         <Input label="Commission Date" type="date" value={form.commission_date} onChange={(e) => setForm({ ...form, commission_date: e.target.value })} />
         <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}>
-          {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          {STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>)}
         </Select>
         <div className="flex justify-end gap-2 pt-2">
           <Button variant="secondary" onClick={onClose}>Cancel</Button>
-          <Button onClick={submit}>Save Changes</Button>
+          <Button onClick={submit} loading={busy}>Save Changes</Button>
         </div>
       </div>
     </Drawer>

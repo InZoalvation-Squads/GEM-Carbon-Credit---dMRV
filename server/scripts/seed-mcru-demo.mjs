@@ -121,7 +121,7 @@ const section_data = {
     { equipment: 'Water Pump', rated_w: 2300, hours_per_year: 10, note: 'ล้างแผง 1 ครั้ง/ปี ครั้งละ 10 ชั่วโมง' },
     { equipment: 'Television 1 เครื่อง', note: 'ไม่ได้เปิดใช้งาน' },
     { equipment: 'Air Conditioner 2 เครื่อง', note: 'ไม่ได้เปิดใช้งาน' },
-    { equipment: 'Inverter (Standby Mode)', kwh_year: 610, note: 'คิดที่ 19 ชั่วโมง/วัน (non sun peak hour)' },
+    { equipment: 'Inverter (Standby Mode)', kwh_year: 610.28, note: 'คิดที่ 19 ชั่วโมง/วัน (non sun peak hour)' }, // 610.28 → EC_PJ 5,801.68 exactly as the printed MCRU reference
   ],
   // ---- monitoring_plan ----
   monitored_parameter: 'EG_Consumer,PJ,y',
