@@ -48,6 +48,8 @@ export interface PddFieldSchema {
   source?: PddComputedSource;  // for 'computed'
   sensitive?: boolean;         // selective disclosure: published only as a hash
   columns?: PddTableColumn[];  // for 'table' — value is Array<Record<column.key, string|number>>
+  defaultValue?: unknown;      // methodology-standard value seeded into a brand-new PDD
+  siteSpecific?: boolean;      // per-site fact — never carried over when cloning another PDD
 }
 
 export interface PddSectionSchema {

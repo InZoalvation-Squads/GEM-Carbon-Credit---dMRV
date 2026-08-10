@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import { buildDefaults, cloneableData, buildPrefill } from './pdd-prefill';
 import type { Methodology, PddFieldSchema } from '../types';
+import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
 
 /** Minimal methodology fixture — only what prefill logic reads. */
 function meth(fields: PddFieldSchema[]): Methodology {
@@ -83,5 +84,36 @@ describe('buildPrefill', () => {
     ]);
     expect(buildPrefill(m2, { tech: 'B' })).toEqual({ tech: 'B', freq: 'M' });
     expect(buildPrefill(m2)).toEqual({ tech: 'A', freq: 'M' });
+  });
+});
+
+describe('TVER solar methodology prefill data', () => {
+  it('buildDefaults seeds exactly the 9 standard values', () => {
+    expect(buildDefaults(TVER_SOLAR_METHODOLOGY)).toEqual({
+      technology: 'Solar PV rooftop',
+      grid_connection: 'Grid-connected',
+      crediting_years: '7',
+      registered_elsewhere: 'ไม่มี',
+      degradation_pct: 0.4,
+      monitored_parameter: 'EG_PJ — net electricity supplied to the grid',
+      measurement_method: 'Revenue-grade bi-directional meter',
+      monitoring_frequency: 'Monthly',
+      baseline_scenario: 'Grid electricity displaced by solar generation', // single-option rule
+    });
+  });
+
+  it('site-specific facts never survive a clone', () => {
+    const SITE_KEYS = [
+      'project_title_th', 'project_title_en', 'project_address', 'permit_no',
+      'permit_date', 'investment_mthb', 'project_scale', 'crediting_start',
+      'doc_completed_date', 'doc_revision', 'installations', 'year1_generation_kwh',
+    ];
+    const source: Record<string, unknown> = Object.fromEntries(SITE_KEYS.map((k) => [k, 'some-value']));
+    source.preparer_name = 'สมชาย';
+    source.equipment_specs = [{ item: 'แผง', brand: 'X', model: 'Y', spec: '600W', qty: 100 }];
+    const cloned = cloneableData(TVER_SOLAR_METHODOLOGY, source);
+    for (const k of SITE_KEYS) expect(cloned, k).not.toHaveProperty(k);
+    expect(cloned.preparer_name).toBe('สมชาย');           // people carry over
+    expect(cloned.equipment_specs).toEqual(source.equipment_specs); // fleet shares equipment models
   });
 });
