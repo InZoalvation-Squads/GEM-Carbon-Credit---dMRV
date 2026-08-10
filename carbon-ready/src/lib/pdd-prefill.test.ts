@@ -1,9 +1,9 @@
 import { describe, it, expect } from 'vitest';
 import { buildDefaults } from './pdd-prefill';
-import type { Methodology } from '../types';
+import type { Methodology, PddFieldSchema } from '../types';
 
 /** Minimal methodology fixture — only what prefill logic reads. */
-function meth(fields: Methodology['pdd_sections'][0]['fields']): Methodology {
+function meth(fields: PddFieldSchema[]): Methodology {
   return {
     id: 'meth-test', code: 'TEST-01', name: 'Test', standard: 'T-VER', version: 'v1',
     sectoral_scope: 'Energy', status: 'active',

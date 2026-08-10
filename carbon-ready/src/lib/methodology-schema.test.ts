@@ -119,3 +119,40 @@ describe('schema v2 — table fields & document_template', () => {
     expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
   });
 });
+
+describe('schema v2 — defaultValue & siteSpecific', () => {
+  const baseDoc = () => JSON.parse(methodologyToJson(seedMethodologies[0]));
+
+  it('round-trips a field with both new flags', () => {
+    const doc = baseDoc();
+    doc.pdd_sections[0].fields.push({
+      key: 'test_default_field', label: 'Default field', type: 'number', required: false,
+      defaultValue: 0.8, siteSpecific: true,
+    });
+    const res = parseMethodologyJson(JSON.stringify(doc));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+    if (res.ok) {
+      const f = res.methodology.pdd_sections.flatMap((s) => s.fields).find((f) => f.key === 'test_default_field');
+      expect(f?.defaultValue).toBe(0.8);
+      expect(f?.siteSpecific).toBe(true);
+    }
+  });
+
+  it('rejects defaultValue on a computed field', () => {
+    const doc = baseDoc();
+    doc.pdd_sections[0].fields.push({
+      key: 't', label: 'T', type: 'computed', required: false, source: 'capacity_kwp',
+      defaultValue: 5,
+    });
+    expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
+  });
+
+  it('rejects a select defaultValue not present in options', () => {
+    const doc = baseDoc();
+    doc.pdd_sections[0].fields.push({
+      key: 't', label: 'T', type: 'select', required: false, options: ['a', 'b'],
+      defaultValue: 'c',
+    });
+    expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
+  });
+});

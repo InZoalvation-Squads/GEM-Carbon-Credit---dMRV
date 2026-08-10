@@ -56,6 +56,8 @@ const PddFieldSchema = z.strictObject({
   source: z.enum(PDD_COMPUTED_SOURCES).optional(),
   sensitive: z.boolean().optional(),
   columns: z.array(PddTableColumnSchema).min(1).optional(),
+  defaultValue: z.unknown().optional(),
+  siteSpecific: z.boolean().optional(),
 });
 
 const PddSectionSchema = z.strictObject({
@@ -172,6 +174,12 @@ const MethodologyDocSchema = z.strictObject({
       }
       if (f.showIf && !fieldKeys.has(f.showIf.field)) {
         ctx.addIssue({ code: 'custom', path: [...path, 'showIf', 'field'], message: `showIf on "${f.key}" references unknown field "${f.showIf.field}"` });
+      }
+      if (f.type === 'computed' && f.defaultValue !== undefined) {
+        ctx.addIssue({ code: 'custom', path: [...path, 'defaultValue'], message: `computed field "${f.key}" must not declare a defaultValue (it would be silently ignored)` });
+      }
+      if (f.type === 'select' && f.defaultValue !== undefined && !(f.options ?? []).includes(f.defaultValue as string)) {
+        ctx.addIssue({ code: 'custom', path: [...path, 'defaultValue'], message: `select field "${f.key}" defaultValue must be one of its options` });
       }
     });
   });
