@@ -140,3 +140,64 @@ describe('table field editor', () => {
     expect(screen.getByDisplayValue('อาคาร 1')).toBeInTheDocument();
   });
 });
+
+describe('PDD editor — draft boilerplate for activity fields', () => {
+  it('fills after_project with TGO-style text composed from project data', async () => {
+    const { useStore } = await import('../store');
+    // PDD-2000 (Pune Rooftop, solar) — flip to draft so the wizard is editable.
+    useStore.setState((st) => ({
+      pdds: st.pdds.map((p) => (p.id === 'PDD-2000' ? { ...p, state: 'draft' as const } : p)),
+      projects: st.projects.map((p) => (p.id === 'prj-0001' ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)),
+    }));
+    render(
+      <MemoryRouter initialEntries={['/registration/PDD-2000']}>
+        <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
+      </MemoryRouter>,
+    );
+    // jump straight to the section that carries the activity textareas
+    fireEvent.click(screen.getByRole('button', { name: /^A\.$/ })); // step chips show the title's first word
+    void useStore;
+    const buttons = screen.getAllByText(/ร่างข้อความให้จากข้อมูลโครงการ/);
+    expect(buttons.length).toBe(2); // before_project + after_project
+    fireEvent.click(buttons[1]); // after_project is the later field
+    const areas = Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n');
+    expect(areas).toContain('ขนาดติดตั้ง'); // ¶2 installation facts
+    expect(areas).toContain('AEDP2015');   // ¶1 policy boilerplate
+    expect(areas).toContain('การไฟฟ้าส่วนภูมิภาค'); // non-MEA address → PEA default
+
+  });
+});
+
+describe('PDD editor — auto-save', () => {
+  it('saves the draft automatically after the user stops typing, with no Save-draft button', async () => {
+    const { api } = await import('../lib/api');
+    const { vi } = await import('vitest');
+    const { act } = await import('@testing-library/react');
+    const spy = vi.spyOn(api, 'savePddDraft').mockResolvedValue(undefined);
+    const { useStore } = await import('../store');
+    useStore.setState((st) => ({
+      pdds: st.pdds.map((p) => (p.id === 'PDD-2000' ? { ...p, state: 'draft' as const } : p)),
+      projects: st.projects.map((p) => (p.id === 'prj-0001' ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)),
+    }));
+    vi.useFakeTimers();
+    try {
+      render(
+        <MemoryRouter initialEntries={['/registration/PDD-2000']}>
+          <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
+        </MemoryRouter>,
+      );
+      expect(screen.queryByRole('button', { name: /Save draft/i })).toBeNull();
+      const area = document.querySelector('textarea')!;
+      fireEvent.change(area, { target: { value: 'แก้ไขข้อความทดสอบ' } });
+      expect(spy).not.toHaveBeenCalled(); // debounced — not on every keystroke
+      await act(async () => { await vi.advanceTimersByTimeAsync(2000); });
+      expect(spy).toHaveBeenCalledTimes(1);
+      // once saved and unchanged, no repeat save fires
+      await act(async () => { await vi.advanceTimersByTimeAsync(4000); });
+      expect(spy).toHaveBeenCalledTimes(1);
+    } finally {
+      vi.useRealTimers();
+      vi.restoreAllMocks();
+    }
+  });
+});

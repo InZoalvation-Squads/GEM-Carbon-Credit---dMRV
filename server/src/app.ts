@@ -79,7 +79,12 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
     app.decorate('prisma', prisma);
   }
 
-  await app.register(cors, { origin: config.CORS_ORIGIN });
+  // Default @fastify/cors only allows GET/HEAD/POST — the SPA also PUTs
+  // (PDD draft saves), PATCHes (project edits) and DELETEs from the browser.
+  await app.register(cors, {
+    origin: config.CORS_ORIGIN,
+    methods: ['GET', 'HEAD', 'POST', 'PUT', 'PATCH', 'DELETE'],
+  });
   // Registered globally but disabled by default; auth routes opt in with
   // route-level `config.rateLimit` (20/min per the design).
   await app.register(rateLimit, { global: false });

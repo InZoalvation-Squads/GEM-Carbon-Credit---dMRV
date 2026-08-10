@@ -59,3 +59,25 @@ describe('app scaffold', () => {
     expect(body.error.message).not.toContain('secret');
   });
 });
+
+describe('CORS — browser mutations beyond POST', () => {
+  let app: FastifyInstance;
+  beforeAll(async () => { app = await buildApp(); });
+  afterAll(async () => { await app.close(); });
+
+  it('preflight allows PUT (draft saves) and PATCH/DELETE', async () => {
+    const res = await app.inject({
+      method: 'OPTIONS',
+      url: '/api/v1/pdds/PDD-x/draft',
+      headers: {
+        origin: 'http://localhost:5173',
+        'access-control-request-method': 'PUT',
+      },
+    });
+    expect(res.statusCode).toBeLessThan(300);
+    const allowed = String(res.headers['access-control-allow-methods'] ?? '');
+    expect(allowed).toContain('PUT');
+    expect(allowed).toContain('PATCH');
+    expect(allowed).toContain('DELETE');
+  });
+});

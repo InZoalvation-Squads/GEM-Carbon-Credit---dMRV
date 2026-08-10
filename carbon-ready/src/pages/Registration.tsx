@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Check, Plus } from 'lucide-react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
@@ -12,6 +12,8 @@ import { Textarea } from '../components/ui/Textarea';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
+import { toast } from '../components/layout/Toast';
+import { draftableKeys, draftActivityText, type DraftableKey } from '../lib/pdd-drafts';
 import type { Methodology, PddFieldSchema, PddComputedSource, Project } from '../types';
 
 const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft'];
@@ -270,7 +272,42 @@ function PddEditor({ pddId }: { pddId: string }) {
   function setField(key: string, value: unknown) {
     setData((d) => ({ ...d, [key]: value }));
   }
-  async function save() { await api.savePddDraft(pddId, data, pdd.evidence_ids); }
+  // ---- Auto-save: debounce after the last edit; no manual Save-draft button. ----
+  const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
+  const lastSavedRef = useRef(JSON.stringify(pdd.section_data));
+  const dataRef = useRef(data);
+  dataRef.current = data;
+
+  async function save() {
+    await api.savePddDraft(pddId, dataRef.current, pdd.evidence_ids);
+    lastSavedRef.current = JSON.stringify(dataRef.current);
+  }
+
+  useEffect(() => {
+    if (readonly) return;
+    if (JSON.stringify(data) === lastSavedRef.current) return;
+    const t = setTimeout(async () => {
+      setSaveState('saving');
+      try {
+        await save();
+        setSaveState('saved');
+      } catch (err) {
+        setSaveState('error');
+        toast.error('บันทึกอัตโนมัติไม่สำเร็จ', err instanceof Error ? err.message : 'กด Next เพื่อลองบันทึกอีกครั้ง');
+      }
+    }, AUTOSAVE_MS);
+    return () => clearTimeout(t);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [data, readonly, pddId]);
+
+  // Leaving the editor mid-debounce still persists the last keystrokes.
+  useEffect(() => () => {
+    if (!readonly && JSON.stringify(dataRef.current) !== lastSavedRef.current) {
+      void api.savePddDraft(pddId, dataRef.current, pdd.evidence_ids);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
   async function next() { await save(); setStep((s) => Math.min(s + 1, sections.length)); }
   function back() { setStep((s) => Math.max(s - 1, 0)); }
 
@@ -311,11 +348,17 @@ function PddEditor({ pddId }: { pddId: string }) {
           {sections[step].fields.filter((f) => isFieldVisible(f, data)).map((f) => (
             <FieldInput key={f.key} field={f} value={data[f.key]} readonly={readonly}
               computed={f.type === 'computed' ? resolveComputed(f.source as PddComputedSource, ctx) : undefined}
+              onDraft={(draftableKeys as readonly string[]).includes(f.key)
+                ? () => draftActivityText(f.key as DraftableKey, project, data, factors)
+                : undefined}
               onChange={(v) => setField(f.key, v)} />
           ))}
           <div className="flex justify-between pt-2">
             <Button variant="ghost" onClick={back} disabled={step === 0}>← Back</Button>
-            <Button onClick={next}>Next →</Button>
+            <div className="flex items-center gap-3">
+              {!readonly && <AutoSaveStatus state={saveState} />}
+              <Button onClick={next}>Next →</Button>
+            </div>
           </div>
         </Card>
       )}
@@ -335,7 +378,10 @@ function PddEditor({ pddId }: { pddId: string }) {
           )}
           <div className="flex justify-between pt-2">
             <Button variant="ghost" onClick={() => navigate(`/registration/${pddId}/document`)}>Preview document</Button>
-            <Button disabled={!check.ok || readonly} onClick={submit}>Submit for validation</Button>
+            <div className="flex items-center gap-3">
+              {!readonly && <AutoSaveStatus state={saveState} />}
+              <Button disabled={!check.ok || readonly} onClick={submit}>Submit for validation</Button>
+            </div>
           </div>
         </Card>
       )}
@@ -343,8 +389,20 @@ function PddEditor({ pddId }: { pddId: string }) {
   );
 }
 
-function FieldInput({ field, value, computed, readonly, onChange }: {
-  field: PddFieldSchema; value: unknown; computed?: number | string | null; readonly: boolean; onChange: (v: unknown) => void;
+const AUTOSAVE_MS = 1500;
+
+function AutoSaveStatus({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
+  if (state === 'idle') return null;
+  const text = state === 'saving' ? 'กำลังบันทึก…' : state === 'saved' ? '✓ บันทึกอัตโนมัติแล้ว' : '⚠ บันทึกไม่สำเร็จ';
+  const tone = state === 'error' ? 'text-red-600' : state === 'saving' ? 'text-ink-400' : 'text-brand-700';
+  return <span aria-live="polite" className={`text-xs ${tone}`}>{text}</span>;
+}
+
+function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
+  field: PddFieldSchema; value: unknown; computed?: number | string | null; readonly: boolean;
+  onChange: (v: unknown) => void;
+  /** Compose a boilerplate draft for this field from data already in the form. */
+  onDraft?: () => string;
 }) {
   const labelText = `${field.label}${field.unit ? ` (${field.unit})` : ''}`;
 
@@ -368,7 +426,24 @@ function FieldInput({ field, value, computed, readonly, onChange }: {
 
   let control;
   if (field.type === 'textarea') {
-    control = <Textarea label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)} />;
+    const applyDraft = () => {
+      if (!onDraft) return;
+      const current = String(value ?? '').trim();
+      // Never silently destroy hand-written text.
+      if (current !== '' && !window.confirm('เขียนทับข้อความเดิมด้วยร่างมาตรฐาน?')) return;
+      onChange(onDraft());
+    };
+    control = (
+      <div>
+        <Textarea label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)} />
+        {onDraft && !readonly && (
+          <button type="button" onClick={applyDraft}
+            className="mt-1 text-xs font-medium text-brand-700 hover:underline">
+            ✨ ร่างข้อความให้จากข้อมูลโครงการ
+          </button>
+        )}
+      </div>
+    );
   } else if (field.type === 'select') {
     control = (
       <Select label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)}>

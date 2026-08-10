@@ -38,15 +38,22 @@ function Check({ on, children }: { on: boolean; children: ReactNode }) {
 }
 
 function HeaderBox() {
+  // Inline verticalAlign: the sheet-wide `.doc-table td { vertical-align: top }`
+  // outranks Tailwind's align-middle utility, so the logo/code/page cells pin
+  // their centering here. Page number comes from the `formpage` CSS counter.
+  const middle = { verticalAlign: 'middle' as const };
   return (
     <table className="doc-table mb-3 w-full">
       <tbody>
         <tr>
-          <td rowSpan={3} className="w-20 text-center align-middle">
+          <td rowSpan={3} className="w-20 text-center" style={middle}>
             <img src="/tgo-logo-notext.svg" alt="T-VER" className="mx-auto h-12 w-auto" />
           </td>
           <td>โครงการลดก๊าซเรือนกระจกภาคสมัครใจตามมาตรฐานของประเทศไทย</td>
-          <td rowSpan={2} className="w-40 text-center align-middle">{FORM_CODE}</td>
+          <td rowSpan={2} className="w-40 text-center" style={middle}>{FORM_CODE}</td>
+          <td rowSpan={3} className="w-[70px] p-1 text-center" style={middle}>
+            <span className="pageno">หน้า</span>
+          </td>
         </tr>
         <tr><td>Standard T-VER</td></tr>
         <tr>
@@ -346,7 +353,11 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 <td className="font-bold">พิกัดที่ตั้งโครงการ</td>
                 <td>
                   {installations.length === 0 ? '-' : installations.map((r, i) => (
-                    <div key={i}>{i + 1}. {String(r.building ?? '-')} {String(r.coordinates ?? '')}</div>
+                    // Reference layout: building name left, lat/long as a flush-right column.
+                    <div key={i} className="flex items-baseline justify-between gap-4">
+                      <span>{i + 1}. {String(r.building ?? '-')}</span>
+                      <span className="whitespace-nowrap text-right [font-variant-numeric:tabular-nums]">{String(r.coordinates ?? '')}</span>
+                    </div>
                   ))}
                 </td>
               </tr>
@@ -891,7 +902,12 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
       </div>
 
       <style>{`
-        .tver-doc { font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', 'Tahoma', sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; }
+        .tver-doc { font-family: 'Sarabun', 'Leelawadee UI', 'Thonburi', 'Tahoma', sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; counter-reset: formpage; }
+        /* Official-form page number: every .doc-page (cover included) advances the
+           counter, so the first header page reads "หน้า 2" like the TGO original. */
+        .tver-doc .doc-page { counter-increment: formpage; }
+        .tver-doc .pageno { display: block; background: #3f7ec1; color: #fff; font-weight: 700; text-align: center; padding: 7px 2px; }
+        .tver-doc .pageno::after { content: " " counter(formpage); }
         .tver-doc .doc-table { border-collapse: collapse; width: 100%; }
         .tver-doc .doc-table td, .tver-doc .doc-table th { border: 1px solid #333; padding: 4px 8px; vertical-align: top; }
         .tver-doc .page-frame { width: 100%; border-collapse: collapse; }
