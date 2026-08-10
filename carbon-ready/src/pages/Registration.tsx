@@ -12,6 +12,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
+import { buildPrefill } from '../lib/pdd-prefill';
 import { toast } from '../components/layout/Toast';
 import { draftableKeys, draftActivityText, type DraftableKey } from '../lib/pdd-drafts';
 import type { Methodology, PddFieldSchema, PddComputedSource, Project } from '../types';
@@ -130,6 +131,14 @@ function StartPddModal({ methodology, candidates, onClose }: {
   const [mode, setMode] = useState<'pick' | 'create'>(candidates.length === 0 ? 'create' : 'pick');
   const [projId, setProjId] = useState('');
   const [busy, setBusy] = useState(false);
+  const pdds = useStore((s) => s.pdds);
+  const allProjects = useStore((s) => s.projects);
+  const [cloneSourceId, setCloneSourceId] = useState('');
+  // PDDs of the same methodology that already hold data — usable as clone templates
+  // (registered ones included: a completed PDD is the best source).
+  const cloneSources = pdds
+    .filter((p) => p.methodology_id === methodology.id && Object.keys(p.section_data).length > 0)
+    .map((p) => ({ pdd: p, name: allProjects.find((x) => x.id === p.project_id)?.name ?? p.id }));
   const [form, setForm] = useState({
     name: '', location: '', capacity_kwp: landBased ? '0' : '',
     commission_date: new Date().toISOString().slice(0, 10),
@@ -138,6 +147,14 @@ function StartPddModal({ methodology, candidates, onClose }: {
 
   async function startWith(projectId: string) {
     const created = await api.selectMethodology(projectId, methodology.id);
+    // Seed only a brand-new (empty) PDD — re-entering an existing draft keeps its data.
+    if (Object.keys(created.section_data).length === 0) {
+      const source = pdds.find((p) => p.id === cloneSourceId);
+      const prefill = buildPrefill(methodology, source?.section_data);
+      if (Object.keys(prefill).length > 0) {
+        await api.savePddDraft(created.id, prefill, created.evidence_ids);
+      }
+    }
     navigate(`/registration/${created.id}`);
   }
 
@@ -164,6 +181,16 @@ function StartPddModal({ methodology, candidates, onClose }: {
     <Modal open onClose={onClose} title={`Start PDD — ${methodology.code}`}>
       <div className="space-y-4">
         <p className="text-[13px] text-ink-500">{methodology.name}</p>
+
+        {cloneSources.length > 0 && (
+          <Select label="คัดลอกข้อมูลจากโครงการก่อนหน้า (ไม่บังคับ)" value={cloneSourceId}
+            onChange={(e) => setCloneSourceId(e.target.value)}>
+            <option value="">— เริ่มจากค่ามาตรฐาน ไม่คัดลอก —</option>
+            {cloneSources.map((s) => (
+              <option key={s.pdd.id} value={s.pdd.id}>{s.name}</option>
+            ))}
+          </Select>
+        )}
 
         {mode === 'pick' ? (
           <>

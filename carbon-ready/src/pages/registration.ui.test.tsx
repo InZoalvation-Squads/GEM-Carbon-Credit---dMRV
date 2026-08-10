@@ -201,3 +201,66 @@ describe('PDD editor — auto-save', () => {
     }
   });
 });
+
+describe('New-PDD prefill & clone-from-previous', () => {
+  function renderEntry() {
+    return render(
+      <MemoryRouter initialEntries={['/registration']}>
+        <Routes>
+          <Route path="/registration" element={<Registration />} />
+          <Route path="/registration/:pddId" element={<Registration />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+  }
+
+  it('seeds methodology-standard defaults into a fresh solar PDD', async () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ทดสอบดีฟอลต์' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Khon Kaen, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '100' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start PDD/ }));
+    await screen.findByText(/Register: โซลาร์ทดสอบดีฟอลต์/);
+
+    const st = useStore.getState();
+    const project = st.projects.find((p) => p.name === 'โซลาร์ทดสอบดีฟอลต์')!;
+    const pdd = st.pdds.find((d) => d.project_id === project.id)!;
+    expect(pdd.section_data.technology).toBe('Solar PV rooftop');
+    expect(pdd.section_data.baseline_scenario).toBe('Grid electricity displaced by solar generation');
+    expect(pdd.section_data.registered_elsewhere).toBe('ไม่มี');
+    expect(pdd.section_data.monitoring_frequency).toBe('Monthly');
+    expect(pdd.section_data.project_title_th).toBeUndefined(); // ไม่มีการเดา fact เฉพาะไซต์
+  });
+
+  it('clone: carries shared fields, blanks site-specific and draftable ones', async () => {
+    // source: draft solar PDD ของ prj-0004 พร้อมข้อมูล
+    const src = useStore.getState().selectMethodology('prj-0004', 'meth-tver-solar');
+    useStore.getState().savePddDraft(src.id, {
+      preparer_name: 'สมชาย ทดสอบ',
+      project_title_th: 'ไซต์เก่า',
+      before_project: 'ข้อความของไซต์เก่า',
+    }, []);
+
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    // เลือกแหล่ง clone (select โผล่เพราะมี PDD solar ที่มีข้อมูลอยู่)
+    fireEvent.change(screen.getByLabelText(/คัดลอกข้อมูลจากโครงการก่อนหน้า/), { target: { value: src.id } });
+    // prj-0004 มี draft solar อยู่ → modal เปิดโหมด pick; สลับไปฟอร์มสร้างโปรเจกต์ใหม่ก่อน
+    fireEvent.click(screen.getByRole('button', { name: /Create a new project/ }));
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ทดสอบโคลน' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Rayong, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '250' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start PDD/ }));
+    await screen.findByText(/Register: โซลาร์ทดสอบโคลน/);
+
+    const st = useStore.getState();
+    const project = st.projects.find((p) => p.name === 'โซลาร์ทดสอบโคลน')!;
+    const pdd = st.pdds.find((d) => d.project_id === project.id)!;
+    expect(pdd.section_data.preparer_name).toBe('สมชาย ทดสอบ');   // ติดมา
+    expect(pdd.section_data.project_title_th).toBeUndefined();      // siteSpecific → ว่าง
+    expect(pdd.section_data.before_project).toBeUndefined();        // draftable → ว่าง (ให้กด ✨ ร่างใหม่)
+    expect(pdd.section_data.technology).toBe('Solar PV rooftop');   // defaults ยังเติมส่วนที่ clone ไม่มี
+    expect(pdd.evidence_ids).toEqual([]);                           // evidence ไม่ copy
+  });
+});
