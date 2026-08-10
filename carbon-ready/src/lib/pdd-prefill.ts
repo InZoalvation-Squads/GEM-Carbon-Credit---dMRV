@@ -34,8 +34,12 @@ export function cloneableData(m: Methodology, source: Record<string, unknown>): 
       if (f.type === 'computed' || f.siteSpecific) continue;
       if ((draftableKeys as readonly string[]).includes(f.key)) continue;
       const v = source[f.key];
-      if (v === undefined || v === null || v === '') continue;
-      out[f.key] = v;
+      const empty = v === undefined || v === null || v === ''
+        || (Array.isArray(v) && v.length === 0);
+      if (empty) continue;
+      // Deep-copy so the clone owns its data: mutating a cloned table row must
+      // never reach back into the source project's PDD (audit-trail integrity).
+      out[f.key] = structuredClone(v);
     }
   }
   return out;

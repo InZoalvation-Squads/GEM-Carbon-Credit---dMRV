@@ -59,6 +59,20 @@ describe('cloneableData', () => {
     };
     expect(cloneableData(m, source)).toEqual({ preparer_name: 'สมชาย' });
   });
+
+  it('deep-copies a non-empty table value and drops an empty one', () => {
+    const mt = meth([
+      { key: 'tbl', label: 'Table', type: 'table', required: false, columns: [{ key: 'name', label: 'Name', type: 'text' }] },
+      { key: 'empty_tbl', label: 'Empty Table', type: 'table', required: false, columns: [{ key: 'name', label: 'Name', type: 'text' }] },
+    ]);
+    const source = {
+      tbl: [{ name: 'row1' }],
+      empty_tbl: [],
+    };
+    const out = cloneableData(mt, source);
+    expect(out).toEqual({ tbl: [{ name: 'row1' }] });
+    expect(out.tbl).not.toBe(source.tbl);
+  });
 });
 
 describe('buildPrefill', () => {
