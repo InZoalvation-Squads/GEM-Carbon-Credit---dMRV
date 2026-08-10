@@ -4,6 +4,7 @@
 // field left with exactly one option is treated the same way: the standard has
 // already fixed the choice, so there is nothing project-specific left to guess.
 import type { Methodology } from '../types';
+import { draftableKeys } from './pdd-drafts';
 
 /** Seed values for a brand-new PDD: declared defaultValue, plus any select with a single option. */
 export function buildDefaults(m: Methodology): Record<string, unknown> {
@@ -17,5 +18,32 @@ export function buildDefaults(m: Methodology): Record<string, unknown> {
       else if (f.type === 'select' && f.options?.length === 1) out[f.key] = f.options[0];
     }
   }
+  return out;
+}
+
+/**
+ * Fields safe to carry over from another project's PDD of the same methodology.
+ * Dropped: computed (recomputed from the new site), siteSpecific facts, draftable
+ * prose (embeds the old site's name/address — user re-drafts instead), keys the
+ * current schema doesn't know, and empty values.
+ */
+export function cloneableData(m: Methodology, source: Record<string, unknown>): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+  for (const section of m.pdd_sections) {
+    for (const f of section.fields) {
+      if (f.type === 'computed' || f.siteSpecific) continue;
+      if ((draftableKeys as readonly string[]).includes(f.key)) continue;
+      const v = source[f.key];
+      if (v === undefined || v === null || v === '') continue;
+      out[f.key] = v;
+    }
+  }
+  return out;
+}
+
+/** Prefill for a brand-new PDD: standard defaults, overlaid by clone data when a source is given. */
+export function buildPrefill(m: Methodology, source?: Record<string, unknown>): Record<string, unknown> {
+  const out = buildDefaults(m);
+  if (source) Object.assign(out, cloneableData(m, source));
   return out;
 }
