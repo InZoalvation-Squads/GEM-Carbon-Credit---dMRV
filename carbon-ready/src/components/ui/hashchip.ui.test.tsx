@@ -4,7 +4,7 @@ import { HashChip } from './HashChip';
 
 const LONG = 'sha256-a3f9c15e60913fd038b91a7d44e5f6a7b8c9d0e1f2a3b4c5d6e7f8a9b0c1d2e3';
 
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); });
 
 describe('HashChip', () => {
   it('truncates long values but keeps the full value on hover (title)', () => {

@@ -6,7 +6,7 @@ import { seedDemo } from '../test/demoFixtures';
 import { api } from '../lib/api';
 
 beforeEach(() => seedDemo());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); });
 
 // VR-1001 (under_review) belongs to prj-0001 "Pune Rooftop Phase 1".
 function renderDetail(id = 'VR-1001') {
@@ -39,7 +39,7 @@ describe('ReviewDetail — approve action shows progress and blocks double-submi
     renderDetail();
     fireEvent.click(screen.getByRole('button', { name: /Approve & lock/i }));
     fireEvent.click(screen.getByLabelText(/I confirm I have reviewed/i));
-    const confirm = screen.getAllByRole('button', { name: /Approve/ }).at(-1)!;
+    const confirm = screen.getAllByRole('button', { name: /Approve/ }).slice(-1)[0]!;
     fireEvent.click(confirm);
     await waitFor(() => expect(confirm).toBeDisabled());
     expect(api.approveVerification).toHaveBeenCalledTimes(1);

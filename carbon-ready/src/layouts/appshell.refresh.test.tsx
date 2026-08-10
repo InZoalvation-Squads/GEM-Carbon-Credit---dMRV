@@ -15,7 +15,7 @@ beforeEach(() => {
   seedDemo();
   useStore.setState({ isAuthenticated: true, refreshFromServer: vi.fn(async () => {}) });
 });
-afterEach(() => vi.useRealTimers());
+afterEach(() => { vi.useRealTimers(); });
 
 describe('AppShell real-time refresh', () => {
   it('polls refreshFromServer on the interval while authenticated in server mode', async () => {

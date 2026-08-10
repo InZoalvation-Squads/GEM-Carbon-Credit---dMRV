@@ -7,7 +7,7 @@ import { toast } from '../components/layout/Toast';
 import { api } from '../lib/api';
 
 beforeEach(() => seedDemo());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); });
 
 function renderDetail(pddId: string) {
   return render(

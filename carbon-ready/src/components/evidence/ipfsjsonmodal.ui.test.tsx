@@ -3,7 +3,7 @@ import { render, screen, waitFor } from '@testing-library/react';
 import { IpfsJsonModal } from './IpfsJsonModal';
 import { sha256HexBytes } from '../../lib/hash';
 
-afterEach(() => vi.unstubAllGlobals());
+afterEach(() => { vi.unstubAllGlobals(); });
 
 const DOC = '{"b":2,"a":"ข้อมูล"}';
 const BYTES = new TextEncoder().encode(DOC);

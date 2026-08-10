@@ -29,7 +29,7 @@ export function RequestVerificationModal({ onClose }: { onClose: () => void }) {
   // the day after the last claimed period of this project.
   const lastClaimedEnd = useMemo(() => {
     const claimed = verifications.filter((v) => v.project_id === projectId && v.state !== 'rejected');
-    return claimed.length ? claimed.map((v) => v.monitoring_period_end).sort().at(-1)! : null;
+    return claimed.length ? claimed.map((v) => v.monitoring_period_end).sort().slice(-1)[0]! : null;
   }, [verifications, projectId]);
   const suggestedStart = useMemo(() => {
     if (!lastClaimedEnd) return `${today.slice(0, 4)}-01-01`;

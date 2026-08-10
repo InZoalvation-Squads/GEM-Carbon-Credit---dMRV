@@ -21,7 +21,6 @@ const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draf
 
 export function Registration() {
   const { pddId } = useParams();
-  const navigate = useNavigate();
   const methodologies = useStore((s) => s.methodologies);
   const projects = useStore((s) => s.projects);
   const pdds = useStore((s) => s.pdds);

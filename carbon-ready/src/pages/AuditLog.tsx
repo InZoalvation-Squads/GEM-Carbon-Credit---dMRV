@@ -98,7 +98,7 @@ export function AuditLogPage() {
       case 'project':
       case 'monitoring':
       case 'calculation':
-        return projectName(a.entity_id) ?? null;
+        return a.entity_id ? projectName(a.entity_id) ?? null : null;
       case 'pdd': {
         const pdd = pdds.find((p) => p.id === a.entity_id);
         return pdd ? projectName(pdd.project_id) ?? null : null;

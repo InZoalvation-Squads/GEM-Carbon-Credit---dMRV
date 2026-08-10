@@ -15,7 +15,7 @@ vi.mock('../../lib/server-api', async (importOriginal) => {
 });
 
 beforeEach(() => seedDemo());
-afterEach(() => vi.restoreAllMocks());
+afterEach(() => { vi.restoreAllMocks(); });
 
 // The role switcher must show the same Guardian terminology as the rest of the app.
 function openRoleMenu() {
