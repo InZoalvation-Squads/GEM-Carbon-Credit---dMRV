@@ -52,4 +52,15 @@ describe('RecGuide — 3-phase checklist', () => {
     render(<RecGuide />);
     expect(screen.getByText('0/9')).toBeInTheDocument();
   });
+
+  it('phase 1 offers official EGAT form downloads in a new tab', () => {
+    render(<RecGuide />);
+    const stc = screen.getByRole('link', { name: /STC Contract \(PDF\)/ });
+    expect(stc).toHaveAttribute('href', expect.stringContaining('Standard_Terms_and_Conditions'));
+    expect(stc).toHaveAttribute('target', '_blank');
+    expect(screen.getByRole('link', { name: /SF-01 \(PDF\)/ }))
+      .toHaveAttribute('href', expect.stringContaining('SF-01'));
+    expect(screen.getByRole('link', { name: /EGAT I-REC Issuer/ }))
+      .toHaveAttribute('href', 'https://irecissuer.egat.co.th/');
+  });
 });

@@ -3,7 +3,7 @@
   "code": "SF-02",
   "name": "I-REC(E) Production Facility Registration (ขึ้นทะเบียนอุปกรณ์ผลิตไฟฟ้า REC)",
   "standard": "REC",
-  "version": "v1.3",
+  "version": "v1.4.1",
   "sectoral_scope": "Renewable electricity generation",
   "status": "active",
   "calculation": {
@@ -38,7 +38,9 @@
           "type": "select",
           "options": [
             "New",
-            "Change of details"
+            "Change of details",
+            "Renewal",
+            "Transfer"
           ],
           "required": true,
           "defaultValue": "New"
@@ -105,6 +107,13 @@
           "label": "Telephone",
           "type": "text",
           "required": true
+        },
+        {
+          "key": "additional_contacts",
+          "label": "Additional Contact(s)",
+          "type": "textarea",
+          "required": false,
+          "help": "ผู้ติดต่ออื่นที่ EGAT/Evident ติดต่อได้ (ถ้ามี)"
         }
       ]
     },
@@ -185,14 +194,16 @@
           "label": "Meter or Measurement ID(s)",
           "type": "text",
           "required": true,
-          "siteSpecific": true
+          "siteSpecific": true,
+          "help": "Serial number ของมิเตอร์ที่วัดปริมาณผลิต/ส่งออกของโรงไฟฟ้า"
         },
         {
           "key": "generating_units",
           "label": "Number of generating units",
           "type": "number",
           "required": true,
-          "siteSpecific": true
+          "siteSpecific": true,
+          "help": "เช่น จำนวน inverter (โซลาร์) หรือจำนวนกังหัน (ลม)"
         },
         {
           "key": "network_owner_voltage",
@@ -235,7 +246,7 @@
     },
     {
       "key": "fuel_technology",
-      "title": "4. Removal Type and Code (Fuel & Technology)",
+      "title": "4. Energy Sources (Fuel & Technology)",
       "help": "รหัสตามเอกสาร Evident SD-02: Technologies and Fuels — โครงการ multi-fuel ให้ระบุทุก fuel",
       "fields": [
         {
@@ -364,7 +375,7 @@
           "type": "date",
           "required": true,
           "siteSpecific": true,
-          "help": "ย้อนหลังได้ไม่เกิน 12 เดือนก่อนวันยื่นฟอร์ม"
+          "help": "ตาม Residual Mix Deadline และไม่ก่อนวัน commissioning"
         }
       ]
     },

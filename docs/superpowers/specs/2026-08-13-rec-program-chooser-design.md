@@ -141,9 +141,17 @@ accepts `'REC'`), and the create-project / create-PDD endpoints are reused as-is
 
 Official source documents, archived in-repo at `docs/reference/rec/`:
 
-- `sf-02-production-facility-registration-v1.3.pdf` — Evident, I-REC Code for
-  Electricity, SF-02: Production Facility Registration v1.3 (07 Sep 2023).
-- `egat-irec-process-guide-v12.pdf` — EGAT, Process Guide: I-REC Registrant and
-  Production Facility Registration, and I-REC(E) Issuance, V12.
+- `sf-02-production-facility-registration-v1.4.1.pdf` — Evident, SF-02 v1.4.1
+  (21 Nov 2025) — **current basis of the form** (updated 2026-08-14 from v1.3:
+  registration_type gains Renewal/Transfer, new Additional Contact(s) field,
+  effective-date rule now "Residual Mix Deadline / not before commissioning",
+  §1.4 renamed Energy Sources).
+- `sf-02-production-facility-registration-v1.3.pdf` — superseded original basis.
+- `egat-irec-process-guide-v15.pdf` — EGAT Process Guide V15 (supporting-document
+  lists unchanged from V12; adds "print STC single-sided").
+- `egat-irec-process-guide-v12.pdf` — superseded.
+- `egat-fee-structure-2026-v2.1.pdf` — EGAT FN-01 fee schedule 2026 (≥3 MW
+  38,000฿ · ≥1–<3 MW 19,000฿ · <1 MW 3,800฿ · <250 kW with approved digital
+  meter exempt; transfer = registration fee).
 
 Originals: https://irecissuer.egat.co.th/ (EGAT I-REC Local Issuer document page).

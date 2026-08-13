@@ -4,17 +4,20 @@ import type { Methodology } from '../../types';
 // registration form, not an A–E carbon PDD, so the shared A–E section shape
 // does not apply here.
 // I-REC(E) Production Facility Registration — transcribed from the official
-// Evident form SF-02 v1.3 (07 Sep 2023) as submitted to EGAT, Thailand's
+// Evident form SF-02 v1.4.1 (21 Nov 2025) as submitted to EGAT, Thailand's
 // I-REC(E) Local Issuer. Source: docs/reference/rec/. SF-02 §1.8 signature and
 // declarations SF-02A/SF-02C are signed documents uploaded as evidence, not
 // form fields. Fuel/Technology codes come from Evident SD-02 and are entered
 // by the user — no codes are hard-coded here.
+// Section grouping note: v1.4.1 places onsite-consumer/aux/import/effective-date
+// under §1.3; we keep them in Business Details for field-key continuity — the
+// field set itself matches v1.4.1.
 export const REC_SOLAR_METHODOLOGY: Methodology = {
   id: 'meth-rec-solar',
   code: 'SF-02',
   name: 'I-REC(E) Production Facility Registration (ขึ้นทะเบียนอุปกรณ์ผลิตไฟฟ้า REC)',
   standard: 'REC',
-  version: 'v1.3',
+  version: 'v1.4.1',
   sectoral_scope: 'Renewable electricity generation',
   status: 'active',
   // Facility generation is metered in kWh; issuance (1 REC = 1 MWh) is out of
@@ -31,7 +34,7 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
       title: '1. Registration / ข้อมูลการยื่น',
       help: 'เอกสารแนบตาม EGAT Process Guide V12 (อัปโหลดในหน้า Evidence): รูปถ่ายโครงการ, PPA, Meter Calibration Report (กรณีมิเตอร์ non-settlement), Single Line Diagram, หลักฐานปริมาณไฟที่ผลิต, หลักฐานกำลังติดตั้ง (kW), ใบอนุญาตผลิตไฟฟ้า (พค.2/ERC), หลักฐานวัน COD, SF-02A Registrant\'s Declaration และ SF-02C Owner\'s Declaration (กรณีผู้ยื่นไม่ใช่เจ้าของ), Declaration/Notice Letter (กรณีมี onsite consumer)',
       fields: [
-        { key: 'registration_type', label: 'Registration type', type: 'select', options: ['New', 'Change of details'], required: true, defaultValue: 'New' },
+        { key: 'registration_type', label: 'Registration type', type: 'select', options: ['New', 'Change of details', 'Renewal', 'Transfer'], required: true, defaultValue: 'New' },
         { key: 'registrant_is_owner', label: 'Is the Registrant also the owner of the Production Facility?', type: 'select', options: ['Yes', 'No'], required: true, help: 'ถ้า No — ต้องแนบ SF-02C Owner\'s Declaration พร้อมหลักฐานความเป็นเจ้าของ' },
       ],
     },
@@ -47,6 +50,7 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
         { key: 'registrant_country', label: 'Country', type: 'text', required: true, defaultValue: 'Thailand' },
         { key: 'registrant_email', label: 'e-mail', type: 'email', required: true },
         { key: 'registrant_phone', label: 'Telephone', type: 'text', required: true },
+        { key: 'additional_contacts', label: 'Additional Contact(s)', type: 'textarea', required: false, help: 'ผู้ติดต่ออื่นที่ EGAT/Evident ติดต่อได้ (ถ้ามี)' },
       ],
     },
     {
@@ -62,8 +66,8 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
         { key: 'latitude', label: 'Latitude', type: 'number', required: true, siteSpecific: true, help: '±n.nnnnnn (ทศนิยม 6 ตำแหน่ง)' },
         { key: 'longitude', label: 'Longitude', type: 'number', required: true, siteSpecific: true, help: '±n.nnnnnn (ทศนิยม 6 ตำแหน่ง)' },
         { key: 'installed_capacity_mw', label: 'Installed capacity', type: 'number', unit: 'MW', required: true, siteSpecific: true, help: 'สูงสุด 6 ตำแหน่งทศนิยม (kWp ÷ 1000)' },
-        { key: 'meter_ids', label: 'Meter or Measurement ID(s)', type: 'text', required: true, siteSpecific: true },
-        { key: 'generating_units', label: 'Number of generating units', type: 'number', required: true, siteSpecific: true },
+        { key: 'meter_ids', label: 'Meter or Measurement ID(s)', type: 'text', required: true, siteSpecific: true, help: 'Serial number ของมิเตอร์ที่วัดปริมาณผลิต/ส่งออกของโรงไฟฟ้า' },
+        { key: 'generating_units', label: 'Number of generating units', type: 'number', required: true, siteSpecific: true, help: 'เช่น จำนวน inverter (โซลาร์) หรือจำนวนกังหัน (ลม)' },
         { key: 'network_owner_voltage', label: 'Owner of the network to which the Production Device is connected and the voltage of that connection', type: 'text', required: true, siteSpecific: true, help: 'เช่น PEA — 22 kV' },
         { key: 'non_grid_details', label: 'If the Production Device is not connected directly to the grid, specify the circumstances and additional relevant meter registration numbers', type: 'textarea', required: false, siteSpecific: true },
         { key: 'volume_evidence_form', label: 'Expected form of volume evidence', type: 'select', options: ['Metering data', 'Contract sales invoice', 'Other'], required: true, defaultValue: 'Metering data' },
@@ -72,7 +76,7 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
     },
     {
       key: 'fuel_technology',
-      title: '4. Removal Type and Code (Fuel & Technology)',
+      title: '4. Energy Sources (Fuel & Technology)',
       help: 'รหัสตามเอกสาร Evident SD-02: Technologies and Fuels — โครงการ multi-fuel ให้ระบุทุก fuel',
       fields: [
         { key: 'fuel_code', label: 'Fuel — Code', type: 'text', required: true, help: 'ตาม SD-02' },
@@ -94,7 +98,7 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
         { key: 'labelling_schemes', label: 'Labelling Scheme(s) for which the Production Facility is accredited', type: 'text', required: false, siteSpecific: true },
         { key: 'public_funding', label: 'Has the Production Facility ever received public (government) funding (e.g. Feed in Tariff)?', type: 'select', options: ['No', 'Investment', 'Production'], required: true, siteSpecific: true },
         { key: 'funding_end_date', label: 'If public funding has been received, when did/will it finish?', type: 'date', required: false, siteSpecific: true, help: 'กรอกเมื่อเลือก Investment หรือ Production' },
-        { key: 'effective_reg_date', label: 'Requested effective date of registration', type: 'date', required: true, siteSpecific: true, help: 'ย้อนหลังได้ไม่เกิน 12 เดือนก่อนวันยื่นฟอร์ม' },
+        { key: 'effective_reg_date', label: 'Requested effective date of registration', type: 'date', required: true, siteSpecific: true, help: 'ตาม Residual Mix Deadline และไม่ก่อนวัน commissioning' },
       ],
     },
     {

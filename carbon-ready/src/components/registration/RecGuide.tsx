@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { ChevronDown } from 'lucide-react';
+import { ChevronDown, FileDown } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { REC_GUIDE_PHASES } from '../../data/rec-guide';
 
@@ -86,6 +86,22 @@ export function RecGuide() {
                     <ul className="mb-2 list-disc space-y-0.5 pl-4 text-[12px] text-ink-500">
                       {phase.notes.map((n, i) => <li key={i}>{n}</li>)}
                     </ul>
+                  )}
+                  {phase.links && phase.links.length > 0 && (
+                    <div className="mb-2 flex flex-wrap gap-1.5">
+                      {phase.links.map((l) => (
+                        <a
+                          key={l.url}
+                          href={l.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50/60 px-2.5 py-1 text-[11px] font-medium text-brand-700 transition-colors hover:border-brand-400 hover:bg-brand-50"
+                        >
+                          <FileDown size={12} aria-hidden />
+                          {l.label}
+                        </a>
+                      ))}
+                    </div>
                   )}
                   {phase.items.length > 0 && (
                     <div className="space-y-1">
