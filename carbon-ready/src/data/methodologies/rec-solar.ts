@@ -1,5 +1,8 @@
 import type { Methodology } from '../../types';
 
+// Deliberately NOT built with buildStandardMethodology: SF-02 is a facility
+// registration form, not an A–E carbon PDD, so the shared A–E section shape
+// does not apply here.
 // I-REC(E) Production Facility Registration — transcribed from the official
 // Evident form SF-02 v1.3 (07 Sep 2023) as submitted to EGAT, Thailand's
 // I-REC(E) Local Issuer. Source: docs/reference/rec/. SF-02 §1.8 signature and
