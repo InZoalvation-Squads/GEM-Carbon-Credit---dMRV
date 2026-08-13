@@ -156,3 +156,13 @@ describe('schema v2 — defaultValue & siteSpecific', () => {
     expect(parseMethodologyJson(JSON.stringify(doc)).ok).toBe(false);
   });
 });
+
+describe('schema v2 — REC standard', () => {
+  it('accepts standard "REC"', () => {
+    const doc = JSON.parse(methodologyToJson(seedMethodologies[0]));
+    doc.standard = 'REC';
+    const res = parseMethodologyJson(JSON.stringify(doc));
+    expect(res.ok).toBe(true);
+    if (res.ok) expect(res.methodology.standard).toBe('REC');
+  });
+});

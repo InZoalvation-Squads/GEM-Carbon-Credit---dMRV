@@ -86,7 +86,7 @@ const MethodologyDocSchema = z.strictObject({
   schema_version: z.literal(METHODOLOGY_SCHEMA_VERSION),
   code: z.string().min(1),
   name: z.string().min(1),
-  standard: z.enum(['T-VER', 'Verra', 'CDM']),
+  standard: z.enum(['T-VER', 'Verra', 'CDM', 'REC']),
   version: z.string().min(1),
   sectoral_scope: z.string().min(1),
   status: z.enum(['active', 'deprecated']),

@@ -349,7 +349,7 @@ export interface MonitoringParam {
   frequency: string;
 }
 
-export type Standard = 'T-VER' | 'Verra' | 'CDM';
+export type Standard = 'T-VER' | 'Verra' | 'CDM' | 'REC';
 
 export type CalcFormula =
   | 'grid_displacement'    // ER = Σ(driver_kWh) × grid EF
