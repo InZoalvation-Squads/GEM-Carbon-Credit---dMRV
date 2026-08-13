@@ -166,3 +166,16 @@ describe('schema v2 — REC standard', () => {
     if (res.ok) expect(res.methodology.standard).toBe('REC');
   });
 });
+
+describe('REC production facility registration doc (SF-02)', () => {
+  it('is bundled, standard REC, with the 7 SF-02 sections', () => {
+    const rec = seedMethodologies.find((m) => m.id === 'meth-rec-solar');
+    expect(rec).toBeDefined();
+    expect(rec!.standard).toBe('REC');
+    expect(rec!.code).toBe('SF-02');
+    expect(rec!.pdd_sections.map((s) => s.key)).toEqual([
+      'registration_info', 'registrant_contact', 'facility_details',
+      'fuel_technology', 'business_details', 'verification_agent', 'additional_info',
+    ]);
+  });
+});

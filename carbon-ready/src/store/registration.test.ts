@@ -119,10 +119,10 @@ describe('registration store', () => {
     expect(after.projects.find((p) => p.id === 'prj-0004')?.lifecycle_stage).toBe('rejected');
   });
 
-  it('loads all 9 methodologies across T-VER / Verra / CDM', () => {
+  it('loads all 10 methodologies across T-VER / Verra / CDM / REC', () => {
     const ms = useStore.getState().methodologies;
-    expect(ms).toHaveLength(9);
-    expect(new Set(ms.map((m) => m.standard))).toEqual(new Set(['T-VER', 'Verra', 'CDM']));
+    expect(ms).toHaveLength(10);
+    expect(new Set(ms.map((m) => m.standard))).toEqual(new Set(['T-VER', 'Verra', 'CDM', 'REC']));
     // every methodology declares a calculation formula
     expect(ms.every((m) => !!m.calculation?.formula)).toBe(true);
   });
