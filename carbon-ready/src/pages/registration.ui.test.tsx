@@ -38,7 +38,7 @@ describe('PDD form renders per-methodology schema', () => {
   });
 });
 
-describe('Registration entry — project list scoped to selected methodology', () => {
+describe('Registration entry — program chooser then methodology cards', () => {
   function renderEntry() {
     return render(
       <MemoryRouter initialEntries={['/registration']}>
@@ -50,21 +50,43 @@ describe('Registration entry — project list scoped to selected methodology', (
     );
   }
 
-  it('offers exactly two cards: solar then forestry', () => {
+  it('step 0 offers exactly two program cards: TGO and REC', () => {
     renderEntry();
-    const cards = screen.getAllByRole('button', { name: /T-VER|VM00|AR-ACM/ });
+    expect(screen.getByRole('button', { name: /TGO \(T-VER\)/ })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ })).toBeInTheDocument();
+    // No methodology cards before a program is picked
+    expect(screen.queryByText('T-VER-S-01')).toBeNull();
+    expect(screen.queryByText('SF-02')).toBeNull();
+  });
+
+  it('TGO shows the two T-VER cards: solar then forestry', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
+    const cards = screen.getAllByRole('button', { name: /T-VER|VM00|AR-ACM|SF-02/ });
     expect(cards).toHaveLength(2);
     expect(cards[0]).toHaveTextContent('T-VER-S-01');
     expect(cards[1]).toHaveTextContent('T-VER-F-01');
     expect(screen.queryByText(VERRA_VM0042_METHODOLOGY.code)).toBeNull();
   });
 
+  it('REC shows only the SF-02 card', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    expect(screen.getByText('SF-02')).toBeInTheDocument();
+    expect(screen.queryByText('T-VER-S-01')).toBeNull();
+  });
+
+  it('back button returns to the program chooser', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /เลือกโปรแกรมใหม่/ }));
+    expect(screen.getByRole('button', { name: /TGO \(T-VER\)/ })).toBeInTheDocument();
+  });
+
   it('clicking a card pops up the modal; with no eligible projects it opens straight on the create form', () => {
     renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     expect(screen.queryByText(/Start PDD —/)).toBeNull();
-
-    // Every fixture project is registered or bound to another methodology, so
-    // the solar track has nothing eligible → create-project form comes first.
     fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
     expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
     expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
@@ -73,6 +95,7 @@ describe('Registration entry — project list scoped to selected methodology', (
 
   it('create & start: makes the project, opens its PDD editor', async () => {
     renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     fireEvent.click(screen.getByRole('button', { name: /T-VER-F-01/ }));
     fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'ป่าชุมชนทดสอบ' } });
     fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Nan, Thailand' } });
@@ -216,6 +239,7 @@ describe('New-PDD prefill & clone-from-previous', () => {
 
   it('seeds methodology-standard defaults into a fresh solar PDD', async () => {
     renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
     fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ทดสอบดีฟอลต์' } });
     fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Khon Kaen, Thailand' } });
@@ -243,6 +267,7 @@ describe('New-PDD prefill & clone-from-previous', () => {
     }, []);
 
     renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
     // เลือกแหล่ง clone (select โผล่เพราะมี PDD solar ที่มีข้อมูลอยู่)
     fireEvent.change(screen.getByLabelText(/คัดลอกข้อมูลจากโครงการก่อนหน้า/), { target: { value: src.id } });

@@ -19,6 +19,19 @@ import type { Methodology, PddFieldSchema, PddComputedSource, Project } from '..
 
 const EDITABLE_STAGES: Project['lifecycle_stage'][] = ['unregistered', 'pdd_draft'];
 
+type Program = 'tgo' | 'rec';
+
+const PROGRAMS: Array<{ key: Program; title: string; tag: string; desc: string }> = [
+  { key: 'tgo', title: 'TGO (T-VER)', tag: 'คาร์บอนเครดิต', desc: 'ขึ้นทะเบียนโครงการลดก๊าซเรือนกระจกกับ อบก. ภายใต้มาตรฐาน T-VER' },
+  { key: 'rec', title: 'REC (I-REC(E))', tag: 'ใบรับรองพลังงานหมุนเวียน', desc: 'ขึ้นทะเบียนอุปกรณ์ผลิตไฟฟ้ากับ EGAT (Local Issuer) ตามฟอร์ม SF-02' },
+];
+
+// Flagship tracks per program: solar first, forestry second for TGO; SF-02 for REC.
+const PROGRAM_TRACKS: Record<Program, string[]> = {
+  tgo: ['meth-tver-solar', 'meth-tver-forestry'],
+  rec: ['meth-rec-solar'],
+};
+
 export function Registration() {
   const { pddId } = useParams();
   const methodologies = useStore((s) => s.methodologies);
@@ -27,7 +40,8 @@ export function Registration() {
 
   const pdd = pdds.find((p) => p.id === pddId);
 
-  // ---- Entry screen: no pdd yet → pick a methodology card, then the project ----
+  // ---- Entry screen: no pdd yet → pick a program, then a methodology card, then the project ----
+  const [program, setProgram] = useState<Program | null>(null);
   const [methId, setMethId] = useState('');
   const [pickerOpen, setPickerOpen] = useState(false);
   // A project belongs to at most one methodology (via its PDD). Once a draft PDD exists it may
@@ -42,19 +56,48 @@ export function Registration() {
     'T-VER': 'bg-emerald-50 text-emerald-700',
     Verra: 'bg-sky-50 text-sky-700',
     CDM: 'bg-amber-50 text-amber-700',
+    REC: 'bg-indigo-50 text-indigo-700',
   };
 
-  // Only the two flagship tracks are offered from this screen: solar first, forestry second.
-  const CARD_TRACKS = ['meth-tver-solar', 'meth-tver-forestry'];
-  const orderedMethodologies = CARD_TRACKS
+  const orderedMethodologies = (program ? PROGRAM_TRACKS[program] : [])
     .map((id) => methodologies.find((m) => m.id === id))
     .filter((m): m is NonNullable<typeof m> => m !== undefined);
 
   if (!pdd) {
+    if (!program) {
+      return (
+        <div>
+          <PageHeader title="Register a project" subtitle="เลือกโปรแกรมที่ต้องการขึ้นทะเบียนก่อน" />
+          <div className="grid gap-3 sm:grid-cols-2">
+            {PROGRAMS.map((p) => (
+              <button
+                key={p.key}
+                type="button"
+                onClick={() => setProgram(p.key)}
+                className="group rounded-xl border border-ink-200/80 bg-white p-5 text-left shadow-card transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg"
+              >
+                <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-semibold text-ink-600">{p.tag}</span>
+                <div className="mt-2 text-lg font-bold text-ink-900">{p.title}</div>
+                <div className="mt-1 text-[13px] leading-snug text-ink-600">{p.desc}</div>
+              </button>
+            ))}
+          </div>
+        </div>
+      );
+    }
+
     const selected = methodologies.find((m) => m.id === methId);
     return (
       <div>
         <PageHeader title="Register a project" subtitle="Pick a methodology card — a project picker will pop up" />
+
+        <button
+          type="button"
+          onClick={() => { setProgram(null); setMethId(''); setPickerOpen(false); }}
+          className="mb-3 text-sm font-medium text-brand-700 hover:underline"
+        >
+          ← เลือกโปรแกรมใหม่
+        </button>
 
         {/* step 1 — methodology cards */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
