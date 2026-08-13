@@ -83,6 +83,20 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(screen.getByRole('button', { name: /TGO \(T-VER\)/ })).toBeInTheDocument();
   });
 
+  it('back after selecting a card fully resets — no stale modal or selection in the other program', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
+    // close the modal, go back, switch program
+    fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
+    fireEvent.click(screen.getByRole('button', { name: /เลือกโปรแกรมใหม่/ }));
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    expect(screen.queryByText(/Start PDD —/)).toBeNull();
+    const pressed = screen.queryAllByRole('button', { pressed: true });
+    expect(pressed).toHaveLength(0);
+  });
+
   it('clicking a card pops up the modal; with no eligible projects it opens straight on the create form', () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
