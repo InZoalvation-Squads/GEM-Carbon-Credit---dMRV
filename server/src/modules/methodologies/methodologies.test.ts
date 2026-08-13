@@ -38,7 +38,7 @@ describe('methodologies module', () => {
     const url = await setupTestDatabase();
     prisma = new PrismaClient({ datasourceUrl: url });
     await resetDatabase(prisma);
-    // Real seed: org-0001 + the 9 methodology documents (no demo users).
+    // Real seed: org-0001 + the 10 methodology documents (no demo users).
     await seed(prisma, {});
     app = await buildApp({ prisma });
     owner = await registerUser(app, 'project_owner');
@@ -56,13 +56,13 @@ describe('methodologies module', () => {
       expect(res.statusCode).toBe(401);
     });
 
-    it('lists the 9 seeded methodologies as summaries (never the full document)', async () => {
+    it('lists the 10 seeded methodologies as summaries (never the full document)', async () => {
       const res = await app.inject({
         method: 'GET', url: '/api/v1/methodologies', headers: auth(owner.token),
       });
       expect(res.statusCode).toBe(200);
       const list = res.json().methodologies as Array<Record<string, unknown>>;
-      expect(list).toHaveLength(9);
+      expect(list).toHaveLength(10);
       for (const m of list) {
         expect(Object.keys(m).sort()).toEqual([...SUMMARY_KEYS].sort());
       }

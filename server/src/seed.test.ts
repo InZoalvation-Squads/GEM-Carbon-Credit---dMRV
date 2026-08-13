@@ -28,14 +28,14 @@ describe('prisma seed', () => {
     await prisma.$disconnect();
   });
 
-  it('seeds org, 4 demo users, 4 factors, 9 methodologies — and is idempotent', async () => {
+  it('seeds org, 4 demo users, 4 factors, 10 methodologies — and is idempotent', async () => {
     await seed(prisma, { demoSeedPassword: TEST_PASSWORD });
     const first = await tableCounts(prisma);
     expect(first).toEqual({
       organizations: 1,
       users: 4,
       emission_factors: 4,
-      methodologies: 9,
+      methodologies: 10,
     });
 
     // Second run must not duplicate or fail (upsert semantics).
@@ -73,7 +73,7 @@ describe('prisma seed', () => {
       organizations: 1,
       users: 0,
       emission_factors: 4,
-      methodologies: 9,
+      methodologies: 10,
     });
   });
 });
