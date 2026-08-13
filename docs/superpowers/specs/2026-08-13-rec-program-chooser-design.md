@@ -1,7 +1,7 @@
 # REC Program Chooser + REC Registration Track — Design
 
 **Date:** 2026-08-13
-**Status:** Approved (pending official REC form document for field content)
+**Status:** Approved — official source documents obtained (see References)
 
 ## Goal
 
@@ -64,11 +64,41 @@ Plus a `REC` badge tone in `STANDARD_TONE` (Registration.tsx). No Prisma migrati
   `carbon-ready/src/data/methodologies/` and registered in `ALL_METHODOLOGIES`.
 - Fields use the existing `defaultValue` / `siteSpecific` flags so standard
   defaults and clone-from-previous work identically to T-VER.
-- **Field content is blocked on the official REC registration document** (I-REC(E)
-  device registration, e.g. EGAT local-issuer form) which the user will supply.
-  Until then the doc is scaffolded with correct metadata and empty/basic sections
-  only — no invented fields, per the real-data-only policy. Filling the fields is
-  the final task of the implementation plan.
+- **Field content comes from the official Evident SF-02: Production Facility
+  Registration form (v1.3, 2023-09-07)**, submitted to EGAT as Thailand's I-REC(E)
+  Local Issuer. Form sections map 1:1 to methodology `pdd_sections`:
+  1. Registration details (date, registration type New/Change of details,
+     registrant-is-owner Yes/No)
+  2. Registrant contact details (Evident organisation ID/code, organisation name,
+     contact person, business address, country, e-mail, telephone)
+  3. Production facility details (facility name, address, country, latitude and
+     longitude ±n.nnnnnn, installed capacity MW up to 6 decimals, meter or
+     measurement ID(s), number of generating units, commissioning date, network
+     owner + connection voltage, non-grid-connection circumstances, expected form
+     of volume evidence: Metering data / Contract sales invoice / Other)
+  4. Fuel and technology codes (per Evident SD-02: Technologies and Fuels; solar
+     defaults can use `defaultValue`)
+  5. Business details (on-site captive consumer Yes/No + details, auxiliary/standby
+     energy sources Yes/No + details, non-metered import routes, other carbon
+     offset / energy tracking scheme registrations incl. registration id — state
+     'None' if none, labelling schemes, public funding No/Investment/Production +
+     end date, requested effective date of registration — no earlier than 12
+     months before submission)
+  6. Verification agent (proposed verification agent, if not the Issuer)
+  7. Additional information (free text)
+  Declarations (SF-02A Registrant's Declaration, SF-02C Owner's Declaration when
+  registrant ≠ owner) and the confirmation signature are physical/signed artifacts —
+  represented as evidence uploads, not form fields. SF-02B (Production Group) is out
+  of scope: the platform registers individual facilities.
+- `required_evidence` comes from EGAT Process Guide V12 pages 2–3 (Production
+  Facility Registration supporting documents): signed Owner's Declaration + proof
+  of owner (when registrant ≠ owner), project photos, Power Purchase Agreement,
+  Meter Calibration Report (when non-settlement metering), Single Line Diagram,
+  evidence of measured production volume, proof of installed capacity (kW),
+  electricity production license (e.g. PorKor2 / ERC license), fuel evidence (for
+  fuel-based facilities), proof of COD date, and — when an onsite consumer exists —
+  a Declaration Letter (signed by consumer) or Notice Letter (signed by owner)
+  waiving energy-attribute claims.
 
 ### 4. UI terminology
 
@@ -99,6 +129,21 @@ accepts `'REC'`), and the create-project / create-PDD endpoints are reused as-is
 
 ## Out of scope
 
-- REC issuance/transfer/redemption (only registration).
+- REC issuance/transfer/redemption (SF-04) — only registration this round.
+- Registrant account opening (SF-01 + STC Contract) — company-level, one-time,
+  done outside the platform; the form captures the resulting Evident
+  organisation ID.
+- Production Groups (SF-02B).
 - Official REC document export (parallel to the T-VER PDD export) — later sprint.
 - Any change to Guardian policy or Hedera anchoring behavior.
+
+## References
+
+Official source documents, archived in-repo at `docs/reference/rec/`:
+
+- `sf-02-production-facility-registration-v1.3.pdf` — Evident, I-REC Code for
+  Electricity, SF-02: Production Facility Registration v1.3 (07 Sep 2023).
+- `egat-irec-process-guide-v12.pdf` — EGAT, Process Guide: I-REC Registrant and
+  Production Facility Registration, and I-REC(E) Issuance, V12.
+
+Originals: https://irecissuer.egat.co.th/ (EGAT I-REC Local Issuer document page).
