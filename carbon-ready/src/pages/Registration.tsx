@@ -4,6 +4,7 @@ import { useNavigate, useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { PageHeader } from '../components/layout/PageHeader';
+import { RecGuide } from '../components/registration/RecGuide';
 import { Card } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -101,6 +102,8 @@ export function Registration() {
         >
           ← เลือกโปรแกรมใหม่
         </button>
+
+        {program === 'rec' && <RecGuide />}
 
         {/* step 1 — methodology cards */}
         <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">

@@ -126,7 +126,8 @@ describe('Registration entry — program chooser then methodology cards', () => 
   it('REC flow labels the modal and editor "REC Registration", and seeds SF-02 defaults', async () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
-    fireEvent.click(screen.getByRole('button', { name: /SF-02/ }));
+    // Disambiguate from the RecGuide accordion header, which also contains "SF-02".
+    fireEvent.click(screen.getByRole('button', { name: /I-REC\(E\) Production Facility Registration/ }));
     expect(screen.getByText('Start REC Registration — SF-02')).toBeInTheDocument();
 
     fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ REC ทดสอบ' } });
@@ -143,6 +144,19 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(pdd.section_data.registration_type).toBe('New');
     expect(pdd.section_data.facility_country).toBe('Thailand');
     expect(pdd.section_data.volume_evidence_form).toBe('Metering data');
+  });
+
+  it('REC track shows the onboarding guide above the SF-02 card', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    expect(screen.getByText(/ขั้นตอนขึ้นทะเบียน REC/)).toBeInTheDocument();
+    expect(screen.getByText(/เปิดบัญชี Registrant/)).toBeInTheDocument();
+  });
+
+  it('TGO track shows no REC guide', () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
+    expect(screen.queryByText(/ขั้นตอนขึ้นทะเบียน REC/)).toBeNull();
   });
 });
 
