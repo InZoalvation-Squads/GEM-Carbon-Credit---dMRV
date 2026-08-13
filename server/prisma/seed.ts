@@ -1,6 +1,6 @@
 // Ports the minimal core of carbon-ready/src/data/seed.ts (source of truth):
 // the organization, the 4 demo accounts (carbon-ready/src/data/accounts.ts),
-// the IN/TH/VN emission factors, and the 9 methodology documents generated from
+// the IN/TH/VN emission factors, and the 10 methodology documents generated from
 // the SPA package via methodologyToJson (prisma/seed-data/methodologies/*.json,
 // one file per SPA methodology id).
 //
