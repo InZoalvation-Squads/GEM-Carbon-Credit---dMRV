@@ -122,6 +122,28 @@ describe('Registration entry — program chooser then methodology cards', () => 
     const pdd = st.pdds.find((d) => d.project_id === project.id)!;
     expect(pdd.methodology_id).toBe('meth-tver-forestry');
   });
+
+  it('REC flow labels the modal and editor "REC Registration", and seeds SF-02 defaults', async () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /SF-02/ }));
+    expect(screen.getByText('Start REC Registration — SF-02')).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ REC ทดสอบ' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Ratchaburi, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '5000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start REC Registration/ }));
+
+    await screen.findByText(/Register: โซลาร์ REC ทดสอบ/);
+    expect(screen.getByText(/REC Registration PDD-/)).toBeInTheDocument();
+
+    const st = useStore.getState();
+    const pdd = st.pdds.find((d) => d.methodology_id === 'meth-rec-solar')!;
+    // Standard defaults seeded by buildPrefill from the SF-02 doc
+    expect(pdd.section_data.registration_type).toBe('New');
+    expect(pdd.section_data.facility_country).toBe('Thailand');
+    expect(pdd.section_data.volume_evidence_form).toBe('Metering data');
+  });
 });
 
 describe('RegistrationGate', () => {

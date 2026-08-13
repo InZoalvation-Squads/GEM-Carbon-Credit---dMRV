@@ -20,10 +20,10 @@ export function ValidationQueue() {
 
   return (
     <div>
-      <PageHeader title="Validation Queue" subtitle="PDDs awaiting validation by the VVB before a project can be registered" />
+      <PageHeader title="Validation Queue" subtitle="PDDs and REC registrations awaiting review before a project can be registered" />
       <Card>
         {queue.length === 0 ? (
-          <EmptyState title="Queue is empty" hint="No PDDs are currently awaiting validation." />
+          <EmptyState title="Queue is empty" hint="No PDDs or REC registrations are currently awaiting review." />
         ) : (
           <Table>
             <THead>

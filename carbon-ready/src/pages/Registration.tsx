@@ -32,6 +32,9 @@ const PROGRAM_TRACKS: Record<Program, string[]> = {
   rec: ['meth-rec-solar'],
 };
 
+/** REC registrations are SF-02 facility registrations, not PDDs — label accordingly. */
+const regNoun = (m: Methodology) => (m.standard === 'REC' ? 'REC Registration' : 'PDD');
+
 export function Registration() {
   const { pddId } = useParams();
   const methodologies = useStore((s) => s.methodologies);
@@ -220,7 +223,7 @@ function StartPddModal({ methodology, candidates, onClose }: {
   }
 
   return (
-    <Modal open onClose={onClose} title={`Start PDD — ${methodology.code}`}>
+    <Modal open onClose={onClose} title={`Start ${regNoun(methodology)} — ${methodology.code}`}>
       <div className="space-y-4">
         <p className="text-[13px] text-ink-500">{methodology.name}</p>
 
@@ -245,7 +248,7 @@ function StartPddModal({ methodology, candidates, onClose }: {
               <span className="grid h-8 w-8 shrink-0 place-items-center rounded-lg bg-brand-gradient text-white"><Plus size={16} /></span>
               <span>
                 <span className="block text-sm font-semibold text-ink-900">Create a new project</span>
-                <span className="block text-[11px] text-ink-500">ตั้งโปรเจกต์ใหม่แล้วเริ่มกรอก PDD ต่อทันที</span>
+                <span className="block text-[11px] text-ink-500">ตั้งโปรเจกต์ใหม่แล้วเริ่มกรอก{methodology.standard === 'REC' ? 'ฟอร์มขึ้นทะเบียน REC' : ' PDD'} ต่อทันที</span>
               </span>
             </button>
 
@@ -291,7 +294,7 @@ function StartPddModal({ methodology, candidates, onClose }: {
 
             <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
               <Button variant="ghost" onClick={onClose}>Cancel</Button>
-              <Button disabled={!projId} onClick={() => void startWith(projId)}>Start PDD →</Button>
+              <Button disabled={!projId} onClick={() => void startWith(projId)}>Start {regNoun(methodology)} →</Button>
             </div>
           </>
         ) : (
@@ -311,7 +314,7 @@ function StartPddModal({ methodology, candidates, onClose }: {
               ) : (
                 <Button variant="ghost" onClick={onClose}>Cancel</Button>
               )}
-              <Button loading={busy} onClick={createAndStart}>Create & Start PDD →</Button>
+              <Button loading={busy} onClick={createAndStart}>Create & Start {regNoun(methodology)} →</Button>
             </div>
           </>
         )}
@@ -391,7 +394,7 @@ function PddEditor({ pddId }: { pddId: string }) {
     <div>
       <PageHeader
         title={`Register: ${project.name}`}
-        subtitle={`${methodology.code} ${methodology.version} · PDD ${pdd.id}`}
+        subtitle={`${methodology.code} ${methodology.version} · ${regNoun(methodology)} ${pdd.id}`}
       />
 
       {/* progress */}
