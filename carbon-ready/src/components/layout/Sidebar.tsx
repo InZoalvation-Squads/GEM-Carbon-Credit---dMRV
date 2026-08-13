@@ -2,7 +2,7 @@ import { NavLink } from 'react-router-dom';
 import {
   LayoutDashboard, FolderKanban, Upload, Calculator, Gauge,
   ScrollText, ClipboardCheck, Link2, Building2,
-  FileText, FilePlus2, ShieldCheck, BookOpen, Cable,
+  FileText, FilePlus2, ShieldCheck, BookOpen, Cable, Zap,
 } from 'lucide-react';
 import clsx from 'clsx';
 import { useStore } from '../../store';
@@ -42,6 +42,7 @@ const groups: Group[] = [
     heading: 'Verify & Anchor',
     items: [
       { to: '/verifications', label: 'Verifications', icon: ClipboardCheck, roles: ['project_owner', 'verifier'] },
+      { to: '/rec-issuance',  label: 'REC Issuance',  icon: Zap,            roles: ['project_owner', 'esg_manager', 'verifier'] },
       { to: '/guardian',      label: 'Guardian',      icon: Link2,          roles: ['verifier', 'admin'] },
       { to: '/audit-log',     label: 'Audit Log',     icon: ScrollText,     roles: ['admin', 'esg_manager'] },
     ],
