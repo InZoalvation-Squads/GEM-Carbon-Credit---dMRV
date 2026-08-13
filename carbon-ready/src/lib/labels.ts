@@ -57,6 +57,11 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   PROJECT_REGISTERED: 'Project Registered',
   PDD_REJECTED: 'PDD Rejected',
   TOKEN_MINTED: 'VCU Token Minted',
+  REC_ISSUE_CREATED: 'REC Issue Request Created',
+  REC_ISSUE_SUBMITTED: 'REC Issue Request Submitted',
+  REC_ISSUE_ISSUED: 'REC Certificates Issued',
+  REC_ISSUE_REJECTED: 'REC Issue Request Rejected',
+  REC_ISSUE_DELETED: 'REC Issue Request Deleted',
 };
 
 export const ENTITY_LABEL: Record<EntityType, string> = {
@@ -69,6 +74,7 @@ export const ENTITY_LABEL: Record<EntityType, string> = {
   methodology: 'Methodology',
   pdd: 'PDD',
   token: 'VCU Token',
+  rec_issue: 'REC Issue Request',
 };
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {

@@ -27,11 +27,17 @@ export type AuditAction =
   | 'PROJECT_REGISTERED'
   | 'PDD_REJECTED'
   // Guardian issuance
-  | 'TOKEN_MINTED';
+  | 'TOKEN_MINTED'
+  // REC issuance (SF-04)
+  | 'REC_ISSUE_CREATED'
+  | 'REC_ISSUE_SUBMITTED'
+  | 'REC_ISSUE_ISSUED'
+  | 'REC_ISSUE_REJECTED'
+  | 'REC_ISSUE_DELETED';
 
 export type EntityType =
   | 'project' | 'monitoring' | 'factor' | 'calculation'
-  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token';
+  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
 export interface Organization {
@@ -201,6 +207,43 @@ export interface VerificationRequest {
   anchored_at: string | null;
   hcs_topic_id: string | null;
   hcs_sequence_number: number | null;
+}
+
+// ============================================================
+// REC Issuance — SF-04 Issue Request (see docs/reference/rec/)
+// ============================================================
+export type RecIssueState = 'draft' | 'submitted' | 'issued' | 'rejected';
+
+/** Org/facility/fuel data copied from the REC registration at request creation. */
+export interface RecFacilitySnapshot {
+  evident_org_id: string;
+  organisation_name: string;
+  facility_name: string;
+  fuel_code: string;
+  fuel_description: string;
+  technology_code: string;
+  technology_description: string;
+}
+
+export interface RecIssueRequest {
+  id: UUID;
+  project_id: UUID;
+  created_by: string;
+  owner_name: string;
+  assigned_reviewer_name: string;
+  state: RecIssueState;
+  request_type: 'Normal' | 'Self consumption';
+  period_start: string; // ISO date
+  period_end: string;   // ISO date
+  total_production_mwh: number; // server-computed; frozen at submit
+  applied_mwh: number | null;   // SF-04 "I-REC(E) applied for"; null = total
+  facility_snapshot: RecFacilitySnapshot;
+  receiving_org_name: string;
+  receiving_account_id: string;
+  evidence_ids: UUID[];
+  submitted_at: string | null;
+  issued_at: string | null;
+  rejection_reason?: string | null;
 }
 
 export type CsvErrorCode =

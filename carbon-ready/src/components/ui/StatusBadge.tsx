@@ -2,7 +2,7 @@ import { FileSpreadsheet, FileText, Image as ImageIcon } from 'lucide-react';
 import clsx from 'clsx';
 import { Badge } from './Badge';
 import { CATEGORY_LABEL, STATE_LABEL } from '../../lib/labels';
-import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState } from '../../types';
+import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState, RecIssueState } from '../../types';
 
 type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet';
 
@@ -50,6 +50,16 @@ const pddStateLabel: Record<PddState, string> = {
 };
 export function PddStatusBadge({ state }: { state: PddState }) {
   return <Badge tone={pddStateTone[state]}>{pddStateLabel[state]}</Badge>;
+}
+
+const recIssueTone: Record<RecIssueState, Tone> = {
+  draft: 'gray', submitted: 'blue', issued: 'green', rejected: 'red',
+};
+const REC_ISSUE_LABEL: Record<RecIssueState, string> = {
+  draft: 'Draft', submitted: 'Submitted', issued: 'Issued', rejected: 'Rejected',
+};
+export function RecIssueStatusBadge({ state }: { state: RecIssueState }) {
+  return <Badge tone={recIssueTone[state]}>{REC_ISSUE_LABEL[state]}</Badge>;
 }
 
 export function EvidenceStatusDot({ status }: { status: EvidenceStatus }) {
