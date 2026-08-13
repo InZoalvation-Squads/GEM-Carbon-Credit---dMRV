@@ -4,7 +4,7 @@ import { setSession } from '../lib/server-api';
 import { seedFactors } from '../data/seed';
 import type {
   Project, MonitoringRecord, EmissionFactor, ProjectDesignDocument,
-  VerificationRequest, EvidenceFile, VerifiableCredential, GuardianToken,
+  VerificationRequest, EvidenceFile, VerifiableCredential, GuardianToken, RecIssueRequest,
 } from '../types';
 
 // ============================================================
@@ -68,6 +68,7 @@ const methodologyDoc = {
 const pddInflight = { id: 'PDD-srv-1', project_id: 'prj-srv-2', state: 'submitted' } as ProjectDesignDocument;
 const pddRegistered = { id: 'PDD-srv-2', project_id: 'prj-srv-1', state: 'registered' } as ProjectDesignDocument;
 const verification = { id: 'ver-srv-1', project_id: 'prj-srv-1', state: 'approved' } as VerificationRequest;
+const recIssue = { id: 'RIR-srv-1', project_id: 'prj-srv-1', state: 'draft' } as RecIssueRequest;
 const evidenceRow = { id: 'ev-srv-1', project_id: 'prj-srv-1', status: 'active' } as EvidenceFile;
 const credential = { id: 'vc-srv-1', schema_id: 'sch-1' } as VerifiableCredential;
 const token = { id: 'tok-srv-1', credential_id: 'vc-srv-1' } as GuardianToken;
@@ -86,6 +87,7 @@ const HAPPY_ROUTES: Record<string, unknown> = {
   '/projects/prj-srv-1/evidence': { evidence: [evidenceRow] },
   '/credentials': { credentials: [credential] },
   '/tokens': { tokens: [token] },
+  '/rec-issues': { rec_issues: [recIssue] },
 };
 
 describe('hydrateFromServer', () => {
@@ -115,6 +117,7 @@ describe('hydrateFromServer', () => {
     expect(s.evidence).toEqual([evidenceRow]);
     expect(s.credentials).toEqual([credential]);
     expect(s.tokens).toEqual([token]);
+    expect(s.recIssues).toEqual([recIssue]);
     expect(s.hydration_errors).toEqual([]);
     // pdds merge the bare (in-flight) list with the explicit terminal states
     expect(s.pdds.map((p) => p.id).sort()).toEqual(['PDD-srv-1', 'PDD-srv-2']);

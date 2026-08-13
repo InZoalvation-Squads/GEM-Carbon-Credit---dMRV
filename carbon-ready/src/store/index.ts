@@ -5,12 +5,12 @@ import type {
   AuditLog, User, UserRole, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
   VerifiableCredential, GuardianConfig, GuardianToken,
-  Methodology, ProjectDesignDocument,
+  Methodology, ProjectDesignDocument, RecIssueRequest,
 } from '../types';
 import {
   seedOrg, seedUser, seedFactors, seedProjects, seedRecords, seedAudit,
   seedEvidence, seedVerifications, seedComments, seedCredentials,
-  seedMethodologies, seedPdds,
+  seedMethodologies, seedPdds, seedRecIssues,
 } from '../data/seed';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
 import { validatePdd, pddContentHash, splitDisclosure, sensitiveFieldKeys } from '../lib/pdd';
@@ -23,7 +23,7 @@ import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guard
 import {
   serverMode, authApi, ApiError, SessionExpiredError, onSessionExpired,
   projectsApi, factorsApi, monitoringApi, methodologiesApi,
-  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi,
+  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi, recIssuesApi,
   type ServerUser,
 } from '../lib/server-api';
 
@@ -58,6 +58,7 @@ interface AppState {
   guardianConfig: GuardianConfig;
   methodologies: Methodology[];
   pdds: ProjectDesignDocument[];
+  recIssues: RecIssueRequest[];
 
   // Methodology-as-data: import a validated JSON document into the library.
   importMethodology: (json: string) => { ok: boolean; error?: string; methodology?: Methodology };
@@ -120,6 +121,20 @@ interface AppState {
   anchorVerification: (id: UUID) => void;
   // Guardian VCU minting — Standard Registry mints a token per anchored credential.
   mintToken: (credential_id: string) => GuardianToken | null;
+
+  // SF-04 — REC issuance (I-REC(E) Issue Requests). Parallel to the
+  // verification workflow above; never entangled with it.
+  createRecIssue: (input: {
+    project_id: UUID; period_start: string; period_end: string;
+    request_type: 'Normal' | 'Self consumption'; applied_mwh?: number;
+    receiving_org_name?: string; receiving_account_id?: string; evidence_ids?: UUID[];
+  }) => RecIssueRequest;
+  submitRecIssue: (id: UUID) => void;
+  approveRecIssue: (id: UUID) => void;
+  rejectRecIssue: (id: UUID, reason: string) => void;
+  deleteRecIssue: (id: UUID) => void;
+  /** Server mode: overlay any server-returned REC issue request (create/update/transitions). */
+  applyServerRecIssue: (recIssue: RecIssueRequest) => void;
 
   resetToSeed: () => void;
 }
@@ -269,6 +284,7 @@ export const useStore = create<AppState>()(
           ['verifications', verificationsApi.list().then((verifications) => set({ verifications }))],
           ['credentials', credentialsApi.list().then((credentials) => set({ credentials }))],
           ['tokens', tokensApi.list().then((tokens) => set({ tokens }))],
+          ['recIssues', recIssuesApi.list().then((recIssues) => set({ recIssues }))],
         ];
         if (projects) {
           const ids = projects.map((p) => p.id);
@@ -306,6 +322,7 @@ export const useStore = create<AppState>()(
           verificationsApi.list().then((verifications) => set({ verifications })),
           credentialsApi.list().then((credentials) => set({ credentials })),
           tokensApi.list().then((tokens) => set({ tokens })),
+          recIssuesApi.list().then((recIssues) => set({ recIssues })),
         ];
         await Promise.allSettled(tasks); // best-effort — a flaky poll never throws
       },
@@ -326,6 +343,7 @@ export const useStore = create<AppState>()(
       guardianConfig: DEFAULT_GUARDIAN_CONFIG,
       methodologies: seedMethodologies,
       pdds: seedPdds,
+      recIssues: seedRecIssues,
 
       audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) => {
         // Server mode: no-op — the server writes the hash-chained audit row
@@ -590,6 +608,81 @@ export const useStore = create<AppState>()(
         return token;
       },
 
+      // ---------------- SF-04: REC issuance (I-REC(E) Issue Requests) ----------------
+      // Parallel to the Sprint 2 verification workflow above; never entangled with it.
+      createRecIssue: (input) => {
+        const s = get();
+        const kwh = s.records
+          .filter((m) => m.project_id === input.project_id
+            && m.record_date >= input.period_start && m.record_date <= input.period_end)
+          .reduce((sum, m) => sum + m.generation_kwh, 0);
+        const total = Math.round((kwh / 1000) * 1e6) / 1e6;
+        const pdd = s.pdds.find((p) => p.project_id === input.project_id && p.state === 'registered'
+          && s.methodologies.find((m) => m.id === p.methodology_id)?.standard === 'REC');
+        const sd = (pdd?.section_data ?? {}) as Record<string, unknown>;
+        const str = (k: string) => (typeof sd[k] === 'string' ? (sd[k] as string) : '');
+        const u = s.currentUser;
+        const entity: RecIssueRequest = {
+          id: uid('RIR'), project_id: input.project_id, created_by: u.id, owner_name: u.name,
+          assigned_reviewer_name: 'EGAT (Local Issuer)', state: 'draft',
+          request_type: input.request_type,
+          period_start: input.period_start, period_end: input.period_end,
+          total_production_mwh: total, applied_mwh: input.applied_mwh ?? null,
+          facility_snapshot: {
+            evident_org_id: str('evident_org_id'), organisation_name: str('organisation_name'),
+            facility_name: str('facility_name'), fuel_code: str('fuel_code'),
+            fuel_description: str('fuel_description'), technology_code: str('technology_code'),
+            technology_description: str('technology_description'),
+          },
+          receiving_org_name: input.receiving_org_name ?? '',
+          receiving_account_id: input.receiving_account_id ?? '',
+          evidence_ids: input.evidence_ids ?? [], submitted_at: null, issued_at: null, rejection_reason: null,
+        };
+        set((st) => ({ recIssues: [entity, ...st.recIssues] }));
+        get().audit_write('REC_ISSUE_CREATED', 'rec_issue', entity.id,
+          { total_production_mwh: total }, { new_value: { state: 'draft', total_production_mwh: total } });
+        return entity;
+      },
+
+      submitRecIssue: (id) => {
+        set((s) => ({
+          recIssues: s.recIssues.map((r) => (r.id === id
+            ? { ...r, state: 'submitted', submitted_at: r.submitted_at ?? new Date().toISOString() }
+            : r)),
+        }));
+        get().audit_write('REC_ISSUE_SUBMITTED', 'rec_issue', id, {},
+          { previous_value: { state: 'draft' }, new_value: { state: 'submitted' } });
+      },
+
+      approveRecIssue: (id) => {
+        const r = get().recIssues.find((x) => x.id === id);
+        const issued_at = new Date().toISOString();
+        set((s) => ({ recIssues: s.recIssues.map((x) => (x.id === id ? { ...x, state: 'issued', issued_at } : x)) }));
+        get().audit_write('REC_ISSUE_ISSUED', 'rec_issue', id,
+          { mwh: r?.applied_mwh ?? r?.total_production_mwh ?? null },
+          { previous_value: { state: r?.state ?? null }, new_value: { state: 'issued', issued_at } });
+      },
+
+      rejectRecIssue: (id, reason) => {
+        const r = get().recIssues.find((x) => x.id === id);
+        set((s) => ({ recIssues: s.recIssues.map((x) => (x.id === id ? { ...x, state: 'rejected', rejection_reason: reason } : x)) }));
+        get().audit_write('REC_ISSUE_REJECTED', 'rec_issue', id, { reason },
+          { previous_value: { state: r?.state ?? null }, new_value: { state: 'rejected', reason } });
+      },
+
+      deleteRecIssue: (id) => {
+        set((s) => ({ recIssues: s.recIssues.filter((r) => r.id !== id) }));
+        get().audit_write('REC_ISSUE_DELETED', 'rec_issue', id, {}, { previous_value: { state: 'draft' } });
+      },
+
+      applyServerRecIssue: (recIssue) => {
+        set((s) => ({
+          recIssues: s.recIssues.some((r) => r.id === recIssue.id)
+            ? s.recIssues.map((r) => (r.id === recIssue.id ? { ...r, ...recIssue } : r))
+            : [recIssue, ...s.recIssues],
+        }));
+      },
+
       // ---------------- Methodology-as-data: JSON import ----------------
       importMethodology: (json) => {
         // Only the Standard Registry curates the methodology library.
@@ -803,10 +896,10 @@ export const useStore = create<AppState>()(
         projects: seedProjects, records: seedRecords, factors: seedFactors, calculations: [], audit: seedAudit,
         evidence: seedEvidence, verifications: seedVerifications, comments: seedComments,
         credentials: seedCredentials, tokens: [], guardianConfig: DEFAULT_GUARDIAN_CONFIG,
-        methodologies: seedMethodologies, pdds: seedPdds,
+        methodologies: seedMethodologies, pdds: seedPdds, recIssues: seedRecIssues,
       }),
     }),
-    { name: 'carbon-ready-store-v15' }
+    { name: 'carbon-ready-store-v16' }
   )
 );
 

@@ -11,7 +11,7 @@ import type {
   Project, MonitoringRecord, AuditLog,
   EvidenceFile, VerificationRequest, VerificationComment,
   AuditAction, EntityType, UserRole, VerifiableCredential,
-  Methodology, ProjectDesignDocument,
+  Methodology, ProjectDesignDocument, RecIssueRequest,
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
@@ -19,6 +19,7 @@ import {
   TVER_WIND_METHODOLOGY, TVER_BIOMASS_METHODOLOGY, TVER_BIOGAS_METHODOLOGY,
   TVER_FORESTRY_METHODOLOGY, TVER_WASTE_LFG_METHODOLOGY,
   VERRA_VM0042_METHODOLOGY, VERRA_VM0047_METHODOLOGY, CDM_ARACM0003_METHODOLOGY,
+  REC_SOLAR_METHODOLOGY,
 } from '../data/methodologies';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
@@ -40,6 +41,10 @@ export const demoProjects: Project[] = [
   { id: 'prj-0007', organization_id: seedOrg.id, name: 'Rayong Landfill Gas',        location: 'Rayong, Thailand',             capacity_kwp: 0,     commission_date: '2025-01-15', status: 'active', lifecycle_stage: 'registered',       created_at: '2025-01-15T00:00:00Z', updated_at: '2025-01-15T00:00:00Z' },
   { id: 'prj-0008', organization_id: seedOrg.id, name: 'Loei Reforestation (CDM)',   location: 'Loei, Thailand',               capacity_kwp: 0,     commission_date: '2024-03-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2024-03-01T00:00:00Z', updated_at: '2024-03-01T00:00:00Z' },
   { id: 'prj-0009', organization_id: seedOrg.id, name: 'Mae Chaem Agroforestry ARR', location: 'Chiang Mai, Thailand',          capacity_kwp: 0,     commission_date: '2024-09-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2024-09-01T00:00:00Z', updated_at: '2024-09-01T00:00:00Z' },
+  // REC track — I-REC(E) registered facility (SF-02). Its own clean, hand-picked
+  // monitoring records (below) drive the SF-04 REC issuance demo fixtures with
+  // exact, deterministic MWh totals (no dependency on the solar day-generation formula).
+  { id: 'prj-0010', organization_id: seedOrg.id, name: 'Ayutthaya Solar REC Facility', location: 'Ayutthaya, Thailand',         capacity_kwp: 800,   commission_date: '2025-09-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2025-09-01T00:00:00Z', updated_at: '2025-09-01T00:00:00Z' },
 ];
 
 const VALIDATOR = 'Daniel Okoye';
@@ -69,6 +74,26 @@ const FORESTRY_SECTION_DATA = { area_hectares: 1200, species: 'Dipterocarpus ala
 const WASTE_LFG_SECTION_DATA = { destruction_device: 'Enclosed flare', site_type: 'Municipal landfill', baseline_flaring: true, baseline_scenario: 'Uncontrolled methane emission to atmosphere', barrier_type: 'Investment', investment_metric: 'IRR', barrier_explanation: 'Capture infrastructure not viable on tipping fees alone.', common_practice: false, collection_efficiency: 0.75, annual_er_estimate: 42000, monitored_parameter: 'M_CH4', measurement_method: 'Flow meter × CH₄ fraction × density', monitoring_frequency: 'Continuous', qaqc_procedure: 'Analyzer calibrated monthly; flare uptime logged.' };
 const CDM_SECTION_DATA = { area_hectares: 800, strata_count: 4, land_eligibility: true, baseline_scenario: 'Pre-project degraded land with negligible woody biomass', barrier_type: 'Investment', investment_metric: 'NPV', barrier_explanation: 'Long rotation makes NPV negative without credits.', common_practice: false, leakage_estimate: 300, annual_er_estimate: 7200, monitored_parameter: 'dC_actual', measurement_method: 'Permanent sample plots + allometric models', monitoring_frequency: 'Annually', qaqc_procedure: 'Strata re-survey audited by third party.' };
 const VM0047_SECTION_DATA = { quantification_approach: 'Census-based', arr_activity: 'Revegetation', area_hectares: 450, land_use_change: false, baseline_scenario: 'Non-forest / degraded land vs dynamic performance benchmark (matched control plots)', barrier_type: 'Institutional', barrier_explanation: 'Dispersed smallholder plots lack finance without carbon revenue.', common_practice: false, stocking_index_baseline: 0.18, soc_included: true, biomass_burning_emissions: 40, n_fertilizer_emissions: 55, leakage_estimate: 120, annual_removal_estimate: 5400, monitored_parameter: 'dCO2_removals', measurement_method: 'Census of planted stems + allometric models, net of dynamic benchmark', monitoring_frequency: 'Annually', qaqc_procedure: 'Independent re-census of 10% of plots; control-plot SI re-measured each verification.' };
+// REC (SF-02) facility registration — I-REC(E) production facility details for
+// the Ayutthaya Solar REC Facility (prj-0010). Answers every required SF-02
+// field (see data/methodologies/rec-solar.ts) so validatePdd() passes; the
+// facility_snapshot fields consumed by SF-04 REC issuance (evident_org_id,
+// organisation_name, facility_name, fuel_code/description, technology_code/description)
+// are the ones exercised by the rec-issues store tests.
+const REC_SECTION_DATA = {
+  registration_type: 'New', registrant_is_owner: 'Yes',
+  evident_org_id: 'EVID-000456', organisation_name: 'GreenGrid Asia Co., Ltd.',
+  contact_person: 'Anong Siriwan', business_address: '99/1 Rama IX Road, Bangkok 10310',
+  registrant_country: 'Thailand', registrant_email: 'rec@greengrid.example', registrant_phone: '+66-2-555-0199',
+  facility_name: 'Ayutthaya Solar REC Facility', facility_address: '45 Moo 3, Ayutthaya 13000',
+  facility_country: 'Thailand', latitude: 14.354, longitude: 100.578,
+  installed_capacity_mw: 0.8, meter_ids: 'MTR-AYU-0800-01', generating_units: 4,
+  network_owner_voltage: 'PEA — 22 kV', volume_evidence_form: 'Metering data',
+  fuel_code: 'F01', fuel_description: 'Solar', technology_code: 'T01', technology_description: 'Photovoltaic',
+  onsite_consumer: 'No', aux_energy_sources: 'No',
+  import_routes: 'None', other_schemes: 'None', public_funding: 'No',
+  effective_reg_date: '2025-09-01',
+};
 
 const snap = (m: Methodology) => `${m.code} ${m.version}`;
 
@@ -146,6 +171,14 @@ export const demoPdds: ProjectDesignDocument[] = [
     assigned_validator_name: VALIDATOR, submitted_at: '2024-09-02T00:00:00Z',
     validated_at: '2024-09-22T00:00:00Z', content_hash: shortHash('PDD-2008-registered'), ipfs_cid: null, credential_id: null,
   },
+  // REC (SF-02) — registered facility, drives the SF-04 REC issuance demo (Task 4).
+  {
+    id: 'PDD-2009', project_id: 'prj-0010', methodology_id: REC_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: snap(REC_SOLAR_METHODOLOGY), state: 'registered',
+    section_data: REC_SECTION_DATA, evidence_ids: [],
+    assigned_validator_name: 'EGAT (Local Issuer)', submitted_at: '2025-09-02T00:00:00Z',
+    validated_at: '2025-09-10T00:00:00Z', content_hash: shortHash('PDD-2009-registered'), ipfs_cid: null, credential_id: null,
+  },
 ];
 
 function generationFor(kwp: number, dateIso: string, seed: number): number {
@@ -220,7 +253,30 @@ function buildDriverRecords(): MonitoringRecord[] {
   return out;
 }
 
-export const demoRecords: MonitoringRecord[] = [...buildSolarRecords(), ...buildDriverRecords()];
+// REC facility (prj-0010) monitoring — hand-picked round kWh values (mirrors
+// the server module's rec-issues.test.ts fixture) so SF-04 issuance MWh totals
+// are exact, easy-to-verify numbers instead of derived from the solar
+// day-generation formula: Jan 2026 = 1500 + 2500 = 4000 kWh = 4 MWh;
+// Feb 2026 = 999 kWh = 0.999 MWh; Mar 2026 = 6000 kWh = 6 MWh (the "issued" row).
+const REC_RECORDS: Array<{ record_date: string; generation_kwh: number }> = [
+  { record_date: '2026-01-01', generation_kwh: 1500 },
+  { record_date: '2026-01-15', generation_kwh: 2500 },
+  { record_date: '2026-02-01', generation_kwh: 999 },
+  { record_date: '2026-03-01', generation_kwh: 6000 },
+];
+
+function buildRecRecords(): MonitoringRecord[] {
+  return REC_RECORDS.map((r, i) => ({
+    id: uid('mon-rec', i + 1),
+    project_id: 'prj-0010',
+    record_date: r.record_date,
+    generation_kwh: r.generation_kwh,
+    source: 'seed_direct',
+    uploaded_at: '2026-06-30T00:00:00Z',
+  }));
+}
+
+export const demoRecords: MonitoringRecord[] = [...buildSolarRecords(), ...buildDriverRecords(), ...buildRecRecords()];
 
 // Evidence (all attached to the solar project).
 const U = { id: seedUser.id, name: seedUser.name };
@@ -285,6 +341,43 @@ export const demoVerifications: VerificationRequest[] = [
     hash_value: shortHash('VR-1000-approval-payload'),
     credential_id: 'urn:vc:vr1000seed', anchored_at: '2026-04-15T08:30:00Z',
     hcs_topic_id: DEFAULT_GUARDIAN_CONFIG.topic_id, hcs_sequence_number: 1,
+  },
+];
+
+const REC_FACILITY_SNAPSHOT = {
+  evident_org_id: REC_SECTION_DATA.evident_org_id,
+  organisation_name: REC_SECTION_DATA.organisation_name,
+  facility_name: REC_SECTION_DATA.facility_name,
+  fuel_code: REC_SECTION_DATA.fuel_code,
+  fuel_description: REC_SECTION_DATA.fuel_description,
+  technology_code: REC_SECTION_DATA.technology_code,
+  technology_description: REC_SECTION_DATA.technology_description,
+};
+
+// SF-04 I-REC(E) Issue Requests — two rows against the REC facility (prj-0010):
+// one draft (Feb 2026 period, 999 kWh = 0.999 MWh) and one issued (Mar 2026
+// period, 6000 kWh = 6 MWh), consistent with REC_RECORDS above.
+export const demoRecIssues: RecIssueRequest[] = [
+  {
+    id: 'RIR-1001', project_id: 'prj-0010', created_by: U.id, owner_name: U.name,
+    assigned_reviewer_name: 'EGAT (Local Issuer)', state: 'draft',
+    request_type: 'Normal',
+    period_start: '2026-02-01', period_end: '2026-02-28',
+    total_production_mwh: 0.999, applied_mwh: null,
+    facility_snapshot: REC_FACILITY_SNAPSHOT,
+    receiving_org_name: '', receiving_account_id: '',
+    evidence_ids: [], submitted_at: null, issued_at: null, rejection_reason: null,
+  },
+  {
+    id: 'RIR-1000', project_id: 'prj-0010', created_by: U.id, owner_name: U.name,
+    assigned_reviewer_name: 'EGAT (Local Issuer)', state: 'issued',
+    request_type: 'Normal',
+    period_start: '2026-03-01', period_end: '2026-03-31',
+    total_production_mwh: 6, applied_mwh: null,
+    facility_snapshot: REC_FACILITY_SNAPSHOT,
+    receiving_org_name: 'GreenGrid Asia Co., Ltd.', receiving_account_id: 'EVID-ACC-000456',
+    evidence_ids: [], submitted_at: '2026-04-01T02:00:00Z', issued_at: '2026-04-05T09:00:00Z',
+    rejection_reason: null,
   },
 ];
 
@@ -393,5 +486,6 @@ export function seedDemo() {
     guardianConfig: DEFAULT_GUARDIAN_CONFIG,
     methodologies: seedMethodologies,
     pdds: demoPdds,
+    recIssues: demoRecIssues,
   });
 }

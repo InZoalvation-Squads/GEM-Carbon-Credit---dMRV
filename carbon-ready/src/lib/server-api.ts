@@ -1,7 +1,7 @@
 import type {
   UserRole, Project, EmissionFactor, MonitoringRecord, Methodology, PddState,
   ProjectDesignDocument, VerificationRequest, VerificationState, EvidenceFile,
-  VerifiableCredential, GuardianToken, VerificationComment,
+  VerifiableCredential, GuardianToken, VerificationComment, RecIssueRequest,
 } from '../types';
 import type { DisclosureSplit } from './pdd';
 
@@ -484,6 +484,54 @@ export const verificationsApi = {
     return (await apiFetch<{ comment: VerificationComment }>(`/verifications/${id}/comments`, {
       method: 'POST', body: { body, evidence_id: evidenceId },
     })).comment;
+  },
+};
+
+// SF-04 I-REC(E) Issue Requests — parallel to verificationsApi, never entangled
+// with the T-VER/Verra/CDM verification workflow. Server module:
+// server/src/modules/rec-issues/routes.ts.
+export const recIssuesApi = {
+  /** GET /rec-issues → { rec_issues } (org-scoped, all projects). */
+  async list(): Promise<RecIssueRequest[]> {
+    return (await apiFetch<{ rec_issues: RecIssueRequest[] }>('/rec-issues')).rec_issues;
+  },
+  /** POST /projects/:id/rec-issues — create a draft (proponent side); MWh is server-computed. */
+  async create(projectId: string, input: {
+    period_start: string;
+    period_end: string;
+    request_type: 'Normal' | 'Self consumption';
+    applied_mwh?: number;
+    receiving_org_name?: string;
+    receiving_account_id?: string;
+    evidence_ids?: string[];
+  }): Promise<RecIssueRequest> {
+    return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/projects/${projectId}/rec-issues`, {
+      method: 'POST', body: input,
+    })).rec_issue;
+  },
+  /** PUT /rec-issues/:id — draft-only edit; server recomputes MWh when the period changes. */
+  async update(id: string, patch: Record<string, unknown>): Promise<RecIssueRequest> {
+    return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/rec-issues/${id}`, {
+      method: 'PUT', body: patch,
+    })).rec_issue;
+  },
+  /** POST /rec-issues/:id/submit — proponent sends the request for review; freezes total_production_mwh. */
+  async submit(id: string): Promise<RecIssueRequest> {
+    return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/rec-issues/${id}/submit`, { method: 'POST' })).rec_issue;
+  },
+  /** POST /rec-issues/:id/approve — Local Issuer (verifier/admin) issues the certificates. */
+  async approve(id: string): Promise<RecIssueRequest> {
+    return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/rec-issues/${id}/approve`, { method: 'POST' })).rec_issue;
+  },
+  /** POST /rec-issues/:id/reject — terminal rejection with a required reason. */
+  async reject(id: string, reason: string): Promise<RecIssueRequest> {
+    return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/rec-issues/${id}/reject`, {
+      method: 'POST', body: { reason },
+    })).rec_issue;
+  },
+  /** DELETE /rec-issues/:id — draft-only removal. */
+  async remove(id: string): Promise<void> {
+    await apiFetch<void>(`/rec-issues/${id}`, { method: 'DELETE' });
   },
 };
 

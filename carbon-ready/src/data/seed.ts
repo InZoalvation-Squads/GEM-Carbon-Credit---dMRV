@@ -1,7 +1,7 @@
 import type {
   Organization, Project, MonitoringRecord, EmissionFactor, User, AuditLog,
   EvidenceFile, VerificationRequest, VerificationComment, VerifiableCredential,
-  Methodology, ProjectDesignDocument,
+  Methodology, ProjectDesignDocument, RecIssueRequest,
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from './methodology-tver-solar';
@@ -202,3 +202,6 @@ export const seedVerifications: VerificationRequest[] = [];
 export const seedComments: VerificationComment[] = [];
 export const seedCredentials: VerifiableCredential[] = [];
 export const seedAudit: AuditLog[] = [];
+// No REC (SF-04) issue requests yet — these accrue as REC-registered projects
+// request I-REC(E) issuance from their metered production.
+export const seedRecIssues: RecIssueRequest[] = [];

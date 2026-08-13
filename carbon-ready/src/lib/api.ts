@@ -4,14 +4,14 @@ import { calculateCarbon } from './calc';
 import { locationToCountryCode } from './geo';
 import { toast } from '../components/layout/Toast';
 import { formatNumber } from './format';
-import { serverMode, pddsApi, credentialsApi, verificationsApi } from './server-api';
+import { serverMode, pddsApi, credentialsApi, verificationsApi, recIssuesApi } from './server-api';
 import { issueCredential, buildPddSubject, buildApprovalSubject, mintGuardianToken, projectTopicId } from './guardian';
 import { PDD_REGISTRATION_SCHEMA_V1, MRV_APPROVAL_SCHEMA_V1 } from './guardian-schema';
 import { issuerIdentity } from './identity';
 import type {
   Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID,
   EvidenceFile, VerificationRequest, EvidenceCategory,
-  Methodology, ProjectDesignDocument, GuardianToken,
+  Methodology, ProjectDesignDocument, GuardianToken, RecIssueRequest,
 } from '../types';
 
 const tick = <T>(value: T, ms = 120): Promise<T> =>
@@ -200,6 +200,69 @@ export const api = {
     }
     useStore.getState().addComment(id, body, evidence);
     return tick(undefined, 60);
+  },
+
+  // ---------------- SF-04: REC issuance (I-REC(E) Issue Requests) ----------------
+  async listRecIssues(): Promise<RecIssueRequest[]> {
+    if (serverMode()) return recIssuesApi.list();
+    return tick(useStore.getState().recIssues);
+  },
+  async createRecIssue(input: {
+    project_id: UUID; period_start: string; period_end: string;
+    request_type: 'Normal' | 'Self consumption'; applied_mwh?: number;
+    receiving_org_name?: string; receiving_account_id?: string; evidence_ids?: UUID[];
+  }): Promise<RecIssueRequest> {
+    if (serverMode()) {
+      const { project_id, ...body } = input;
+      const r = await recIssuesApi.create(project_id, body);
+      useStore.getState().applyServerRecIssue(r);
+      toast.success('Issue request created', 'Draft saved.');
+      return r;
+    }
+    const r = useStore.getState().createRecIssue(input);
+    toast.success('Issue request created', 'Draft saved.');
+    return tick(r);
+  },
+  async submitRecIssue(id: UUID): Promise<void> {
+    if (serverMode()) {
+      useStore.getState().applyServerRecIssue(await recIssuesApi.submit(id));
+      toast.success('Issue request submitted', 'Sent to the Local Issuer for review.');
+      return;
+    }
+    useStore.getState().submitRecIssue(id);
+    toast.success('Issue request submitted', 'Sent to the Local Issuer for review.');
+    return tick(undefined);
+  },
+  async approveRecIssue(id: UUID): Promise<void> {
+    if (serverMode()) {
+      useStore.getState().applyServerRecIssue(await recIssuesApi.approve(id));
+      toast.success('REC certificates issued', 'Issue request approved.');
+      return;
+    }
+    useStore.getState().approveRecIssue(id);
+    toast.success('REC certificates issued', 'Issue request approved.');
+    return tick(undefined);
+  },
+  async rejectRecIssue(id: UUID, reason: string): Promise<void> {
+    if (serverMode()) {
+      useStore.getState().applyServerRecIssue(await recIssuesApi.reject(id, reason));
+      toast.error('Issue request rejected', reason);
+      return;
+    }
+    useStore.getState().rejectRecIssue(id, reason);
+    toast.error('Issue request rejected', reason);
+    return tick(undefined);
+  },
+  async deleteRecIssue(id: UUID): Promise<void> {
+    if (serverMode()) {
+      await recIssuesApi.remove(id);
+      useStore.setState((s) => ({ recIssues: s.recIssues.filter((r) => r.id !== id) }));
+      toast.info('Issue request deleted');
+      return;
+    }
+    useStore.getState().deleteRecIssue(id);
+    toast.info('Issue request deleted');
+    return tick(undefined);
   },
 
   // ---------------- Sprint 3: Guardian anchoring ----------------
