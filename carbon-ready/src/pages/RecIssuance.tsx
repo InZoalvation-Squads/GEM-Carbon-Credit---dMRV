@@ -149,6 +149,11 @@ export function RecIssuance() {
                 {rows.map((r) => {
                   const mwh = r.applied_mwh ?? r.total_production_mwh;
                   const busy = busyId === r.id;
+                  // The server requires non-blank receiving fields at submit
+                  // time (SF-04 §2) — disable Submit here too so the row
+                  // action never 400s; there is no edit UI yet, so recovery
+                  // would otherwise be delete + recreate.
+                  const receivingIncomplete = !r.receiving_org_name?.trim() || !r.receiving_account_id?.trim();
                   return (
                     <TR key={r.id}>
                       <TD>
@@ -164,7 +169,9 @@ export function RecIssuance() {
                       <TD className="text-right">
                         {r.state === 'draft' && canCreate && (
                           <div className="flex justify-end gap-2">
-                            <Button size="sm" variant="secondary" loading={busy} onClick={() => doSubmit(r.id)}>Submit</Button>
+                            <span title={receivingIncomplete ? 'กรอก Receiving account ใน draft ก่อน submit' : undefined}>
+                              <Button size="sm" variant="secondary" disabled={receivingIncomplete} loading={busy} onClick={() => doSubmit(r.id)}>Submit</Button>
+                            </span>
                             <Button size="sm" variant="ghost" loading={busy} onClick={() => doDelete(r.id)}>Delete</Button>
                           </div>
                         )}

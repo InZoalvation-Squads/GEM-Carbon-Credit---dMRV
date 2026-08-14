@@ -91,7 +91,34 @@ describe('REC Issuance page', () => {
     expect(screen.getByRole('button', { name: /Save & Submit/ })).toBeDisabled();
   });
 
+  it('blank receiving fields disable Save & Submit but not Save draft; filling them enables Save & Submit', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Issue Request/ }));
+
+    const start = screen.getByLabelText(/Period start/i);
+    const end = screen.getByLabelText(/Period end/i);
+    fireEvent.change(start, { target: { value: '2026-01-01' } });
+    fireEvent.change(end, { target: { value: '2026-01-31' } });
+
+    expect(screen.getByRole('button', { name: /Save draft/ })).toBeEnabled();
+    expect(screen.getByRole('button', { name: /Save & Submit/ })).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/Receiving organisation/i), { target: { value: 'GreenGrid Asia Co., Ltd.' } });
+    fireEvent.change(screen.getByLabelText(/Receiving account ID/i), { target: { value: 'EVID-ACC-000456' } });
+
+    expect(screen.getByRole('button', { name: /Save & Submit/ })).toBeEnabled();
+  });
+
   it('submit then approve as verifier walks a draft to issued', async () => {
+    // RIR-1001's demo fixture ships with blank receiving fields (never
+    // submitted in the seed data), which the row-level guard now disables
+    // Submit for. Fill them in via the store so this walk exercises the
+    // submit → approve transition rather than the guard.
+    useStore.setState((s) => ({
+      recIssues: s.recIssues.map((r) => (r.id === 'RIR-1001'
+        ? { ...r, receiving_org_name: 'GreenGrid Asia Co., Ltd.', receiving_account_id: 'EVID-ACC-000456' }
+        : r)),
+    }));
     renderPage();
     // RIR-1001 starts as draft — submit it.
     const submitButtons = screen.getAllByRole('button', { name: /^Submit$/ });

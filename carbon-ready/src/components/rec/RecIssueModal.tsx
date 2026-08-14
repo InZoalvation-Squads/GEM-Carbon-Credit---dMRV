@@ -54,10 +54,15 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
   const appliedValue = appliedMwh.trim() === '' ? null : Number(appliedMwh);
   const appliedInvalid = appliedValue !== null && (Number.isNaN(appliedValue) || appliedValue <= 0 || appliedValue > mwh);
 
-  const canSubmit = !!projectId && mwh > 0 && from <= to && !appliedInvalid && !busy;
+  const canSaveDraft = !!projectId && mwh > 0 && from <= to && !appliedInvalid && !busy;
+  // The server requires non-blank receiving fields at submit time (SF-04 §2) —
+  // guard the button here too so "Save & Submit" never 400s; the draft path
+  // stays permissive since those fields can be filled in later before submit.
+  const receivingComplete = receivingOrgName.trim() !== '' && receivingAccountId.trim() !== '';
+  const canSubmit = canSaveDraft && receivingComplete;
 
   async function saveDraft() {
-    if (!canSubmit) return;
+    if (!canSaveDraft) return;
     setBusy(true);
     try {
       await api.createRecIssue({
@@ -137,6 +142,11 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
           <Input label="Receiving organisation" value={receivingOrgName} onChange={(e) => setReceivingOrgName(e.target.value)} />
           <Input label="Receiving account ID" value={receivingAccountId} onChange={(e) => setReceivingAccountId(e.target.value)} />
         </div>
+        {!receivingComplete && (
+          <p className="-mt-2 text-xs text-amber-700">
+            ต้องระบุ Receiving organisation และ Account ID ก่อน submit
+          </p>
+        )}
 
         <div className="rounded-xl bg-ink-50 px-4 py-3 text-sm">
           <div className="text-ink-600">
@@ -152,7 +162,7 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
-          <Button variant="secondary" disabled={!canSubmit} loading={busy} onClick={saveDraft}>
+          <Button variant="secondary" disabled={!canSaveDraft} loading={busy} onClick={saveDraft}>
             Save draft
           </Button>
           <Button disabled={!canSubmit} loading={busy} onClick={saveAndSubmit}>
