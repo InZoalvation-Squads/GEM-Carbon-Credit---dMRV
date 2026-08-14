@@ -5,13 +5,22 @@ import { RecGuide, REC_GUIDE_STORAGE_KEY } from './RecGuide';
 beforeEach(() => localStorage.clear());
 
 describe('RecGuide — 3-phase checklist', () => {
-  it('renders the three phase headers with counters', () => {
+  it('renders the four phase headers with counters', () => {
     render(<RecGuide />);
     expect(screen.getByText(/เปิดบัญชี Registrant/)).toBeInTheDocument();
     expect(screen.getByText(/ขึ้นทะเบียนโรงไฟฟ้า SF-02/)).toBeInTheDocument();
     expect(screen.getByText(/EGAT ตรวจ \+ ค่าธรรมเนียม/)).toBeInTheDocument();
+    expect(screen.getByText(/ขอออกใบรับรอง REC \(SF-04\)/)).toBeInTheDocument();
     // phase 1 has 9 tickable items, none checked yet
     expect(screen.getByText('0/9')).toBeInTheDocument();
+  });
+
+  it('phase 4 points to the in-app REC Issuance page and offers the SF-04 download', () => {
+    render(<RecGuide />);
+    fireEvent.click(screen.getByText(/ขอออกใบรับรอง REC \(SF-04\)/));
+    expect(screen.getByText(/หน้า REC Issuance/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /SF-04 \(PDF\)/ }))
+      .toHaveAttribute('href', expect.stringContaining('SF-04'));
   });
 
   it('phase 1 is expanded by default; phase 2 expands on click', () => {

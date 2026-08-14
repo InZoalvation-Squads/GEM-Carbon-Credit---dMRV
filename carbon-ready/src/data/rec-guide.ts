@@ -95,4 +95,22 @@ export const REC_GUIDE_PHASES: RecGuidePhase[] = [
     ],
     items: [],
   },
+  {
+    key: 'issuance',
+    title: '④ ขอออกใบรับรอง REC (SF-04) — ทำในระบบนี้ ทำซ้ำทุกงวดผลิต',
+    notes: [
+      'สร้างและติดตามคำขอได้ที่หน้า REC Issuance — ระบบคำนวณ MWh จากข้อมูลมิเตอร์ของงวดให้อัตโนมัติ (1 REC = 1 MWh)',
+      'EGAT อนุมัติแล้ว REC จะโอนเข้า Participant Account ที่ระบุในคำขอ — invoice ค่าออกใบชำระภายใน 30 วัน (ปี 2026: 0.95 บาท/MWh · self-consumption 1.33 บาท/MWh)',
+    ],
+    links: [
+      { label: 'SF-04 (PDF)', url: 'https://ppa-s3.egat.co.th/rec-landing-public-prod/forms/SF-04-IssueRequest_V1.2.1.pdf' },
+      { label: 'SF-04 (Word)', url: 'https://ppa-s3.egat.co.th/rec-landing-public-prod/forms/SF-04-IssueRequest.docx' },
+    ],
+    items: [
+      { id: 'metering-period', label: 'ข้อมูลมิเตอร์/ปริมาณไฟของงวดที่จะเคลม อัปโหลดเข้าระบบครบแล้ว' },
+      { id: 'volume-agreed', label: 'หลักฐานปริมาณไฟที่ผู้ผลิตและผู้ซื้อยอมรับร่วมกัน (ใบแจ้งหนี้ขายไฟ/ข้อมูลมิเตอร์พร้อมวิธีคำนวณ)' },
+      { id: 'receiving-account', label: 'Receiving/Participant Account ปลายทางบน Evident Registry' },
+      { id: 'sf04a', label: 'SF-04A Issuing Declaration ลงนาม (คำประกาศว่าไฟงวดนี้ไม่ถูกเคลมในกลไกอื่น)' },
+    ],
+  },
 ];
