@@ -77,6 +77,20 @@ describe('REC Issuance page', () => {
     expect(screen.getByTestId('fee-estimate')).toHaveTextContent('5.32');
   });
 
+  it('period with no production data disables Save & Submit and shows the zero-MWh warning', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Issue Request/ }));
+
+    const start = screen.getByLabelText(/Period start/i);
+    const end = screen.getByLabelText(/Period end/i);
+    // prj-0010 (Ayutthaya Solar REC Facility) has no monitoring records in April 2026.
+    fireEvent.change(start, { target: { value: '2026-04-01' } });
+    fireEvent.change(end, { target: { value: '2026-04-30' } });
+
+    expect(screen.getByText(/ไม่มีข้อมูล monitoring ในช่วงที่เลือก/)).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /Save & Submit/ })).toBeDisabled();
+  });
+
   it('submit then approve as verifier walks a draft to issued', async () => {
     renderPage();
     // RIR-1001 starts as draft — submit it.
