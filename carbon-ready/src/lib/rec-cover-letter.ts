@@ -17,10 +17,10 @@ const BLANK = '[.....]';
 const CONDITIONAL_ATTACHMENTS: ReadonlyArray<{ id: string; label: string }> = [
   { id: 'company-cert', label: 'Proof of company registration (Dated within the last 6 months)' },
   { id: 'poa', label: 'Power of Attorney' },
-  { id: 'id-copy', label: 'Copy of passport/ID card of authorized person(s)' },
+  { id: 'id-copy', label: 'Copy of passport/ID card of authorized person' },
   { id: 'boj34', label: 'Company Seal/Stamp Registration (BOJ.3/BOJ.4)' },
   { id: 'boj5', label: "Copy of List of shareholder's names (BOJ.5)" },
-  { id: 'financial', label: "Company's financial report (Dated within the last 12 months)" },
+  { id: 'financial', label: "Company's financial report (Within the last 12 months)" },
   { id: 'pp20', label: 'Copy of the VAT registration certificate (PP20)' },
 ];
 
@@ -43,7 +43,6 @@ ${input.date}
 
 Subject:   Registrant Application
 Attention: Director, Power Purchase Agreement Division
-           Electricity Generating Authority of Thailand
 
 Attachment:
 ${attachment}
