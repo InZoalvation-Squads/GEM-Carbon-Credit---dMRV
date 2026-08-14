@@ -1,6 +1,7 @@
 import type { ComponentType } from 'react';
 import type { DocumentTemplate } from '../types';
 import { TverSF001Pdd } from './TverSF001Pdd';
+import { EvidentSF02 } from './EvidentSF02';
 
 export interface OfficialFormMeta {
   component: ComponentType<{ pddId?: string }>;
@@ -16,5 +17,10 @@ export const OFFICIAL_FORMS: Record<DocumentTemplate, OfficialFormMeta> = {
     component: TverSF001Pdd,
     badgeLabel: 'ฟอร์ม อบก.',
     buttonLabel: 'เอกสารฟอร์ม อบก.',
+  },
+  'EVIDENT-SF-02': {
+    component: EvidentSF02,
+    badgeLabel: 'ฟอร์ม Evident',
+    buttonLabel: 'เอกสารฟอร์ม Evident SF-02',
   },
 };

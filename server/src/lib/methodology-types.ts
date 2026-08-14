@@ -95,5 +95,8 @@ export interface Methodology {
   required_evidence: EvidenceCategory[];
   monitoring_params: MonitoringParam[];
   /** Official-form renderer registered for this methodology (template-per-form). */
-  document_template?: 'T-VER-S-F001-PDD';
+  document_template?: DocumentTemplate;
 }
+
+/** Official-form renderers registered per methodology (template-per-form). */
+export type DocumentTemplate = 'T-VER-S-F001-PDD' | 'EVIDENT-SF-02';

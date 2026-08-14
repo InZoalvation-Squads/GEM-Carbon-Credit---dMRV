@@ -42,6 +42,10 @@ describe('official TGO form export button', () => {
     render(<MemoryRouter><PddDocument pddId="PDD-2005" /></MemoryRouter>); // forestry
     expect(screen.queryByText(/เอกสารฟอร์ม อบก\./)).toBeNull();
   });
+  it('shows the Evident SF-02 export button for the REC pdd', () => {
+    render(<MemoryRouter><PddDocument pddId="PDD-2009" /></MemoryRouter>); // REC facility (EVIDENT-SF-02)
+    expect(screen.getByText(/เอกสารฟอร์ม Evident SF-02/)).toBeInTheDocument();
+  });
 });
 
 describe('official form cover image', () => {

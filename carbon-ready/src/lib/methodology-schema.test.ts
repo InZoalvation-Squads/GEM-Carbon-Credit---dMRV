@@ -72,6 +72,17 @@ describe('extended T-VER solar methodology (T-VER-S-F001-PDD)', () => {
   });
 });
 
+describe('REC solar methodology (EVIDENT-SF-02)', () => {
+  it('roundtrips through the JSON contract and carries the SF-02 template', () => {
+    const rec = seedMethodologies.find((m) => m.id === 'meth-rec-solar')!;
+    const res = parseMethodologyJson(methodologyToJson(rec));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+    if (res.ok) {
+      expect(res.methodology.document_template).toBe('EVIDENT-SF-02');
+    }
+  });
+});
+
 describe('schema v2 — table fields & document_template', () => {
   const baseDoc = () => JSON.parse(methodologyToJson(seedMethodologies[0]));
 

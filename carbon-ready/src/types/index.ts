@@ -424,7 +424,7 @@ export interface Methodology {
 }
 
 /** Official-form renderers registered per methodology (template-per-form). */
-export type DocumentTemplate = 'T-VER-S-F001-PDD';
+export type DocumentTemplate = 'T-VER-S-F001-PDD' | 'EVIDENT-SF-02';
 
 export type PddState =
   | 'draft' | 'submitted' | 'under_validation'

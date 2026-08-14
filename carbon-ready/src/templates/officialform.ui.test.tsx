@@ -30,4 +30,9 @@ describe('OfficialForm dispatcher', () => {
     renderAt('PDD-nope');
     expect(screen.getByText(/not found|ไม่พบ/i)).toBeInTheDocument();
   });
+
+  it('renders the Evident SF-02 form for a REC (EVIDENT-SF-02) methodology pdd', () => {
+    renderAt('PDD-2009');
+    expect(screen.getByText('EC-IRE-SF02')).toBeInTheDocument();
+  });
 });

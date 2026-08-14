@@ -21,7 +21,7 @@ const PDD_COMPUTED_SOURCES = [
   'annual_generation', 'ec_pj', 'be_annual', 'pe_annual', 'er_annual',
 ] as const;
 
-const DOCUMENT_TEMPLATES = ['T-VER-S-F001-PDD'] as const;
+const DOCUMENT_TEMPLATES = ['T-VER-S-F001-PDD', 'EVIDENT-SF-02'] as const;
 
 const EVIDENCE_CATEGORIES = [
   'meter_reading', 'utility_bill', 'commissioning_report', 'site_photo',

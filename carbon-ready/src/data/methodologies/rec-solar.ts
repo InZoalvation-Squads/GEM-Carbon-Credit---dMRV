@@ -19,6 +19,7 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
   standard: 'REC',
   version: 'v1.4.1',
   sectoral_scope: 'Renewable electricity generation',
+  document_template: 'EVIDENT-SF-02',
   status: 'active',
   // Facility generation is metered in kWh; issuance (1 REC = 1 MWh) is out of
   // scope this round — grid_displacement keeps the SPA treating the track as a

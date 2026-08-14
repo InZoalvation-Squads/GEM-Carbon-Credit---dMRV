@@ -5,6 +5,7 @@
   "standard": "REC",
   "version": "v1.4.1",
   "sectoral_scope": "Renewable electricity generation",
+  "document_template": "EVIDENT-SF-02",
   "status": "active",
   "calculation": {
     "formula": "grid_displacement",
