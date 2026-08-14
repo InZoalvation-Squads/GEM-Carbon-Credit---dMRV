@@ -37,9 +37,7 @@ function Footer({ pageLabel }: { pageLabel?: string }) {
 function HeaderBox() {
   return (
     <div className="flex items-start justify-between">
-      <div className="flex items-center gap-3">
-        <img src="/evident-logo.svg" alt="Evident" className="h-12 w-auto" onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }} />
-      </div>
+      <div className="text-xl font-extrabold tracking-tight">Ev.</div>
       <div className="text-right leading-snug">
         <p className="font-bold">Evident . I-REC Code for Electricity</p>
         <p>SF-02: Production Facility Registration</p>
@@ -119,7 +117,9 @@ function Row({ label, hint, children, labelWidth = 'w-64' }: { label: string; hi
 
 /** DD | MM | YYYY cells; grey placeholder text when the ISO date is blank. */
 function DateCells({ iso }: { iso: unknown }) {
-  const parts = typeof iso === 'string' && iso ? iso.split('-') : null; // [YYYY, MM, DD]
+  // slice(0, 10): tolerate full ISO datetimes (e.g. pdd.submitted_at) — the
+  // form's DD cell must never show a time suffix.
+  const parts = typeof iso === 'string' && iso ? iso.slice(0, 10).split('-') : null; // [YYYY, MM, DD]
   const [yyyy, mm, dd] = parts ?? [undefined, undefined, undefined];
   const cell = (val: string | undefined, placeholder: string) => (
     <div className="flex-1 border-r border-[#333] px-2 py-1.5 last:border-r-0">
@@ -355,7 +355,7 @@ export function EvidentSF02({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <Row label="Number of generating units" hint="(E.g., number of inverters for solar facility, number of wind turbine generators for wind facility, etc.)">{str('generating_units')}</Row>
           <Row label="Commissioning date"><DateCells iso={project.commission_date} /></Row>
           <Row label="Owner of the network to which the Production Device is connected and the voltage of that connection">{str('network_owner_voltage')}</Row>
-          <Row label="If the Production Device is not connected directly to the grid, specify the circumstances and additional relevant meter registration numbers">{str('non_grid_details')}</Row>
+          <Row label="If the Production Device is not connected directly to the grid, specify the circumstances, and additional relevant meter registration numbers">{str('non_grid_details')}</Row>
         </Page>
 
         {/* ============ Form page 3/8 — §1.3 continued + §1.4 ============ */}
