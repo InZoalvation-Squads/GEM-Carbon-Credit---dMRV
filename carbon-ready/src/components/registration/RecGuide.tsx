@@ -1,7 +1,8 @@
 import { useState } from 'react';
-import { ChevronDown, FileDown } from 'lucide-react';
+import { ChevronDown, FileDown, FileText } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { REC_GUIDE_PHASES } from '../../data/rec-guide';
+import { RecCoverLetterModal } from './RecCoverLetterModal';
 
 export const REC_GUIDE_STORAGE_KEY = 'carbonready.rec-guide.v1';
 
@@ -33,6 +34,7 @@ function saveChecked(ids: Set<string>) {
 export function RecGuide() {
   const [checked, setChecked] = useState<Set<string>>(loadChecked);
   const [openKeys, setOpenKeys] = useState<Set<string>>(new Set([REC_GUIDE_PHASES[0].key]));
+  const [letterOpen, setLetterOpen] = useState(false);
 
   function toggleItem(id: string) {
     setChecked((prev) => {
@@ -101,6 +103,16 @@ export function RecGuide() {
                           {l.label}
                         </a>
                       ))}
+                      {phase.key === 'registrant' && (
+                        <button
+                          type="button"
+                          onClick={() => setLetterOpen(true)}
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50/60 px-2.5 py-1 text-[11px] font-medium text-brand-700 transition-colors hover:border-brand-400 hover:bg-brand-50"
+                        >
+                          <FileText size={12} aria-hidden />
+                          ร่างจดหมายนำส่ง
+                        </button>
+                      )}
                     </div>
                   )}
                   {phase.items.length > 0 && (
@@ -127,6 +139,7 @@ export function RecGuide() {
       <div className="mt-2 flex justify-end">
         <Button variant="ghost" onClick={clearAll}>ล้าง checklist</Button>
       </div>
+      {letterOpen && <RecCoverLetterModal checkedIds={checked} onClose={() => setLetterOpen(false)} />}
     </div>
   );
 }

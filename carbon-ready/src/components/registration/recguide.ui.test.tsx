@@ -1,5 +1,5 @@
-import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { RecGuide, REC_GUIDE_STORAGE_KEY } from './RecGuide';
 
 beforeEach(() => localStorage.clear());
@@ -71,5 +71,33 @@ describe('RecGuide — 3-phase checklist', () => {
       .toHaveAttribute('href', expect.stringContaining('SF-01'));
     expect(screen.getByRole('link', { name: /EGAT I-REC Issuer/ }))
       .toHaveAttribute('href', 'https://irecissuer.egat.co.th/');
+  });
+});
+
+describe('cover letter draft', () => {
+  it('phase 1 has a draft button that opens the letter modal; typed company name appears in the preview', () => {
+    render(<RecGuide />);
+    fireEvent.click(screen.getByRole('button', { name: /ร่างจดหมายนำส่ง/ }));
+    expect(screen.getByText(/Registrant Application/)).toBeInTheDocument();
+    fireEvent.change(screen.getByLabelText(/ชื่อบริษัท/), { target: { value: 'Rocks Green Energy Co., Ltd.' } });
+    expect(screen.getByTestId('cover-letter-preview')).toHaveTextContent('Rocks Green Energy Co., Ltd.');
+  });
+
+  it('ticked checklist items appear as attachment lines in the letter', () => {
+    localStorage.setItem(REC_GUIDE_STORAGE_KEY, JSON.stringify(['company-cert']));
+    render(<RecGuide />);
+    fireEvent.click(screen.getByRole('button', { name: /ร่างจดหมายนำส่ง/ }));
+    expect(screen.getByTestId('cover-letter-preview'))
+      .toHaveTextContent('Proof of company registration');
+  });
+
+  it('Copy writes the letter to the clipboard', async () => {
+    const writeText = vi.fn().mockResolvedValue(undefined);
+    Object.assign(navigator, { clipboard: { writeText } });
+    render(<RecGuide />);
+    fireEvent.click(screen.getByRole('button', { name: /ร่างจดหมายนำส่ง/ }));
+    fireEvent.click(screen.getByRole('button', { name: /^Copy/ }));
+    await waitFor(() => expect(writeText).toHaveBeenCalledOnce());
+    expect(writeText.mock.calls[0][0]).toContain('Registrant Application');
   });
 });
