@@ -12,6 +12,7 @@ import { Select } from '../components/ui/Select';
 import { Textarea } from '../components/ui/Textarea';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
+import { OFFICIAL_FORMS } from '../templates/registry';
 import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
 import { buildPrefill } from '../lib/pdd-prefill';
 import { toast } from '../components/layout/Toast';
@@ -131,7 +132,7 @@ export function Registration() {
                   </span>
                   <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[10px] font-medium text-ink-500">{m.version}</span>
                   {m.document_template && (
-                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">ฟอร์ม อบก.</span>
+                    <span className="rounded-full bg-violet-50 px-2 py-0.5 text-[10px] font-medium text-violet-700">{OFFICIAL_FORMS[m.document_template].badgeLabel}</span>
                   )}
                 </div>
                 <div className="mt-2 font-mono text-sm font-bold text-ink-900">{m.code}</div>

@@ -19,7 +19,7 @@ import { Guardian } from './pages/Guardian';
 import { Methodologies } from './pages/Methodologies';
 import { Registration } from './pages/Registration';
 import { PddDocument } from './pages/PddDocument';
-import { TverSF001Pdd } from './templates/TverSF001Pdd';
+import { OfficialForm } from './templates/OfficialForm';
 import { ValidationQueue } from './pages/ValidationQueue';
 import { ValidationDetail } from './pages/ValidationDetail';
 
@@ -45,7 +45,7 @@ export default function App() {
           <Route path="/registration" element={<Registration />} />
           <Route path="/registration/:pddId" element={<Registration />} />
           <Route path="/registration/:pddId/document" element={<PddDocument />} />
-          <Route path="/registration/:pddId/official" element={<TverSF001Pdd />} />
+          <Route path="/registration/:pddId/official" element={<OfficialForm />} />
           <Route path="/validation" element={<ValidationQueue />} />
           <Route path="/validation/:pddId" element={<ValidationDetail />} />
           <Route path="/projects" element={<Projects />} />

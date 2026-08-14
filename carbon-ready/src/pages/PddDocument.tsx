@@ -8,6 +8,7 @@ import { PddStatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { HashChip } from '../components/ui/HashChip';
 import { isFieldVisible, resolveComputed } from '../lib/pdd';
+import { OFFICIAL_FORMS } from '../templates/registry';
 import type { PddComputedSource } from '../types';
 import clsx from 'clsx';
 import { displayHcs } from '../lib/guardian';
@@ -41,9 +42,9 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
       <div className={clsx('mb-4 flex items-center print:hidden', embedded ? 'justify-end' : 'justify-between')}>
         {!embedded && <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>}
         <div className="flex items-center gap-2">
-          {methodology.document_template === 'T-VER-S-F001-PDD' && (
+          {methodology.document_template && (
             <Link to={`/registration/${pdd.id}/official`}>
-              <Button variant="ghost"><FileText size={16} /> เอกสารฟอร์ม อบก.</Button>
+              <Button variant="ghost"><FileText size={16} /> {OFFICIAL_FORMS[methodology.document_template].buttonLabel}</Button>
             </Link>
           )}
           <Button variant="ghost" onClick={() => setPublicView((v) => !v)}>
