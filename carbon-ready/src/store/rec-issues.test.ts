@@ -112,6 +112,25 @@ describe('REC issue requests — demo store', () => {
     expect(issuedAfter).toEqual(issuedBefore);
   });
 
+  it('updateRecIssue re-windows MWh from a partial period patch (period_start only)', async () => {
+    // Feb+Mar records: 999 kWh (2026-02-01) + 6000 kWh (2026-03-01).
+    const created = await api.createRecIssue({
+      project_id: REC_PROJECT_ID,
+      period_start: '2026-02-01',
+      period_end: '2026-03-31',
+      request_type: 'Normal',
+    });
+    expect(created.total_production_mwh).toBe(6.999);
+
+    // Narrow only the start; the window becomes [new start, existing end].
+    await api.updateRecIssue(created.id, { period_start: '2026-03-01' });
+
+    const row = useStore.getState().recIssues.find((r) => r.id === created.id);
+    expect(row?.period_start).toBe('2026-03-01');
+    expect(row?.period_end).toBe('2026-03-31');
+    expect(row?.total_production_mwh).toBe(6);
+  });
+
   it('delete removes a draft', async () => {
     const created = await api.createRecIssue({
       project_id: REC_PROJECT_ID,

@@ -12,6 +12,7 @@ import type {
   Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID,
   EvidenceFile, VerificationRequest, EvidenceCategory,
   Methodology, ProjectDesignDocument, GuardianToken, RecIssueRequest,
+  RecIssueDraftPatch,
 } from '../types';
 
 const tick = <T>(value: T, ms = 120): Promise<T> =>
@@ -224,12 +225,7 @@ export const api = {
     toast.success('Issue request created', 'Draft saved.');
     return tick(r);
   },
-  async updateRecIssue(id: UUID, patch: Partial<{
-    period_start: string; period_end: string;
-    request_type: 'Normal' | 'Self consumption'; applied_mwh: number | null;
-    receiving_org_name: string; receiving_account_id: string;
-    facility_id: string; requested_labels: string; evidence_ids: UUID[];
-  }>): Promise<void> {
+  async updateRecIssue(id: UUID, patch: RecIssueDraftPatch): Promise<void> {
     if (serverMode()) {
       useStore.getState().applyServerRecIssue(await recIssuesApi.update(id, patch));
       toast.success('Issue request updated', 'Draft saved.');

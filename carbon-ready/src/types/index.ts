@@ -248,6 +248,19 @@ export interface RecIssueRequest {
   rejection_reason?: string | null;
 }
 
+/**
+ * Draft-only editable fields of a RecIssueRequest — the whitelist accepted by
+ * PUT /rec-issues/:id and by the demo store's updateRecIssue. Shared by
+ * api.updateRecIssue, recIssuesApi.update, and the store action so the three
+ * never drift.
+ */
+export type RecIssueDraftPatch = Partial<{
+  period_start: string; period_end: string;
+  request_type: 'Normal' | 'Self consumption'; applied_mwh: number | null;
+  receiving_org_name: string; receiving_account_id: string;
+  facility_id: string; requested_labels: string; evidence_ids: UUID[];
+}>;
+
 export type CsvErrorCode =
   | 'DUPLICATE_DATE'
   | 'MISSING_DATE'

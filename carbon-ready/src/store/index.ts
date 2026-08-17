@@ -5,7 +5,7 @@ import type {
   AuditLog, User, UserRole, Organization, UUID, AuditAction, EntityType,
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
   VerifiableCredential, GuardianConfig, GuardianToken,
-  Methodology, ProjectDesignDocument, RecIssueRequest,
+  Methodology, ProjectDesignDocument, RecIssueRequest, RecIssueDraftPatch,
 } from '../types';
 import {
   seedOrg, seedUser, seedFactors, seedProjects, seedRecords, seedAudit,
@@ -131,17 +131,14 @@ interface AppState {
     facility_id?: string; requested_labels?: string; evidence_ids?: UUID[];
   }) => RecIssueRequest;
   /**
-   * Draft-only patch (mirrors the server's PUT /rec-issues/:id). Recomputes
-   * total_production_mwh when the period changes. Quiet (no audit) — the
-   * trail begins at submit. Returns undefined if the row is missing or not
-   * a draft.
+   * Draft-only patch (demo-mode counterpart of PUT /rec-issues/:id).
+   * Recomputes total_production_mwh when the period changes. Quiet (no
+   * audit) — the trail begins at submit. Returns undefined if the row is
+   * missing or not a draft. Looser than the server PUT, which additionally
+   * rejects periods with total production <= 0 and invalid dates — demo
+   * drafts stay permissive, consistent with createRecIssue above.
    */
-  updateRecIssue: (id: UUID, patch: Partial<{
-    period_start: string; period_end: string;
-    request_type: 'Normal' | 'Self consumption'; applied_mwh: number | null;
-    receiving_org_name: string; receiving_account_id: string;
-    facility_id: string; requested_labels: string; evidence_ids: UUID[];
-  }>) => RecIssueRequest | undefined;
+  updateRecIssue: (id: UUID, patch: RecIssueDraftPatch) => RecIssueRequest | undefined;
   submitRecIssue: (id: UUID) => void;
   approveRecIssue: (id: UUID) => void;
   rejectRecIssue: (id: UUID, reason: string) => void;
@@ -154,6 +151,18 @@ interface AppState {
 
 function uid(prefix: string) {
   return `${prefix}-${Date.now().toString(36)}-${Math.floor(Math.random() * 1e6).toString(36)}`;
+}
+
+/**
+ * SF-04 MWh window: sum a project's generation_kwh over [start, end] and
+ * convert to MWh. Same rounding as the server's mwhForPeriod and
+ * RecIssueModal's preview — keep the three in sync.
+ */
+function recMwhForPeriod(records: MonitoringRecord[], projectId: UUID, start: string, end: string): number {
+  const kwh = records
+    .filter((m) => m.project_id === projectId && m.record_date >= start && m.record_date <= end)
+    .reduce((sum, m) => sum + m.generation_kwh, 0);
+  return Math.round((kwh / 1000) * 1e6) / 1e6;
 }
 
 const CALLER_IP = '203.0.113.10'; // stand-in for request IP until real auth middleware (Sprint 3+)
@@ -625,11 +634,7 @@ export const useStore = create<AppState>()(
       // Parallel to the Sprint 2 verification workflow above; never entangled with it.
       createRecIssue: (input) => {
         const s = get();
-        const kwh = s.records
-          .filter((m) => m.project_id === input.project_id
-            && m.record_date >= input.period_start && m.record_date <= input.period_end)
-          .reduce((sum, m) => sum + m.generation_kwh, 0);
-        const total = Math.round((kwh / 1000) * 1e6) / 1e6;
+        const total = recMwhForPeriod(s.records, input.project_id, input.period_start, input.period_end);
         const pdd = s.pdds.find((p) => p.project_id === input.project_id && p.state === 'registered'
           && s.methodologies.find((m) => m.id === p.methodology_id)?.standard === 'REC');
         const sd = (pdd?.section_data ?? {}) as Record<string, unknown>;
@@ -663,13 +668,14 @@ export const useStore = create<AppState>()(
         const s = get();
         const row = s.recIssues.find((r) => r.id === id);
         if (!row || row.state !== 'draft') return undefined;
-        const next: RecIssueRequest = { ...row, ...patch };
-        if (patch.period_start !== undefined || patch.period_end !== undefined) {
-          const kwh = s.records
-            .filter((m) => m.project_id === next.project_id
-              && m.record_date >= next.period_start && m.record_date <= next.period_end)
-            .reduce((sum, m) => sum + m.generation_kwh, 0);
-          next.total_production_mwh = Math.round((kwh / 1000) * 1e6) / 1e6;
+        // Drop explicitly-undefined keys so `{ period_start: undefined }`
+        // can neither blank a field nor skip the MWh recompute below.
+        const clean = Object.fromEntries(
+          Object.entries(patch).filter(([, v]) => v !== undefined),
+        ) as RecIssueDraftPatch;
+        const next: RecIssueRequest = { ...row, ...clean };
+        if (clean.period_start !== undefined || clean.period_end !== undefined) {
+          next.total_production_mwh = recMwhForPeriod(s.records, next.project_id, next.period_start, next.period_end);
         }
         set((st) => ({ recIssues: st.recIssues.map((r) => (r.id === id ? next : r)) }));
         // Quiet (no audit) — mirrors the server: the trail begins at submit,

@@ -2,6 +2,7 @@ import type {
   UserRole, Project, EmissionFactor, MonitoringRecord, Methodology, PddState,
   ProjectDesignDocument, VerificationRequest, VerificationState, EvidenceFile,
   VerifiableCredential, GuardianToken, VerificationComment, RecIssueRequest,
+  RecIssueDraftPatch,
 } from '../types';
 import type { DisclosureSplit } from './pdd';
 
@@ -503,6 +504,8 @@ export const recIssuesApi = {
     applied_mwh?: number;
     receiving_org_name?: string;
     receiving_account_id?: string;
+    facility_id?: string;
+    requested_labels?: string;
     evidence_ids?: string[];
   }): Promise<RecIssueRequest> {
     return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/projects/${projectId}/rec-issues`, {
@@ -510,7 +513,7 @@ export const recIssuesApi = {
     })).rec_issue;
   },
   /** PUT /rec-issues/:id — draft-only edit; server recomputes MWh when the period changes. */
-  async update(id: string, patch: Record<string, unknown>): Promise<RecIssueRequest> {
+  async update(id: string, patch: RecIssueDraftPatch): Promise<RecIssueRequest> {
     return (await apiFetch<{ rec_issue: RecIssueRequest }>(`/rec-issues/${id}`, {
       method: 'PUT', body: patch,
     })).rec_issue;
