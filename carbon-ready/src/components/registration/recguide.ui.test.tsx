@@ -74,7 +74,37 @@ describe('RecGuide — 3-phase checklist', () => {
   });
 });
 
+describe('journey status — คุณอยู่ขั้นนี้', () => {
+  it('with no REC registration, phase 1 is current and nothing is checked off', async () => {
+    const { useStore } = await import('../../store');
+    useStore.setState({ pdds: [] });
+    render(<RecGuide />);
+    expect(screen.getByText('คุณอยู่ขั้นนี้')).toBeInTheDocument();
+    expect(screen.queryAllByText('✓')).toHaveLength(0);
+    // current phase (1) auto-opened → its first item visible
+    expect(screen.getByLabelText(/STC Contract/)).toBeInTheDocument();
+  });
+
+  it('registered REC registration → phase 4 current, phases 1-3 ✓, phase 4 auto-opened', async () => {
+    const { seedDemo } = await import('../../test/demoFixtures');
+    seedDemo(); // PDD-2009 on prj-0010 is a registered REC registration
+    render(<RecGuide />);
+    expect(screen.getByText('คุณอยู่ขั้นนี้')).toBeInTheDocument();
+    expect(screen.getAllByText('✓')).toHaveLength(3);
+    // phase 4 auto-opened → its checklist visible without a click
+    expect(screen.getByLabelText(/SF-04A Issuing Declaration/)).toBeInTheDocument();
+  });
+});
+
 describe('cover letter draft', () => {
+  // The journey tests above may leave a registered REC pdd in the store, which
+  // would auto-open phase ④ instead of ① — reset so phase ① (and its draft
+  // button) is the default again.
+  beforeEach(async () => {
+    const { useStore } = await import('../../store');
+    useStore.setState({ pdds: [] });
+  });
+
   it('phase 1 has a draft button that opens the letter modal; typed company name appears in the preview', () => {
     render(<RecGuide />);
     fireEvent.click(screen.getByRole('button', { name: /ร่างจดหมายนำส่ง/ }));

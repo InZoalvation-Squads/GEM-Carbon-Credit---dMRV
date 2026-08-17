@@ -1,7 +1,9 @@
 import { useState } from 'react';
 import { ChevronDown, FileDown, FileText } from 'lucide-react';
 import { Button } from '../ui/Button';
+import { useStore } from '../../store';
 import { REC_GUIDE_PHASES } from '../../data/rec-guide';
+import { currentRecPhase } from '../../lib/rec-journey';
 import { RecCoverLetterModal } from './RecCoverLetterModal';
 
 export const REC_GUIDE_STORAGE_KEY = 'carbonready.rec-guide.v1';
@@ -32,8 +34,16 @@ function saveChecked(ids: Set<string>) {
  * Evident SF-02 v1.3 (see src/data/rec-guide.ts).
  */
 export function RecGuide() {
+  const pdds = useStore((s) => s.pdds);
+  const methodologies = useStore((s) => s.methodologies);
+  // Where the org actually is in the journey — drives the ✓ / "คุณอยู่ขั้นนี้"
+  // markers and which phase opens by default.
+  const journeyPhase = currentRecPhase(pdds, methodologies);
+
   const [checked, setChecked] = useState<Set<string>>(loadChecked);
-  const [openKeys, setOpenKeys] = useState<Set<string>>(new Set([REC_GUIDE_PHASES[0].key]));
+  const [openKeys, setOpenKeys] = useState<Set<string>>(
+    () => new Set([REC_GUIDE_PHASES[journeyPhase - 1]?.key ?? REC_GUIDE_PHASES[0].key]),
+  );
   const [letterOpen, setLetterOpen] = useState(false);
 
   function toggleItem(id: string) {
@@ -63,17 +73,25 @@ export function RecGuide() {
     <div className="mb-4 rounded-xl border border-ink-200/80 bg-white p-4 shadow-card">
       <div className="mb-2 text-sm font-semibold text-ink-900">ขั้นตอนขึ้นทะเบียน REC — เตรียมอะไรบ้าง</div>
       <div className="space-y-2">
-        {REC_GUIDE_PHASES.map((phase) => {
+        {REC_GUIDE_PHASES.map((phase, idx) => {
           const open = openKeys.has(phase.key);
           const done = phase.items.filter((i) => checked.has(i.id)).length;
+          const phasePassed = idx < journeyPhase - 1;
+          const isCurrent = idx === journeyPhase - 1;
           return (
-            <div key={phase.key} className="rounded-lg border border-ink-100">
+            <div key={phase.key} className={`rounded-lg border ${isCurrent ? 'border-brand-300 bg-brand-50/30' : 'border-ink-100'}`}>
               <button
                 type="button"
                 onClick={() => togglePhase(phase.key)}
                 className="flex w-full items-center gap-2 px-3 py-2 text-left"
               >
+                {phasePassed && <span className="shrink-0 font-bold text-emerald-600">✓</span>}
                 <span className="flex-1 text-[13px] font-medium text-ink-800">{phase.title}</span>
+                {isCurrent && (
+                  <span className="shrink-0 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                    คุณอยู่ขั้นนี้
+                  </span>
+                )}
                 {phase.items.length > 0 && (
                   <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
                     done === phase.items.length ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-500'}`}>
