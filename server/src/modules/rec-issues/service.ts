@@ -34,6 +34,8 @@ export type PublicRecIssue = {
   facility_snapshot: Prisma.JsonValue;
   receiving_org_name: string;
   receiving_account_id: string;
+  facility_id: string;
+  requested_labels: string;
   evidence_ids: string[];
   submitted_at: string | null;
   issued_at: string | null;
@@ -56,6 +58,8 @@ export function serializeRecIssue(r: RecIssueRequest): PublicRecIssue {
     facility_snapshot: r.facility_snapshot,
     receiving_org_name: r.receiving_org_name,
     receiving_account_id: r.receiving_account_id,
+    facility_id: r.facility_id,
+    requested_labels: r.requested_labels,
     evidence_ids: r.evidence_ids,
     submitted_at: r.submitted_at?.toISOString() ?? null,
     issued_at: r.issued_at?.toISOString() ?? null,
@@ -131,6 +135,8 @@ export interface CreateRecIssueInput {
   applied_mwh?: number;
   receiving_org_name?: string;
   receiving_account_id?: string;
+  facility_id?: string;
+  requested_labels?: string;
   evidence_ids?: string[];
 }
 
@@ -169,6 +175,8 @@ export async function createRecIssue(
         facility_snapshot: snapshotFromSectionData(pdd.section_data) as Prisma.InputJsonValue,
         receiving_org_name: input.receiving_org_name ?? '',
         receiving_account_id: input.receiving_account_id ?? '',
+        facility_id: input.facility_id ?? '',
+        requested_labels: input.requested_labels ?? '',
         evidence_ids: input.evidence_ids ?? [],
       },
     });
@@ -194,6 +202,8 @@ export interface UpdateRecIssuePatch {
   applied_mwh?: number | null;
   receiving_org_name?: string;
   receiving_account_id?: string;
+  facility_id?: string;
+  requested_labels?: string;
   evidence_ids?: string[];
 }
 
@@ -219,6 +229,8 @@ export async function updateRecIssue(
       request_type: patch.request_type ?? r.request_type,
       receiving_org_name: patch.receiving_org_name ?? r.receiving_org_name,
       receiving_account_id: patch.receiving_account_id ?? r.receiving_account_id,
+      facility_id: patch.facility_id ?? r.facility_id,
+      requested_labels: patch.requested_labels ?? r.requested_labels,
       evidence_ids: patch.evidence_ids ?? r.evidence_ids,
     };
     if ('applied_mwh' in patch) {

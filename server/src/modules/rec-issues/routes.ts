@@ -24,6 +24,8 @@ const CreateBody = z.object({
   applied_mwh: z.number().positive().optional(),
   receiving_org_name: z.string().trim().optional(),
   receiving_account_id: z.string().trim().optional(),
+  facility_id: z.string().trim().optional(),
+  requested_labels: z.string().trim().optional(),
   evidence_ids: z.array(z.string().min(1)).optional(),
 });
 
@@ -35,6 +37,8 @@ const PatchBody = z
     applied_mwh: z.number().positive().nullable().optional(),
     receiving_org_name: z.string().trim().optional(),
     receiving_account_id: z.string().trim().optional(),
+    facility_id: z.string().trim().optional(),
+    requested_labels: z.string().trim().optional(),
     evidence_ids: z.array(z.string().min(1)).optional(),
   })
   .strict()

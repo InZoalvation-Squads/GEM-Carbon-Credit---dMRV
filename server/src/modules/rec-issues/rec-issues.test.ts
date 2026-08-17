@@ -18,7 +18,7 @@ const REC_ISSUE_PUBLIC_KEYS = [
   'id', 'project_id', 'created_by', 'owner_name', 'assigned_reviewer_name',
   'state', 'request_type', 'period_start', 'period_end',
   'total_production_mwh', 'applied_mwh', 'facility_snapshot',
-  'receiving_org_name', 'receiving_account_id', 'evidence_ids',
+  'receiving_org_name', 'receiving_account_id', 'facility_id', 'requested_labels', 'evidence_ids',
   'submitted_at', 'issued_at', 'rejection_reason',
 ];
 
@@ -131,7 +131,7 @@ describe('rec-issues module', () => {
 
   describe('POST /api/v1/projects/:id/rec-issues (create draft)', () => {
     it('creates a draft with server-computed MWh, facility snapshot, and audits REC_ISSUE_CREATED', async () => {
-      const res = await createRequest();
+      const res = await createRequest({ facility_id: 'FAC-TEST-01', requested_labels: 'GoldLabel' });
       expect(res.statusCode).toBe(201);
       const r = res.json().rec_issue as Record<string, unknown>;
       expect(Object.keys(r).sort()).toEqual([...REC_ISSUE_PUBLIC_KEYS].sort());
@@ -149,6 +149,8 @@ describe('rec-issues module', () => {
         facility_snapshot: FACILITY_SNAPSHOT,
         receiving_org_name: '',
         receiving_account_id: '',
+        facility_id: 'FAC-TEST-01',
+        requested_labels: 'GoldLabel',
         evidence_ids: [],
         submitted_at: null,
         issued_at: null,
@@ -217,6 +219,16 @@ describe('rec-issues module', () => {
       });
       expect(res.statusCode).toBe(200);
       expect(res.json().rec_issue.total_production_mwh).toBe(4.999);
+    });
+
+    it('patches facility_id on a draft', async () => {
+      const created = await createRequest();
+      const id = created.json().rec_issue.id as string;
+      const res = await put(`/api/v1/rec-issues/${id}`, owner.token, {
+        facility_id: 'FAC-PATCHED-99',
+      });
+      expect(res.statusCode).toBe(200);
+      expect(res.json().rec_issue.facility_id).toBe('FAC-PATCHED-99');
     });
 
     it('rejects applied_mwh greater than total on submit (400)', async () => {

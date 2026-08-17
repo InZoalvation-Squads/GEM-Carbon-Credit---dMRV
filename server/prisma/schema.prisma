@@ -340,6 +340,10 @@ model RecIssueRequest {
   facility_snapshot      Json // org/facility/fuel/tech copied from the REC Pdd section_data
   receiving_org_name     String
   receiving_account_id   String
+  // Evident-assigned Facility ID/code (known only after SF-02 approval) and
+  // SF-04 §1.2 Requested Labels — both optional on the official form.
+  facility_id            String        @default("")
+  requested_labels       String        @default("")
   evidence_ids           String[]
   submitted_at           DateTime?
   issued_at              DateTime?
