@@ -366,6 +366,7 @@ export const demoRecIssues: RecIssueRequest[] = [
     total_production_mwh: 0.999, applied_mwh: null,
     facility_snapshot: REC_FACILITY_SNAPSHOT,
     receiving_org_name: '', receiving_account_id: '',
+    facility_id: '', requested_labels: '',
     evidence_ids: [], submitted_at: null, issued_at: null, rejection_reason: null,
   },
   {
@@ -376,6 +377,7 @@ export const demoRecIssues: RecIssueRequest[] = [
     total_production_mwh: 6, applied_mwh: null,
     facility_snapshot: REC_FACILITY_SNAPSHOT,
     receiving_org_name: 'GreenGrid Asia Co., Ltd.', receiving_account_id: 'EVID-ACC-000456',
+    facility_id: 'DEMO-FAC-0001', requested_labels: '',
     evidence_ids: [], submitted_at: '2026-04-01T02:00:00Z', issued_at: '2026-04-05T09:00:00Z',
     rejection_reason: null,
   },

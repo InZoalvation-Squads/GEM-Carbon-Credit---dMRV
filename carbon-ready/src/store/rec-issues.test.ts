@@ -86,6 +86,32 @@ describe('REC issue requests — demo store', () => {
     expect(row?.rejection_reason).toBe('Meter serial number does not match SF-02 registration.');
   });
 
+  it('updateRecIssue patches draft fields and recomputes MWh when the period changes', async () => {
+    const created = await api.createRecIssue({
+      project_id: REC_PROJECT_ID,
+      period_start: '2026-02-01',
+      period_end: '2026-02-28',
+      request_type: 'Normal',
+    });
+    expect(created.total_production_mwh).toBe(0.999);
+
+    await api.updateRecIssue(created.id, {
+      facility_id: 'FAC-XYZ',
+      period_start: '2026-03-01',
+      period_end: '2026-03-31',
+    });
+
+    const row = useStore.getState().recIssues.find((r) => r.id === created.id);
+    expect(row?.facility_id).toBe('FAC-XYZ');
+    expect(row?.total_production_mwh).toBe(6);
+
+    // Non-draft rows are immutable: RIR-1000 is issued.
+    const issuedBefore = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
+    await api.updateRecIssue('RIR-1000', { facility_id: 'FAC-XYZ' });
+    const issuedAfter = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
+    expect(issuedAfter).toEqual(issuedBefore);
+  });
+
   it('delete removes a draft', async () => {
     const created = await api.createRecIssue({
       project_id: REC_PROJECT_ID,

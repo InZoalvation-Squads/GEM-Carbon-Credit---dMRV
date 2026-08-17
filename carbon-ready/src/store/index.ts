@@ -127,8 +127,21 @@ interface AppState {
   createRecIssue: (input: {
     project_id: UUID; period_start: string; period_end: string;
     request_type: 'Normal' | 'Self consumption'; applied_mwh?: number;
-    receiving_org_name?: string; receiving_account_id?: string; evidence_ids?: UUID[];
+    receiving_org_name?: string; receiving_account_id?: string;
+    facility_id?: string; requested_labels?: string; evidence_ids?: UUID[];
   }) => RecIssueRequest;
+  /**
+   * Draft-only patch (mirrors the server's PUT /rec-issues/:id). Recomputes
+   * total_production_mwh when the period changes. Quiet (no audit) — the
+   * trail begins at submit. Returns undefined if the row is missing or not
+   * a draft.
+   */
+  updateRecIssue: (id: UUID, patch: Partial<{
+    period_start: string; period_end: string;
+    request_type: 'Normal' | 'Self consumption'; applied_mwh: number | null;
+    receiving_org_name: string; receiving_account_id: string;
+    facility_id: string; requested_labels: string; evidence_ids: UUID[];
+  }>) => RecIssueRequest | undefined;
   submitRecIssue: (id: UUID) => void;
   approveRecIssue: (id: UUID) => void;
   rejectRecIssue: (id: UUID, reason: string) => void;
@@ -636,12 +649,32 @@ export const useStore = create<AppState>()(
           },
           receiving_org_name: input.receiving_org_name ?? '',
           receiving_account_id: input.receiving_account_id ?? '',
+          facility_id: input.facility_id ?? '',
+          requested_labels: input.requested_labels ?? '',
           evidence_ids: input.evidence_ids ?? [], submitted_at: null, issued_at: null, rejection_reason: null,
         };
         set((st) => ({ recIssues: [entity, ...st.recIssues] }));
         get().audit_write('REC_ISSUE_CREATED', 'rec_issue', entity.id,
           { total_production_mwh: total }, { new_value: { state: 'draft', total_production_mwh: total } });
         return entity;
+      },
+
+      updateRecIssue: (id, patch) => {
+        const s = get();
+        const row = s.recIssues.find((r) => r.id === id);
+        if (!row || row.state !== 'draft') return undefined;
+        const next: RecIssueRequest = { ...row, ...patch };
+        if (patch.period_start !== undefined || patch.period_end !== undefined) {
+          const kwh = s.records
+            .filter((m) => m.project_id === next.project_id
+              && m.record_date >= next.period_start && m.record_date <= next.period_end)
+            .reduce((sum, m) => sum + m.generation_kwh, 0);
+          next.total_production_mwh = Math.round((kwh / 1000) * 1e6) / 1e6;
+        }
+        set((st) => ({ recIssues: st.recIssues.map((r) => (r.id === id ? next : r)) }));
+        // Quiet (no audit) — mirrors the server: the trail begins at submit,
+        // not at every draft edit.
+        return next;
       },
 
       submitRecIssue: (id) => {

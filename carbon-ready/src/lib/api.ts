@@ -210,7 +210,8 @@ export const api = {
   async createRecIssue(input: {
     project_id: UUID; period_start: string; period_end: string;
     request_type: 'Normal' | 'Self consumption'; applied_mwh?: number;
-    receiving_org_name?: string; receiving_account_id?: string; evidence_ids?: UUID[];
+    receiving_org_name?: string; receiving_account_id?: string;
+    facility_id?: string; requested_labels?: string; evidence_ids?: UUID[];
   }): Promise<RecIssueRequest> {
     if (serverMode()) {
       const { project_id, ...body } = input;
@@ -222,6 +223,25 @@ export const api = {
     const r = useStore.getState().createRecIssue(input);
     toast.success('Issue request created', 'Draft saved.');
     return tick(r);
+  },
+  async updateRecIssue(id: UUID, patch: Partial<{
+    period_start: string; period_end: string;
+    request_type: 'Normal' | 'Self consumption'; applied_mwh: number | null;
+    receiving_org_name: string; receiving_account_id: string;
+    facility_id: string; requested_labels: string; evidence_ids: UUID[];
+  }>): Promise<void> {
+    if (serverMode()) {
+      useStore.getState().applyServerRecIssue(await recIssuesApi.update(id, patch));
+      toast.success('Issue request updated', 'Draft saved.');
+      return;
+    }
+    const r = useStore.getState().updateRecIssue(id, patch);
+    if (!r) {
+      toast.error('Cannot update', 'Only draft issue requests can be edited.');
+      return tick(undefined);
+    }
+    toast.success('Issue request updated', 'Draft saved.');
+    return tick(undefined);
   },
   async submitRecIssue(id: UUID): Promise<void> {
     if (serverMode()) {

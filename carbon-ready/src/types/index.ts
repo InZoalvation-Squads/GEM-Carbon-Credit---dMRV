@@ -240,6 +240,8 @@ export interface RecIssueRequest {
   facility_snapshot: RecFacilitySnapshot;
   receiving_org_name: string;
   receiving_account_id: string;
+  facility_id: string;       // Evident facility ID (SF-04 supplemental); '' until set
+  requested_labels: string;  // e.g. 'TIGR'; '' = none requested
   evidence_ids: UUID[];
   submitted_at: string | null;
   issued_at: string | null;
