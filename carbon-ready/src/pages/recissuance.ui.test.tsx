@@ -142,4 +142,11 @@ describe('REC Issuance page', () => {
       expect(issuedBadges.length).toBeGreaterThanOrEqual(1);
     });
   });
+
+  it('every row links to its official SF-04 document', () => {
+    renderPage();
+    const links = screen.getAllByRole('link', { name: /SF-04/ });
+    expect(links.length).toBeGreaterThanOrEqual(2); // RIR-1000 + RIR-1001
+    expect(links[0]).toHaveAttribute('href', expect.stringMatching(/\/rec-issuance\/RIR-\d+\/official$/));
+  });
 });

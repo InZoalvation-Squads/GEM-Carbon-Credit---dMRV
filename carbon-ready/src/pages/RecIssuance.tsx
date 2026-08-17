@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
-import { Plus, Zap, FileCheck2, Clock, Leaf } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { Plus, Zap, FileCheck2, Clock, Leaf, FileText } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
@@ -167,37 +168,42 @@ export function RecIssuance() {
                       <TD className="hidden sm:table-cell text-ink-700">{r.request_type}</TD>
                       <TD><RecIssueStatusBadge state={r.state} /></TD>
                       <TD className="text-right">
-                        {r.state === 'draft' && canCreate && (
-                          <div className="flex justify-end gap-2">
-                            <span title={receivingIncomplete ? 'กรอก Receiving account ใน draft ก่อน submit' : undefined}>
-                              <Button size="sm" variant="secondary" disabled={receivingIncomplete} loading={busy} onClick={() => doSubmit(r.id)}>Submit</Button>
-                            </span>
-                            <Button size="sm" variant="ghost" loading={busy} onClick={() => doDelete(r.id)}>Delete</Button>
-                          </div>
-                        )}
-                        {r.state === 'submitted' && canReview && rejectingId !== r.id && (
-                          <div className="flex justify-end gap-2">
-                            <Button size="sm" loading={busy} onClick={() => doApprove(r.id)}>Approve</Button>
-                            <Button size="sm" variant="danger" onClick={() => { setRejectingId(r.id); setReason(''); }}>Reject</Button>
-                          </div>
-                        )}
-                        {r.state === 'submitted' && canReview && rejectingId === r.id && (
-                          <div className="flex justify-end items-center gap-2">
-                            <Input
-                              aria-label="Rejection reason" placeholder="Reason for rejection"
-                              value={reason} onChange={(e) => setReason(e.target.value)}
-                              className="h-8 w-48 text-xs"
-                            />
-                            <Button size="sm" variant="danger" disabled={!reason.trim()} loading={busy} onClick={() => doReject(r.id)}>Confirm</Button>
-                            <Button size="sm" variant="ghost" onClick={() => setRejectingId(null)}>Cancel</Button>
-                          </div>
-                        )}
-                        {r.state === 'issued' && (
-                          <span className="text-xs text-ink-500">Issued {r.issued_at ? fmtDate(r.issued_at) : ''}</span>
-                        )}
-                        {r.state === 'rejected' && r.rejection_reason && (
-                          <span className="text-xs text-red-600" title={r.rejection_reason}>Rejected</span>
-                        )}
+                        <div className="flex justify-end items-center gap-2">
+                          <Link to={`/rec-issuance/${r.id}/official`} title="เอกสารฟอร์ม Evident SF-04">
+                            <Button size="sm" variant="ghost"><FileText size={14} /> SF-04</Button>
+                          </Link>
+                          {r.state === 'draft' && canCreate && (
+                            <>
+                              <span title={receivingIncomplete ? 'กรอก Receiving account ใน draft ก่อน submit' : undefined}>
+                                <Button size="sm" variant="secondary" disabled={receivingIncomplete} loading={busy} onClick={() => doSubmit(r.id)}>Submit</Button>
+                              </span>
+                              <Button size="sm" variant="ghost" loading={busy} onClick={() => doDelete(r.id)}>Delete</Button>
+                            </>
+                          )}
+                          {r.state === 'submitted' && canReview && rejectingId !== r.id && (
+                            <>
+                              <Button size="sm" loading={busy} onClick={() => doApprove(r.id)}>Approve</Button>
+                              <Button size="sm" variant="danger" onClick={() => { setRejectingId(r.id); setReason(''); }}>Reject</Button>
+                            </>
+                          )}
+                          {r.state === 'submitted' && canReview && rejectingId === r.id && (
+                            <>
+                              <Input
+                                aria-label="Rejection reason" placeholder="Reason for rejection"
+                                value={reason} onChange={(e) => setReason(e.target.value)}
+                                className="h-8 w-48 text-xs"
+                              />
+                              <Button size="sm" variant="danger" disabled={!reason.trim()} loading={busy} onClick={() => doReject(r.id)}>Confirm</Button>
+                              <Button size="sm" variant="ghost" onClick={() => setRejectingId(null)}>Cancel</Button>
+                            </>
+                          )}
+                          {r.state === 'issued' && (
+                            <span className="text-xs text-ink-500">Issued {r.issued_at ? fmtDate(r.issued_at) : ''}</span>
+                          )}
+                          {r.state === 'rejected' && r.rejection_reason && (
+                            <span className="text-xs text-red-600" title={r.rejection_reason}>Rejected</span>
+                          )}
+                        </div>
                       </TD>
                     </TR>
                   );

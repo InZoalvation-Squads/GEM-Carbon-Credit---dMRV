@@ -15,6 +15,7 @@ import { AuditLogPage } from './pages/AuditLog';
 import { Verifications } from './pages/Verifications';
 import { ReviewDetail } from './pages/ReviewDetail';
 import { RecIssuance } from './pages/RecIssuance';
+import { RecIssueOfficialForm } from './templates/RecIssueOfficialForm';
 import { Guardian } from './pages/Guardian';
 import { Methodologies } from './pages/Methodologies';
 import { Registration } from './pages/Registration';
@@ -57,6 +58,7 @@ export default function App() {
           <Route path="/verifications" element={<Verifications />} />
           <Route path="/verifications/:id" element={<ReviewDetail />} />
           <Route path="/rec-issuance" element={<RecIssuance />} />
+          <Route path="/rec-issuance/:id/official" element={<RecIssueOfficialForm />} />
           <Route path="/guardian" element={<Guardian />} />
           <Route path="/audit-log" element={<AuditLogPage />} />
           <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
