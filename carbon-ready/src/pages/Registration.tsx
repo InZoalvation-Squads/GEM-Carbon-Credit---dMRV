@@ -388,6 +388,7 @@ function PddEditor({ pddId }: { pddId: string }) {
   function back() { setStep((s) => Math.max(s - 1, 0)); }
 
   const check = validatePdd(methodology, data);
+  const missingSections = new Set(check.missing.map((m) => m.section));
   async function submit() {
     await save();
     await api.submitPdd(pddId);
@@ -401,19 +402,29 @@ function PddEditor({ pddId }: { pddId: string }) {
         subtitle={`${methodology.code} ${methodology.version} · ${regNoun(methodology)} ${pdd.id}`}
       />
 
-      {/* progress */}
+      {/* progress — a chip goes green once its section has no missing required
+          fields (same rule as the Review screen's validatePdd check). */}
       <div className="mb-5 flex flex-wrap gap-1.5">
-        {sections.map((s, i) => (
-          <button key={s.key} onClick={() => setStep(i)} title={s.title}
-            className={`max-w-[12rem] truncate rounded-full px-3 py-1 text-xs ${i === step ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}>
-            {/* Section titles are "<name> / <thai>" — the part before the slash reads
-                as a step label; the full title stays available on hover. */}
-            {s.title.split('/')[0].trim()}
-          </button>
-        ))}
+        {sections.map((s, i) => {
+          const complete = !missingSections.has(s.key);
+          return (
+            <button key={s.key} onClick={() => setStep(i)} title={s.title}
+              className={`max-w-[12rem] truncate rounded-full px-3 py-1 text-xs ${
+                i === step ? 'bg-brand-600 text-white'
+                : complete ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+                : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}>
+              {/* Section titles are "<name> / <thai>" — the part before the slash reads
+                  as a step label; the full title stays available on hover. */}
+              {complete ? '✓ ' : ''}{s.title.split('/')[0].trim()}
+            </button>
+          );
+        })}
         <button onClick={() => setStep(sections.length)}
-          className={`rounded-full px-3 py-1 text-xs ${isReview ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600'}`}>
-          Review
+          className={`rounded-full px-3 py-1 text-xs ${
+            isReview ? 'bg-brand-600 text-white'
+            : check.ok ? 'bg-emerald-100 text-emerald-700 hover:bg-emerald-200'
+            : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}>
+          {check.ok ? '✓ ' : ''}Review
         </button>
       </div>
 

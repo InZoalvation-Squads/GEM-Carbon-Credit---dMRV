@@ -139,6 +139,26 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(screen.queryByRole('button', { name: '1.' })).toBeNull();
   });
 
+  it('step chips turn green with a ✓ once their section has no missing required fields', async () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    fireEvent.click(screen.getByRole('button', { name: /I-REC\(E\) Production Facility Registration/ }));
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'ชิปเขียว REC' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Test, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '1000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start REC Registration/ }));
+    await screen.findByText(/Register: ชิปเขียว REC/);
+
+    // optional-only sections are complete from the start…
+    expect(screen.getByRole('button', { name: '✓ 6. Verification Agent' })).toBeInTheDocument();
+    // …but section 1 still misses the required registrant_is_owner answer
+    expect(screen.getByRole('button', { name: '1. Registration' })).toBeInTheDocument();
+
+    // answer the remaining required field of section 1 → its chip turns ✓
+    fireEvent.change(screen.getByLabelText(/Is the Registrant also the owner/), { target: { value: 'Yes' } });
+    expect(screen.getByRole('button', { name: '✓ 1. Registration' })).toBeInTheDocument();
+  });
+
   it('REC flow labels the modal and editor "REC Registration", and seeds SF-02 defaults', async () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
@@ -211,7 +231,7 @@ describe('table field editor', () => {
         <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: /^A\./ }));
+    fireEvent.click(screen.getByRole('button', { name: /A\. / }));
     expect(screen.getByText('อุปกรณ์หลักที่ติดตั้งรายอาคาร')).toBeInTheDocument();
 
     // Section A now holds two table fields (installations + equipment_specs);
@@ -244,7 +264,7 @@ describe('PDD editor — draft boilerplate for activity fields', () => {
       </MemoryRouter>,
     );
     // jump straight to the section that carries the activity textareas
-    fireEvent.click(screen.getByRole('button', { name: /^A\./ })); // step chips show the section title up to the slash
+    fireEvent.click(screen.getByRole('button', { name: /A\. / })); // step chips show the section title up to the slash
     void useStore;
     const buttons = screen.getAllByText(/ร่างข้อความให้จากข้อมูลโครงการ/);
     expect(buttons.length).toBe(2); // before_project + after_project
