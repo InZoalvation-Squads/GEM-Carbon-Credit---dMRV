@@ -123,6 +123,22 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(pdd.methodology_id).toBe('meth-tver-forestry');
   });
 
+  it('editor step chips show readable section names, not bare numbers', async () => {
+    renderEntry();
+    fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
+    // Disambiguate from the RecGuide accordion headers, which also contain "SF-02".
+    fireEvent.click(screen.getByRole('button', { name: /I-REC\(E\) Production Facility Registration/ }));
+    fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'ชิปทดสอบ REC' } });
+    fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Test, Thailand' } });
+    fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '1000' } });
+    fireEvent.click(screen.getByRole('button', { name: /Create & Start REC Registration/ }));
+    await screen.findByText(/Register: ชิปทดสอบ REC/);
+    // '1. Registration / ข้อมูลการยื่น' → chip shows the part before the slash
+    expect(screen.getByRole('button', { name: '1. Registration' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '3. Production Facility Details' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '1.' })).toBeNull();
+  });
+
   it('REC flow labels the modal and editor "REC Registration", and seeds SF-02 defaults', async () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
@@ -195,7 +211,7 @@ describe('table field editor', () => {
         <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
       </MemoryRouter>,
     );
-    fireEvent.click(screen.getByRole('button', { name: 'A.' }));
+    fireEvent.click(screen.getByRole('button', { name: /^A\./ }));
     expect(screen.getByText('อุปกรณ์หลักที่ติดตั้งรายอาคาร')).toBeInTheDocument();
 
     // Section A now holds two table fields (installations + equipment_specs);
@@ -228,7 +244,7 @@ describe('PDD editor — draft boilerplate for activity fields', () => {
       </MemoryRouter>,
     );
     // jump straight to the section that carries the activity textareas
-    fireEvent.click(screen.getByRole('button', { name: /^A\.$/ })); // step chips show the title's first word
+    fireEvent.click(screen.getByRole('button', { name: /^A\./ })); // step chips show the section title up to the slash
     void useStore;
     const buttons = screen.getAllByText(/ร่างข้อความให้จากข้อมูลโครงการ/);
     expect(buttons.length).toBe(2); // before_project + after_project

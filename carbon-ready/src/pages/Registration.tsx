@@ -404,9 +404,11 @@ function PddEditor({ pddId }: { pddId: string }) {
       {/* progress */}
       <div className="mb-5 flex flex-wrap gap-1.5">
         {sections.map((s, i) => (
-          <button key={s.key} onClick={() => setStep(i)}
-            className={`rounded-full px-3 py-1 text-xs ${i === step ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600'}`}>
-            {s.title.split(' ')[0]}
+          <button key={s.key} onClick={() => setStep(i)} title={s.title}
+            className={`max-w-[12rem] truncate rounded-full px-3 py-1 text-xs ${i === step ? 'bg-brand-600 text-white' : 'bg-ink-100 text-ink-600 hover:bg-ink-200'}`}>
+            {/* Section titles are "<name> / <thai>" — the part before the slash reads
+                as a step label; the full title stays available on hover. */}
+            {s.title.split('/')[0].trim()}
           </button>
         ))}
         <button onClick={() => setStep(sections.length)}
