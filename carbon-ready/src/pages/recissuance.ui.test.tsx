@@ -161,6 +161,40 @@ describe('REC Issuance page', () => {
     });
   });
 
+  it('edit-mode Save & Submit saves the changes and walks the draft to submitted', async () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไข' }));
+
+    // RIR-1001's receiving fields are blank — fill them so submit is allowed.
+    fireEvent.change(screen.getByLabelText(/Receiving organisation/i), { target: { value: 'GreenGrid Asia Co., Ltd.' } });
+    fireEvent.change(screen.getByLabelText(/Receiving account ID/i), { target: { value: 'EVID-ACC-000456' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save & Submit/ }));
+
+    await waitFor(() => {
+      const row = useStore.getState().recIssues.find((r) => r.id === 'RIR-1001');
+      expect(row?.state).toBe('submitted');
+      expect(row?.receiving_org_name).toBe('GreenGrid Asia Co., Ltd.');
+      expect(row?.receiving_account_id).toBe('EVID-ACC-000456');
+    });
+  });
+
+  it('clearing a prefilled optional field in edit mode persists as blank (\'\' not undefined)', async () => {
+    useStore.setState((s) => ({
+      recIssues: s.recIssues.map((r) => (r.id === 'RIR-1001' ? { ...r, facility_id: 'FAC-OLD-01' } : r)),
+    }));
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไข' }));
+
+    const facility = screen.getByLabelText(/Evident Facility ID/i);
+    expect(facility).toHaveValue('FAC-OLD-01');
+    fireEvent.change(facility, { target: { value: '' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save changes/ }));
+
+    await waitFor(() => {
+      expect(useStore.getState().recIssues.find((r) => r.id === 'RIR-1001')?.facility_id).toBe('');
+    });
+  });
+
   it('create modal prefills Facility ID from the project\'s most recent request', () => {
     renderPage();
     fireEvent.click(screen.getByRole('button', { name: /Issue Request/ }));

@@ -139,7 +139,8 @@ interface AppState {
    * drafts stay permissive, consistent with createRecIssue above.
    */
   updateRecIssue: (id: UUID, patch: RecIssueDraftPatch) => RecIssueRequest | undefined;
-  submitRecIssue: (id: UUID) => void;
+  /** No-ops (returns false) unless the row exists and is a draft. */
+  submitRecIssue: (id: UUID) => boolean;
   approveRecIssue: (id: UUID) => void;
   rejectRecIssue: (id: UUID, reason: string) => void;
   deleteRecIssue: (id: UUID) => void;
@@ -684,6 +685,11 @@ export const useStore = create<AppState>()(
       },
 
       submitRecIssue: (id) => {
+        // Only a draft may be submitted — mirrors the server's
+        // illegalTransition guard so an issued/rejected row can never be
+        // flipped back to submitted from the demo UI.
+        const row = get().recIssues.find((r) => r.id === id);
+        if (!row || row.state !== 'draft') return false;
         set((s) => ({
           recIssues: s.recIssues.map((r) => (r.id === id
             ? { ...r, state: 'submitted', submitted_at: r.submitted_at ?? new Date().toISOString() }
@@ -691,6 +697,7 @@ export const useStore = create<AppState>()(
         }));
         get().audit_write('REC_ISSUE_SUBMITTED', 'rec_issue', id, {},
           { previous_value: { state: 'draft' }, new_value: { state: 'submitted' } });
+        return true;
       },
 
       approveRecIssue: (id) => {

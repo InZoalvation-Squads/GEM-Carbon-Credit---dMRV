@@ -6,6 +6,7 @@ import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { useStore } from '../../store';
 import { api } from '../../lib/api';
+import { toast } from '../layout/Toast';
 import type { RecIssueRequest } from '../../types';
 
 // SF-04 FN-01 (2026) fee schedule — approximate, per MWh applied for.
@@ -121,16 +122,25 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
     };
   }
 
+  // Surface server rejections (403 role mismatch, expired session, …) —
+  // an unhandled rejection here looks like a dead button and would leave the
+  // modal open with no explanation.
+  function fail(err: unknown) {
+    toast.error('Action failed', err instanceof Error ? err.message : 'The server rejected the request.');
+  }
+
   async function saveDraft() {
     if (!canSaveDraft) return;
     setBusy(true);
     try {
       if (editing) {
-        await api.updateRecIssue(editing.id, editPatch());
+        if (!(await api.updateRecIssue(editing.id, editPatch()))) return; // refused (demo) — toast already shown
       } else {
         await api.createRecIssue(createInput());
       }
       onClose();
+    } catch (err) {
+      fail(err); // modal stays open so nothing typed is lost
     } finally {
       setBusy(false);
     }
@@ -140,14 +150,25 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
     if (!canSubmit) return;
     setBusy(true);
     try {
-      let id = editing?.id;
       if (editing) {
-        await api.updateRecIssue(editing.id, editPatch());
+        // Two server calls: never submit if the update didn't land, and if the
+        // update landed but the submit was rejected, say so explicitly — the
+        // user's changes ARE saved and must not look lost.
+        if (!(await api.updateRecIssue(editing.id, editPatch()))) return;
+        try {
+          await api.submitRecIssue(editing.id);
+        } catch (err) {
+          toast.error('Submit failed', 'บันทึกการแก้ไขแล้ว แต่คำขอ submit ถูกปฏิเสธ: '
+            + (err instanceof Error ? err.message : 'The server rejected the request.'));
+          return;
+        }
       } else {
-        id = (await api.createRecIssue(createInput())).id;
+        const created = await api.createRecIssue(createInput());
+        await api.submitRecIssue(created.id);
       }
-      if (id) await api.submitRecIssue(id);
       onClose();
+    } catch (err) {
+      fail(err);
     } finally {
       setBusy(false);
     }

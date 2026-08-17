@@ -225,19 +225,22 @@ export const api = {
     toast.success('Issue request created', 'Draft saved.');
     return tick(r);
   },
-  async updateRecIssue(id: UUID, patch: RecIssueDraftPatch): Promise<void> {
+  /** Resolves true when the draft was updated; false when the demo store
+   *  refused (non-draft row) — so callers can stop a save-then-submit chain.
+   *  Server mode throws on rejection instead. */
+  async updateRecIssue(id: UUID, patch: RecIssueDraftPatch): Promise<boolean> {
     if (serverMode()) {
       useStore.getState().applyServerRecIssue(await recIssuesApi.update(id, patch));
       toast.success('Issue request updated', 'Draft saved.');
-      return;
+      return true;
     }
     const r = useStore.getState().updateRecIssue(id, patch);
     if (!r) {
       toast.error('Cannot update', 'Only draft issue requests can be edited.');
-      return tick(undefined);
+      return tick(false);
     }
     toast.success('Issue request updated', 'Draft saved.');
-    return tick(undefined);
+    return tick(true);
   },
   async submitRecIssue(id: UUID): Promise<void> {
     if (serverMode()) {
@@ -245,7 +248,10 @@ export const api = {
       toast.success('Issue request submitted', 'Sent to the Local Issuer for review.');
       return;
     }
-    useStore.getState().submitRecIssue(id);
+    if (!useStore.getState().submitRecIssue(id)) {
+      toast.error('Cannot submit', 'Only draft issue requests can be submitted.');
+      return tick(undefined);
+    }
     toast.success('Issue request submitted', 'Sent to the Local Issuer for review.');
     return tick(undefined);
   },

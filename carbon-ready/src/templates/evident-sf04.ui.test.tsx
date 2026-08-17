@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { EvidentSF04 } from './EvidentSF04';
 import { RecIssueOfficialForm } from './RecIssueOfficialForm';
@@ -31,7 +31,8 @@ describe('Evident SF-04 official form', () => {
     // RIR-1000 fixture carries facility_id 'DEMO-FAC-0001' (requested_labels
     // is '' and must stay a blank cell — no placeholder text like '-').
     expect(screen.getByText('DEMO-FAC-0001')).toBeInTheDocument();
-    expect(screen.queryByText('-')).not.toBeInTheDocument();
+    const labelsRow = screen.getByText('Requested Labels').closest('.doc-row') as HTMLElement;
+    expect(within(labelsRow).queryByText('-')).not.toBeInTheDocument();
   });
 
   it('marks the request type with ☑ and shows the MWh digit grid', () => {

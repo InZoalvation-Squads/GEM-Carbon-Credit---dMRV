@@ -105,11 +105,22 @@ describe('REC issue requests — demo store', () => {
     expect(row?.facility_id).toBe('FAC-XYZ');
     expect(row?.total_production_mwh).toBe(6);
 
-    // Non-draft rows are immutable: RIR-1000 is issued.
+    // Non-draft rows are immutable: RIR-1000 is issued. The api reports the
+    // outcome so callers (Save & Submit) can stop before submitting.
     const issuedBefore = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
-    await api.updateRecIssue('RIR-1000', { facility_id: 'FAC-XYZ' });
+    await expect(api.updateRecIssue('RIR-1000', { facility_id: 'FAC-XYZ' })).resolves.toBe(false);
     const issuedAfter = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
     expect(issuedAfter).toEqual(issuedBefore);
+    await expect(api.updateRecIssue(created.id, { requested_labels: 'TIGR' })).resolves.toBe(true);
+  });
+
+  it('submitRecIssue never flips a non-draft row (mirrors the server illegalTransition)', async () => {
+    // RIR-1000 is issued — submitting it must be a no-op, not a state reset.
+    const before = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
+    await api.submitRecIssue('RIR-1000');
+    const after = useStore.getState().recIssues.find((r) => r.id === 'RIR-1000');
+    expect(after).toEqual(before);
+    expect(after?.state).toBe('issued');
   });
 
   it('updateRecIssue re-windows MWh from a partial period patch (period_start only)', async () => {
