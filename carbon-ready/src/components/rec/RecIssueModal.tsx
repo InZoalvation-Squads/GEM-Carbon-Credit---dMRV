@@ -19,12 +19,17 @@ const FEE_PER_MWH: Record<RecIssueRequest['request_type'], number> = {
  * production period, the MWh is COMPUTED from raw monitoring records (never
  * hand-typed) — the same formula the server module recomputes and freezes
  * at submit, so the two always agree.
+ *
+ * With `editing` set the same form edits an existing DRAFT instead: the
+ * project is fixed, every field prefills from the row, and the buttons
+ * become "Save changes" / "Save & Submit" (PUT + optional submit).
  */
-export function RecIssueModal({ onClose }: { onClose: () => void }) {
+export function RecIssueModal({ onClose, editing }: { onClose: () => void; editing?: RecIssueRequest }) {
   const projects = useStore((s) => s.projects);
   const pdds = useStore((s) => s.pdds);
   const methodologies = useStore((s) => s.methodologies);
   const records = useStore((s) => s.records);
+  const recIssues = useStore((s) => s.recIssues);
 
   const recProjects = useMemo(
     () => projects.filter((p) =>
@@ -33,15 +38,40 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
     [projects, pdds, methodologies],
   );
 
-  const [projectId, setProjectId] = useState(recProjects[0]?.id ?? '');
+  // recIssues is newest-first (createRecIssue prepends), so `find` yields the
+  // project's most recent request that carries each value — the best default
+  // for the next request against the same facility.
+  const prefillFor = (pid: string) => ({
+    facility_id: recIssues.find((r) => r.project_id === pid && r.facility_id !== '')?.facility_id ?? '',
+    requested_labels: recIssues.find((r) => r.project_id === pid && r.requested_labels !== '')?.requested_labels ?? '',
+  });
+
+  const initialProjectId = editing?.project_id ?? recProjects[0]?.id ?? '';
+  const [projectId, setProjectId] = useState(initialProjectId);
   const today = new Date().toISOString().slice(0, 10);
-  const [from, setFrom] = useState(`${today.slice(0, 4)}-01-01`);
-  const [to, setTo] = useState(today);
-  const [requestType, setRequestType] = useState<RecIssueRequest['request_type']>('Normal');
-  const [appliedMwh, setAppliedMwh] = useState('');
-  const [receivingOrgName, setReceivingOrgName] = useState('');
-  const [receivingAccountId, setReceivingAccountId] = useState('');
+  const [from, setFrom] = useState(editing?.period_start ?? `${today.slice(0, 4)}-01-01`);
+  const [to, setTo] = useState(editing?.period_end ?? today);
+  const [requestType, setRequestType] = useState<RecIssueRequest['request_type']>(editing?.request_type ?? 'Normal');
+  const [appliedMwh, setAppliedMwh] = useState(editing?.applied_mwh != null ? String(editing.applied_mwh) : '');
+  const [receivingOrgName, setReceivingOrgName] = useState(editing?.receiving_org_name ?? '');
+  const [receivingAccountId, setReceivingAccountId] = useState(editing?.receiving_account_id ?? '');
+  const [initialOptional] = useState(() => (editing
+    ? { facility_id: editing.facility_id, requested_labels: editing.requested_labels }
+    : prefillFor(initialProjectId)));
+  const [facilityId, setFacilityId] = useState(initialOptional.facility_id);
+  const [requestedLabels, setRequestedLabels] = useState(initialOptional.requested_labels);
+  // Once the user types in an optional input, switching project must never
+  // clobber it with a prefill — a plain "touched" flag per input.
+  const [facilityTouched, setFacilityTouched] = useState(!!editing);
+  const [labelsTouched, setLabelsTouched] = useState(!!editing);
   const [busy, setBusy] = useState(false);
+
+  function handleProjectChange(pid: string) {
+    setProjectId(pid);
+    const p = prefillFor(pid);
+    if (!facilityTouched) setFacilityId(p.facility_id);
+    if (!labelsTouched) setRequestedLabels(p.requested_labels);
+  }
 
   const mwh = useMemo(() => {
     const kwh = records
@@ -61,19 +91,45 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
   const receivingComplete = receivingOrgName.trim() !== '' && receivingAccountId.trim() !== '';
   const canSubmit = canSaveDraft && receivingComplete;
 
+  function createInput() {
+    return {
+      project_id: projectId,
+      period_start: from,
+      period_end: to,
+      request_type: requestType,
+      applied_mwh: appliedValue ?? undefined,
+      receiving_org_name: receivingOrgName.trim() || undefined,
+      receiving_account_id: receivingAccountId.trim() || undefined,
+      facility_id: facilityId.trim() || undefined,
+      requested_labels: requestedLabels.trim() || undefined,
+    };
+  }
+
+  // Edit mode sends every editable field, '' included — clearing a field in
+  // the form must clear it on the draft (the create path maps '' → undefined
+  // instead, so brand-new drafts don't carry noise).
+  function editPatch() {
+    return {
+      period_start: from,
+      period_end: to,
+      request_type: requestType,
+      applied_mwh: appliedValue,
+      receiving_org_name: receivingOrgName.trim(),
+      receiving_account_id: receivingAccountId.trim(),
+      facility_id: facilityId.trim(),
+      requested_labels: requestedLabels.trim(),
+    };
+  }
+
   async function saveDraft() {
     if (!canSaveDraft) return;
     setBusy(true);
     try {
-      await api.createRecIssue({
-        project_id: projectId,
-        period_start: from,
-        period_end: to,
-        request_type: requestType,
-        applied_mwh: appliedValue ?? undefined,
-        receiving_org_name: receivingOrgName.trim() || undefined,
-        receiving_account_id: receivingAccountId.trim() || undefined,
-      });
+      if (editing) {
+        await api.updateRecIssue(editing.id, editPatch());
+      } else {
+        await api.createRecIssue(createInput());
+      }
       onClose();
     } finally {
       setBusy(false);
@@ -84,16 +140,13 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
     if (!canSubmit) return;
     setBusy(true);
     try {
-      const created = await api.createRecIssue({
-        project_id: projectId,
-        period_start: from,
-        period_end: to,
-        request_type: requestType,
-        applied_mwh: appliedValue ?? undefined,
-        receiving_org_name: receivingOrgName.trim() || undefined,
-        receiving_account_id: receivingAccountId.trim() || undefined,
-      });
-      await api.submitRecIssue(created.id);
+      let id = editing?.id;
+      if (editing) {
+        await api.updateRecIssue(editing.id, editPatch());
+      } else {
+        id = (await api.createRecIssue(createInput())).id;
+      }
+      if (id) await api.submitRecIssue(id);
       onClose();
     } finally {
       setBusy(false);
@@ -101,9 +154,9 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <Modal open onClose={onClose} title="Issue Request (SF-04)" size="lg">
+    <Modal open onClose={onClose} title={editing ? `แก้ไข Issue Request (SF-04) — ${editing.id}` : 'Issue Request (SF-04)'} size="lg">
       <div className="space-y-4">
-        <Select label="Project (REC-registered only)" value={projectId} onChange={(e) => setProjectId(e.target.value)}>
+        <Select label="Project (REC-registered only)" value={projectId} disabled={!!editing} onChange={(e) => handleProjectChange(e.target.value)}>
           {recProjects.length === 0 && <option value="">— no REC-registered projects —</option>}
           {recProjects.map((p) => <option key={p.id} value={p.id}>{p.name}</option>)}
         </Select>
@@ -148,6 +201,18 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
           </p>
         )}
 
+        {/* Optional on the official form (§1.2) — no guards, blank is fine. */}
+        <div className="grid grid-cols-2 gap-3">
+          <Input
+            label="Evident Facility ID/code" value={facilityId}
+            onChange={(e) => { setFacilityId(e.target.value); setFacilityTouched(true); }}
+          />
+          <Input
+            label="Requested Labels" value={requestedLabels}
+            onChange={(e) => { setRequestedLabels(e.target.value); setLabelsTouched(true); }}
+          />
+        </div>
+
         <div className="rounded-xl bg-ink-50 px-4 py-3 text-sm">
           <div className="text-ink-600">
             ค่าธรรมเนียมโดยประมาณ: <span data-testid="fee-estimate" className="font-semibold text-ink-900">
@@ -163,7 +228,7 @@ export function RecIssueModal({ onClose }: { onClose: () => void }) {
         <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="secondary" disabled={!canSaveDraft} loading={busy} onClick={saveDraft}>
-            Save draft
+            {editing ? 'Save changes' : 'Save draft'}
           </Button>
           <Button disabled={!canSubmit} loading={busy} onClick={saveAndSubmit}>
             <Check size={15} /> Save & Submit

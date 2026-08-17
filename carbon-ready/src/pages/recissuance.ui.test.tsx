@@ -143,6 +143,31 @@ describe('REC Issuance page', () => {
     });
   });
 
+  it('draft row shows แก้ไข; the modal opens prefilled and Save changes updates the store', async () => {
+    renderPage();
+    // Only RIR-1001 is a draft — exactly one edit button.
+    fireEvent.click(screen.getByRole('button', { name: 'แก้ไข' }));
+
+    // Prefilled from RIR-1001 (Feb 2026 period); the project cannot change in edit mode.
+    expect(screen.getByLabelText(/Period start/i)).toHaveValue('2026-02-01');
+    expect(screen.getByLabelText(/Period end/i)).toHaveValue('2026-02-28');
+    expect(screen.getByLabelText(/Project/i)).toBeDisabled();
+
+    fireEvent.change(screen.getByLabelText(/Evident Facility ID/i), { target: { value: 'FAC-EDIT-01' } });
+    fireEvent.click(screen.getByRole('button', { name: /Save changes/ }));
+
+    await waitFor(() => {
+      expect(useStore.getState().recIssues.find((r) => r.id === 'RIR-1001')?.facility_id).toBe('FAC-EDIT-01');
+    });
+  });
+
+  it('create modal prefills Facility ID from the project\'s most recent request', () => {
+    renderPage();
+    fireEvent.click(screen.getByRole('button', { name: /Issue Request/ }));
+    // prj-0010's most recent request carrying a facility id is RIR-1000.
+    expect(screen.getByLabelText(/Evident Facility ID/i)).toHaveValue('DEMO-FAC-0001');
+  });
+
   it('every row links to its official SF-04 document', () => {
     renderPage();
     const links = screen.getAllByRole('link', { name: /SF-04/ });

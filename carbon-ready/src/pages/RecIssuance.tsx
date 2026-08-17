@@ -13,7 +13,7 @@ import { useStore } from '../store';
 import { api } from '../lib/api';
 import { fmtDate } from '../lib/date';
 import { RecIssueModal } from '../components/rec/RecIssueModal';
-import type { RecIssueState } from '../types';
+import type { RecIssueRequest, RecIssueState } from '../types';
 
 const STATES: (RecIssueState | 'all')[] = ['all', 'draft', 'submitted', 'issued', 'rejected'];
 const STATE_CHIP_LABEL: Record<RecIssueState | 'all', string> = {
@@ -40,6 +40,7 @@ export function RecIssuance() {
 
   const [filter, setFilter] = useState<RecIssueState | 'all'>('all');
   const [creating, setCreating] = useState(false);
+  const [editingRow, setEditingRow] = useState<RecIssueRequest | null>(null);
   const [rejectingId, setRejectingId] = useState<string | null>(null);
   const [reason, setReason] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -152,8 +153,8 @@ export function RecIssuance() {
                   const busy = busyId === r.id;
                   // The server requires non-blank receiving fields at submit
                   // time (SF-04 §2) — disable Submit here too so the row
-                  // action never 400s; there is no edit UI yet, so recovery
-                  // would otherwise be delete + recreate.
+                  // action never 400s; แก้ไข opens the draft for editing so
+                  // the missing fields can be filled in.
                   const receivingIncomplete = !r.receiving_org_name?.trim() || !r.receiving_account_id?.trim();
                   return (
                     <TR key={r.id}>
@@ -174,6 +175,7 @@ export function RecIssuance() {
                           </Link>
                           {r.state === 'draft' && canCreate && (
                             <>
+                              <Button size="sm" variant="ghost" onClick={() => setEditingRow(r)}>แก้ไข</Button>
                               <span title={receivingIncomplete ? 'กรอก Receiving account ใน draft ก่อน submit' : undefined}>
                                 <Button size="sm" variant="secondary" disabled={receivingIncomplete} loading={busy} onClick={() => doSubmit(r.id)}>Submit</Button>
                               </span>
@@ -214,6 +216,7 @@ export function RecIssuance() {
         </CardBody>
       </Card>
       {creating && <RecIssueModal onClose={() => setCreating(false)} />}
+      {editingRow && <RecIssueModal editing={editingRow} onClose={() => setEditingRow(null)} />}
     </div>
   );
 }

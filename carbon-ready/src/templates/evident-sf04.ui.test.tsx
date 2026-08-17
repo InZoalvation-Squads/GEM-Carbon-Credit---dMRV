@@ -26,6 +26,14 @@ describe('Evident SF-04 official form', () => {
     expect(screen.getByText('EVID-ACC-000456')).toBeInTheDocument(); // receiving_account_id
   });
 
+  it('renders §1.2 Facility ID/code from the request', () => {
+    renderForm('RIR-1000');
+    // RIR-1000 fixture carries facility_id 'DEMO-FAC-0001' (requested_labels
+    // is '' and must stay a blank cell — no placeholder text like '-').
+    expect(screen.getByText('DEMO-FAC-0001')).toBeInTheDocument();
+    expect(screen.queryByText('-')).not.toBeInTheDocument();
+  });
+
   it('marks the request type with ☑ and shows the MWh digit grid', () => {
     renderForm('RIR-1000');
     expect(screen.getByTestId('mwh-grid')).toBeInTheDocument();

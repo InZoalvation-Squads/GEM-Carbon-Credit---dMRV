@@ -314,9 +314,9 @@ export function EvidentSF04({ recIssueId: recIssueIdProp }: { recIssueId?: strin
             <SectionHead no="1.2" title="Registrant and Facility Details" hint="Complete all fields. IDs, codes, and names should be as displayed in the Evident Registry." />
             <Row label="Organisation ID/code">{str(snap.evident_org_id)}</Row>
             <Row label="Organisation name">{str(snap.organisation_name)}</Row>
-            <Row label="Facility ID/code" />
+            <Row label="Facility ID/code">{str(rec.facility_id)}</Row>
             <Row label="Facility name">{str(snap.facility_name)}</Row>
-            <Row label="Requested Labels" hint="(only Labels recoded against the Facility registration are permitted)" />
+            <Row label="Requested Labels" hint="(only Labels recoded against the Facility registration are permitted)">{str(rec.requested_labels)}</Row>
           </div>
 
           <div className="mt-4">
