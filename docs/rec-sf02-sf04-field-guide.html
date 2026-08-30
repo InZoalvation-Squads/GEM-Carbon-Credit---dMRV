@@ -1,0 +1,198 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>คู่มือ Field Mapping — Evident SF-02 &amp; SF-04 (Carbon Ready)</title>
+<style>
+  @page { size: A4; margin: 16mm 14mm; }
+  * { box-sizing: border-box; }
+  body {
+    font-family: 'Sukhumvit Set', 'Thonburi', 'Helvetica Neue', Arial, sans-serif;
+    font-size: 11.5px; line-height: 1.55; color: #1a1a1a; margin: 0;
+  }
+  h1 { font-size: 22px; margin: 0 0 2px; }
+  h2 { font-size: 16px; margin: 26px 0 4px; padding: 6px 10px; background: #14532d; color: #fff; border-radius: 4px; break-after: avoid; }
+  h3 { font-size: 13px; margin: 16px 0 4px; color: #14532d; break-after: avoid; }
+  p.sub { color: #555; margin: 0 0 4px; }
+  .meta { font-size: 10.5px; color: #666; margin-bottom: 10px; }
+  table { width: 100%; border-collapse: collapse; margin: 4px 0 10px; }
+  th, td { border: 1px solid #bbb; padding: 4px 7px; vertical-align: top; text-align: left; }
+  th { background: #e8f0ea; font-size: 11px; }
+  td.f { font-weight: 600; width: 26%; }
+  td.s { width: 30%; }
+  tr { break-inside: avoid; }
+  code { font-family: Menlo, monospace; font-size: 10px; background: #f2f2f2; padding: 0 3px; border-radius: 3px; }
+  .tag { display: inline-block; font-size: 9.5px; font-weight: 700; padding: 1px 6px; border-radius: 8px; white-space: nowrap; }
+  .tag.user   { background: #dbeafe; color: #1e40af; }
+  .tag.auto   { background: #dcfce7; color: #166534; }
+  .tag.proj   { background: #fef3c7; color: #92400e; }
+  .tag.snap   { background: #ede9fe; color: #5b21b6; }
+  .tag.blank  { background: #f3f4f6; color: #6b7280; }
+  .tag.paper  { background: #fee2e2; color: #991b1b; }
+  .legend td { border: none; padding: 2px 6px; }
+  .note { background: #fffbeb; border: 1px solid #f59e0b55; border-radius: 4px; padding: 6px 10px; margin: 8px 0; }
+  .pagebreak { break-before: page; }
+  .cover { margin-bottom: 8px; border-bottom: 3px solid #14532d; padding-bottom: 10px; }
+</style>
+</head>
+<body>
+
+<div class="cover">
+  <h1>คู่มือ Field Mapping — REC Track</h1>
+  <p class="sub">Evident SF-02: Production Facility Registration (v1.4.1) &amp; SF-04: Issue Request (v1.2.1)</p>
+  <p class="meta">อธิบายว่าแต่ละช่องในเอกสาร export ของระบบ Carbon Ready ดึงค่ามาจากไหน · จัดทำ 30 ส.ค. 2026 ·
+  อ้างอิงฟอร์มจริง: docs/reference/rec/ (Evident SF-02 v1.4.1, SF-04 v1.2.1, 21 Nov 2025)</p>
+</div>
+
+<h3 style="margin-top:0">สัญลักษณ์แหล่งที่มาของค่า</h3>
+<table class="legend">
+  <tr><td><span class="tag user">กรอกในระบบ</span></td><td>ผู้ใช้กรอกเอง — SF-02 กรอกใน Registration editor / SF-04 กรอกใน Issue Request modal (ปุ่ม New / แก้ไข)</td></tr>
+  <tr><td><span class="tag proj">Project record</span></td><td>ดึงจากข้อมูลโปรเจ็กต์ (หน้า Projects) อัตโนมัติ</td></tr>
+  <tr><td><span class="tag auto">ระบบคำนวณ</span></td><td>ระบบใส่ให้เอง (คำนวณ / ประทับเวลา)</td></tr>
+  <tr><td><span class="tag snap">Snapshot จาก SF-02</span></td><td>คัดลอกจาก SF-02 registration ที่ขึ้นทะเบียนแล้ว ณ ตอนสร้างคำขอ SF-04 (แก้ที่คำขอไม่ได้ — ต้องแก้ที่ registration)</td></tr>
+  <tr><td><span class="tag blank">เว้นว่างในระบบ</span></td><td>ฟอร์มจริงมีช่องนี้ แต่ระบบเว้นว่างโดยตั้งใจ</td></tr>
+  <tr><td><span class="tag paper">เซ็นบนกระดาษ</span></td><td>ลายเซ็น/วันที่เซ็น — กรอกด้วยมือหลังพิมพ์เอกสาร</td></tr>
+</table>
+
+<!-- ================= SF-02 ================= -->
+<h2>ส่วนที่ 1 — SF-02: Production Facility Registration (v1.4.1)</h2>
+<p class="sub">เอกสาร 8 หน้า + หน้าปก/Document Control/Contents/Introduction (ข้อความคงที่ตามฟอร์มจริง) ·
+กรอกข้อมูลที่: <b>Register Project → REC track → REC Registration editor</b> (7 sections) ·
+export ที่หน้า document ของ registration → ปุ่ม "เอกสารฟอร์ม Evident SF-02"</p>
+
+<h3>§1.1 — SF-02: Production Facility Registration</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Date</td><td class="s"><span class="tag auto">ระบบคำนวณ</span></td><td>วันที่ submit registration (<code>submitted_at</code>) — ถ้ายังเป็น draft จะแสดงช่อง DD/MM/YYYY ว่าง</td></tr>
+  <tr><td class="f">Registration type</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 1</td><td>เลือก New / Change of details / Renewal / Transfer (ค่าเริ่มต้น: New) — ติ๊ก ☑ ตามที่เลือก</td></tr>
+  <tr><td class="f">Submitter status (Is the Registrant also the owner?)</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 1</td><td>Yes/No — ถ้า <b>No</b> เอกสารจะแสดงหน้า SF-02C: Owner's Declaration เพิ่มให้อัตโนมัติ และต้องแนบหลักฐานความเป็นเจ้าของ</td></tr>
+</table>
+
+<h3>§1.2 — Registrant Contact Details</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Organisation ID/code</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>รหัสองค์กรบน Evident Registry (ได้หลังสมัครบัญชีด้วย SF-01 + STC กับ EGAT) เช่น EVID-XXXXXX</td></tr>
+  <tr><td class="f">Organisation name</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>ชื่อองค์กรผู้ยื่น (Registrant) ตามบัญชี Evident — ใช้ซ้ำใน SF-02A/SF-02C ด้วย</td></tr>
+  <tr><td class="f">Contact person</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>ชื่อผู้ติดต่อหลัก</td></tr>
+  <tr><td class="f">Business address</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>ที่อยู่องค์กร รวมรหัสไปรษณีย์</td></tr>
+  <tr><td class="f">Country</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>ประเทศขององค์กร (ค่าเริ่มต้น: Thailand)</td></tr>
+  <tr><td class="f">e-mail / Telephone</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2</td><td>อีเมลและเบอร์โทรผู้ยื่น</td></tr>
+  <tr><td class="f">Additional Contact(s)</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 2 (ไม่บังคับ)</td><td>ผู้ติดต่อสำรองที่ EGAT/Evident ติดต่อได้</td></tr>
+</table>
+
+<h3>§1.3 — Production Facility Details</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Facility name</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>ชื่อโรงไฟฟ้า/ระบบผลิต — ใช้ซ้ำใน SF-02C และถูก snapshot ไป SF-04 §1.2</td></tr>
+  <tr><td class="f">Facility address</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>ที่อยู่ที่ตั้งโรงไฟฟ้า รวมรหัสไปรษณีย์</td></tr>
+  <tr><td class="f">Country</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>ประเทศที่ตั้ง (ค่าเริ่มต้น: Thailand)</td></tr>
+  <tr><td class="f">Latitude / Longitude</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>พิกัดรูปแบบ ±n.nnnnnn (ทศนิยม 6 ตำแหน่ง)</td></tr>
+  <tr><td class="f">Installed capacity</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>หน่วย <b>MW</b> (kWp ÷ 1000) แสดงเป็นตารางตัวเลขทีละหลัก ทศนิยมสูงสุด 6 ตำแหน่ง — ระบบ prefill จาก capacity ของโปรเจ็กต์ให้ตรวจทาน</td></tr>
+  <tr><td class="f">Meter or Measurement ID(s)</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>Serial number ของมิเตอร์ที่วัดปริมาณผลิต/ส่งออก</td></tr>
+  <tr><td class="f">Number of generating units</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>เช่น จำนวน inverter (โซลาร์) / จำนวนกังหัน (ลม)</td></tr>
+  <tr><td class="f">Commissioning date</td><td class="s"><span class="tag proj">Project record</span></td><td>ดึงจากวัน COD ของโปรเจ็กต์ (<code>commission_date</code>) อัตโนมัติ — แก้ที่หน้า Projects</td></tr>
+  <tr><td class="f">Owner of the network … and the voltage</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>เจ้าของโครงข่ายที่เชื่อมต่อ + แรงดัน เช่น "PEA — 22 kV"</td></tr>
+  <tr><td class="f">If not connected directly to the grid …</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3 (ไม่บังคับ)</td><td>กรณีไม่ได้ต่อตรงเข้ากริด — อธิบายสถานการณ์ + เลขมิเตอร์เพิ่มเติม</td></tr>
+  <tr><td class="f">Expected form of volume evidence</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 3</td><td>Metering data / Contract sales invoice / Other (ถ้า Other จะมีช่องระบุเพิ่ม)</td></tr>
+</table>
+
+<h3>§1.3 (ต่อ) + Business questions — ในระบบอยู่ที่ Section 5</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Is there an on-site (captive) consumer present?</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>Yes/No — ถ้า Yes กรอกรายละเอียด และต้องแนบ Declaration/Notice Letter สละสิทธิ์การเคลม attributes เป็น evidence</td></tr>
+  <tr><td class="f">Auxiliary/standby energy sources present?</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>Yes/No — ถ้า Yes กรอกรายละเอียดแหล่งพลังงานสำรอง</td></tr>
+  <tr><td class="f">How the site can import electricity by other means</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>ช่องทางนำเข้าไฟอื่นนอกจากมิเตอร์ข้างต้น — ระบุ "None" หากไม่มี</td></tr>
+  <tr><td class="f">Requested effective date of registration</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>ตามกติกา Residual Mix Deadline และไม่ก่อนวัน commissioning</td></tr>
+</table>
+
+<h3>§1.4 — Energy Sources</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Fuel — Code / Description</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 4</td><td>รหัสตามเอกสาร Evident <b>SD-02: Technologies and Fuels</b> — ถูก snapshot ไป SF-04 §1.4 ด้วย</td></tr>
+  <tr><td class="f">Technology — Code / Description</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 4</td><td>รหัสเทคโนโลยีตาม SD-02 — ถูก snapshot ไป SF-04 §1.4 ด้วย</td></tr>
+</table>
+
+<h3>§1.5 — Business Details</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Carbon offset / energy tracking scheme details</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>เช่น ทะเบียน T-VER ของโครงการเดียวกัน (ใส่เลขทะเบียน) — ระบุ "None" หากไม่มี</td></tr>
+  <tr><td class="f">Labelling Scheme(s)</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5 (ไม่บังคับ)</td><td>มาตรฐาน label ที่โรงไฟฟ้าได้รับการรับรอง (ถ้ามี)</td></tr>
+  <tr><td class="f">Public (government) funding?</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>No / Investment / Production (เช่น Feed-in Tariff)</td></tr>
+  <tr><td class="f">(when did/will funding finish?)</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 5</td><td>กรอกเมื่อเลือก Investment หรือ Production เท่านั้น</td></tr>
+</table>
+
+<h3>§1.6 — Verification Agent · §1.7 — Additional Information</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Name of proposed Verification Agent</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 6 (ไม่บังคับ)</td><td>กรอกเฉพาะกรณีใช้ Verification Agent ที่ไม่ใช่ Issuer (EGAT)</td></tr>
+  <tr><td class="f">Additional Information</td><td class="s"><span class="tag user">กรอกในระบบ</span> — Section 7 (ไม่บังคับ)</td><td>ข้อมูลเพิ่มเติมอื่นที่เกี่ยวข้องกับการขึ้นทะเบียน</td></tr>
+</table>
+
+<h3>§1.8 — Confirmation Signature · §1.9 — SF-02A · §1.11 — SF-02C</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">§1.8 Signature / Name / Date</td><td class="s"><span class="tag paper">เซ็นบนกระดาษ</span></td><td>ข้อความยอมรับ Privacy Policy เป็นข้อความคงที่ — ผู้มีอำนาจลงนามเซ็นหลังพิมพ์</td></tr>
+  <tr><td class="f">SF-02A: Registrant's Declaration</td><td class="s"><span class="tag auto">ระบบคำนวณ</span> + <span class="tag paper">เซ็นบนกระดาษ</span></td><td>แสดงทุกครั้ง — ระบบเติมชื่อ Registrant (Organisation name) ลงในย่อหน้าคำประกาศให้ ช่อง Signature/Name/Date เซ็นมือ</td></tr>
+  <tr><td class="f">SF-02B: Production Group Template</td><td class="s"><span class="tag blank">เว้นว่างในระบบ</span></td><td>ไม่ render — ใช้เฉพาะการขึ้นทะเบียนแบบ Production Group ซึ่งอยู่นอกขอบเขตระบบ (โรงเดี่ยว)</td></tr>
+  <tr><td class="f">SF-02C: Owner's Declaration</td><td class="s"><span class="tag auto">ระบบคำนวณ</span> + <span class="tag paper">เซ็นบนกระดาษ</span></td><td>แสดงเฉพาะเมื่อ Registrant ≠ Owner (§1.1 ตอบ No) — ระบบเติมชื่อ Registrant + Facility name ให้ ส่วน [วันที่/ชื่อเจ้าของ] ในวงเล็บเหลี่ยมกรอกมือบนหัวจดหมายเจ้าของ</td></tr>
+</table>
+
+<div class="note"><b>เอกสารแนบ (อัปโหลดที่หน้า Evidence ไม่ใช่ในฟอร์ม):</b> รูปถ่ายโครงการ · PPA · Meter Calibration Report (กรณีมิเตอร์ non-settlement) · Single Line Diagram · หลักฐานปริมาณไฟที่ผลิต · หลักฐานกำลังติดตั้ง (kW) · ใบอนุญาตผลิตไฟฟ้า (พค.2/ERC) · หลักฐานวัน COD · SF-02A ที่เซ็นแล้ว · SF-02C + หลักฐานความเป็นเจ้าของ (กรณีผู้ยื่นไม่ใช่เจ้าของ) · Declaration/Notice Letter (กรณีมี onsite consumer)</div>
+
+<!-- ================= SF-04 ================= -->
+<h2 class="pagebreak">ส่วนที่ 2 — SF-04: Issue Request (v1.2.1)</h2>
+<p class="sub">เอกสาร 5 หน้า + หน้าปก/Document Control/Contents/Introduction ·
+กรอกข้อมูลที่: <b>หน้า REC Issuance → ปุ่ม New Issue Request</b> (หรือปุ่ม "แก้ไข" บนแถว draft) ·
+export ด้วยปุ่ม SF-04 บนทุกแถวของตาราง</p>
+
+<h3>§1.1 — SF-04: Issue Request</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Date</td><td class="s"><span class="tag auto">ระบบคำนวณ</span></td><td>วันที่ submit คำขอ (<code>submitted_at</code>) — draft จะแสดงช่อง DD/MM/YYYY ว่าง</td></tr>
+  <tr><td class="f">Request type</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal</td><td>☑ Normal (ขายให้ผู้อื่น, ค่าธรรมเนียม 0.95 ฿/MWh) หรือ ☑ Self consumption (ใช้เอง, 1.33 ฿/MWh — อัตรา EGAT FN-01 2026)</td></tr>
+</table>
+
+<h3>§1.2 — Registrant and Facility Details</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Organisation ID/code</td><td class="s"><span class="tag snap">Snapshot จาก SF-02</span></td><td>มาจาก "Organisation ID/code" (Section 2) ของ registration ที่ขึ้นทะเบียนแล้ว — freeze ณ ตอนสร้างคำขอ</td></tr>
+  <tr><td class="f">Organisation name</td><td class="s"><span class="tag snap">Snapshot จาก SF-02</span></td><td>มาจาก "Organisation name" (Section 2)</td></tr>
+  <tr><td class="f">Facility ID/code</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal (ไม่บังคับ)</td><td>รหัสโรงไฟฟ้าที่ <b>Evident ออกให้หลัง SF-02 ผ่านการอนุมัติ</b> — พิมพ์ครั้งเดียวในช่อง "Evident Facility ID/code" คำขอถัดไปของโปรเจ็กต์เดียวกันระบบ prefill ให้อัตโนมัติ</td></tr>
+  <tr><td class="f">Facility name</td><td class="s"><span class="tag snap">Snapshot จาก SF-02</span></td><td>มาจาก "Facility name" (Section 3)</td></tr>
+  <tr><td class="f">Requested Labels</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal (ไม่บังคับ)</td><td>Label ที่ขอให้ติดบนใบรับรอง — ใช้ได้เฉพาะ Label ที่บันทึกไว้กับ Facility registration บน Evident เท่านั้น เว้นว่างได้ถ้าไม่ใช้</td></tr>
+</table>
+
+<h3>§1.3 — Production Details</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Period start date / Period end date</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal</td><td>ช่วงเวลาการผลิตที่ขอออกใบรับรอง (เลือกจากช่วงที่มี monitoring records)</td></tr>
+  <tr><td class="f">Total production during period</td><td class="s"><span class="tag auto">ระบบคำนวณ</span></td><td>ระบบรวม kWh จาก monitoring records ในช่วงที่เลือก ÷ 1000 = <b>MWh</b> (ทศนิยมสูงสุด 6 ตำแหน่ง) แสดงเป็นตารางตัวเลขทีละหลัก — ค่าถูก freeze ตอน submit</td></tr>
+  <tr><td class="f">I-REC(E) applied for</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal (ไม่บังคับ)</td><td>จำนวน MWh ที่ขอออกจริง กรณีขอน้อยกว่ายอดผลิต — <b>เว้นว่าง = ออกเต็มยอดผลิตข้างบน</b> (ตามหมายเหตุในฟอร์ม)</td></tr>
+</table>
+
+<h3>§1.4 — Energy Sources · §1.5 — Production Auditor · §1.6 — Receiving Account</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">Fuel Code(s) / Description(s)</td><td class="s"><span class="tag snap">Snapshot จาก SF-02</span></td><td>มาจาก Section 4 ของ registration (รหัสตาม SD-02)</td></tr>
+  <tr><td class="f">Technology Code / Description</td><td class="s"><span class="tag snap">Snapshot จาก SF-02</span></td><td>มาจาก Section 4 ของ registration</td></tr>
+  <tr><td class="f">§1.5 Production Auditor (ทั้งส่วน)</td><td class="s"><span class="tag blank">เว้นว่างในระบบ</span> + <span class="tag paper">เซ็นบนกระดาษ</span></td><td>กรอกเฉพาะกรณีมี Production Auditor ภายนอกตรวจสอบคำขอ — Auditor เป็นผู้กรอกชื่อองค์กร + เซ็นเองบนเอกสารพิมพ์ (ระบบไม่มี workflow นี้)</td></tr>
+  <tr><td class="f">Receiving organisation name</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal</td><td>องค์กรผู้รับใบรับรอง (Participant / Platform Operator / self-consumption) — <b>บังคับก่อน submit</b> แต่ draft เว้นว่างได้</td></tr>
+  <tr><td class="f">Account ID/code</td><td class="s"><span class="tag user">กรอกในระบบ</span> — modal</td><td>รหัสบัญชีผู้รับบน Evident Registry — <b>บังคับก่อน submit</b></td></tr>
+</table>
+
+<h3>§1.7 — SF-04A: Issuing Declaration · SF-04B/C</h3>
+<table>
+  <tr><th>ช่องในฟอร์ม</th><th>แหล่งที่มา</th><th>คำอธิบาย</th></tr>
+  <tr><td class="f">SF-04A: Issuing Declaration</td><td class="s"><span class="tag paper">เซ็นบนกระดาษ</span></td><td>แสดงทุกครั้ง — ข้อความคำประกาศเป็นข้อความคงที่ตามฟอร์มจริง ช่อง Signature / Name (BLOCK CAPITALS) / Date เซ็นมือโดยผู้มีอำนาจของ Registrant</td></tr>
+  <tr><td class="f">SF-04B: Production Group Statement</td><td class="s"><span class="tag blank">เว้นว่างในระบบ</span></td><td>ไม่ render — ใช้เฉพาะ Production Group ซึ่งอยู่นอกขอบเขตระบบ</td></tr>
+  <tr><td class="f">SF-04C: Fuel Consumption Statement</td><td class="s"><span class="tag blank">เว้นว่างในระบบ</span></td><td>ไม่ render — ใช้เฉพาะโรงไฟฟ้า multi-fuel (ระบบรองรับโซลาร์ fuel เดียว)</td></tr>
+</table>
+
+<div class="note">
+<b>สรุปเส้นทางข้อมูล SF-04:</b> ข้อมูลองค์กร/โรงไฟฟ้า/เชื้อเพลิง (§1.2, §1.4) ถูก snapshot มาจาก SF-02 registration ตอนสร้างคำขอ — ถ้าผิดต้องแก้ที่ registration ·
+ช่วงเวลา + Facility ID + Labels + Receiving account กรอกใน modal (แก้ได้ตลอดขณะเป็น draft ด้วยปุ่ม "แก้ไข") ·
+ยอด MWh ระบบคำนวณจาก monitoring records และ freeze ตอน submit · ลายเซ็นทั้งหมดเซ็นบนกระดาษหลังพิมพ์
+</div>
+
+</body>
+</html>
