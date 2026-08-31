@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Weekly Update — REC Track</title>
+<style>
+  @page { size: 297mm 167mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Sukhumvit Set', 'Thonburi', 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; }
+  .slide {
+    width: 297mm; height: 167mm; padding: 18mm 22mm;
+    break-after: page; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .slide:last-child { break-after: auto; }
+  .footer {
+    position: absolute; bottom: 8mm; left: 22mm; right: 22mm;
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #8a8a8a;
+  }
+  .accent { position: absolute; top: 0; left: 0; width: 100%; height: 5mm; background: linear-gradient(90deg, #14532d, #16a34a); }
+  h1 { font-size: 52px; line-height: 1.2; color: #14532d; }
+  h2 { font-size: 34px; color: #14532d; margin-bottom: 4mm; }
+  .kicker { font-size: 16px; font-weight: 700; letter-spacing: 2px; color: #16a34a; text-transform: uppercase; margin-bottom: 3mm; }
+  ul.big { list-style: none; margin-top: 4mm; }
+  ul.big > li { font-size: 20px; margin-bottom: 5.5mm; padding-left: 11mm; position: relative; line-height: 1.45; }
+  ul.big > li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #16a34a; font-weight: 800; font-size: 22px; }
+  ul.big > li b { color: #14532d; }
+  ul.big > li .sub { display: block; font-size: 15.5px; color: #555; margin-top: 1mm; }
+  .cols { display: flex; gap: 10mm; margin-top: 4mm; flex: 1; }
+  .col { flex: 1; }
+  .card { background: #f2f7f3; border-left: 4px solid #16a34a; border-radius: 6px; padding: 5mm 6mm; margin-bottom: 4.5mm; }
+  .card h3 { font-size: 18px; color: #14532d; margin-bottom: 1.5mm; }
+  .card p { font-size: 14.5px; color: #444; line-height: 1.5; }
+  .num { display: inline-flex; align-items: center; justify-content: center; width: 9mm; height: 9mm; border-radius: 50%; background: #14532d; color: #fff; font-weight: 800; font-size: 16px; margin-right: 3mm; }
+  .stat { text-align: center; padding: 6mm 4mm; background: #f2f7f3; border-radius: 8px; }
+  .stat .v { font-size: 44px; font-weight: 800; color: #14532d; }
+  .stat .l { font-size: 14px; color: #555; margin-top: 1mm; }
+  .title-slide { justify-content: center; background: linear-gradient(135deg, #0f3d22 0%, #14532d 55%, #1b6b3a 100%); color: #fff; }
+  .title-slide h1 { color: #fff; font-size: 60px; }
+  .title-slide .sub { font-size: 24px; color: #b9e4c7; margin-top: 5mm; }
+  .title-slide .meta { font-size: 16px; color: #8fcaa4; margin-top: 14mm; }
+  .flow { display: flex; align-items: stretch; gap: 4mm; margin-top: 6mm; }
+  .flow .step { flex: 1; background: #f2f7f3; border-radius: 8px; padding: 4.5mm; text-align: center; }
+  .flow .step .t { font-weight: 800; font-size: 15.5px; color: #14532d; }
+  .flow .step .d { font-size: 12.5px; color: #555; margin-top: 1.5mm; line-height: 1.4; }
+  .flow .arrow { align-self: center; font-size: 20px; color: #16a34a; font-weight: 800; }
+</style>
+</head>
+<body>
+
+<!-- Slide 1: Title -->
+<section class="slide title-slide">
+  <div class="kicker" style="color:#7ddba0">Weekly Update · Carbon Ready dMRV</div>
+  <h1>REC Track<br>ครบวงจรถึงขั้น Export ฟอร์มทางการ</h1>
+  <p class="sub">สรุปงานสัปดาห์ 17 – 31 สิงหาคม 2026</p>
+  <p class="meta">ทีม IT · Rocks Foods</p>
+</section>
+
+<!-- Slide 2: Overview -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">ภาพรวมสัปดาห์นี้</div>
+  <h2>ทำอะไรไปบ้าง — 5 เรื่องหลัก</h2>
+  <ul class="big">
+    <li><b>Export ฟอร์ม SF-04 ทางการ (Evident v1.2.1)</b><span class="sub">คำขอออกใบรับรอง REC พิมพ์เป็นเอกสารตรงตามฟอร์มจริงได้จากทุกแถว</span></li>
+    <li><b>เพิ่มช่องข้อมูล Facility ID + Requested Labels</b><span class="sub">ปิดช่องว่างข้อมูลใน SF-04 — พิมพ์ครั้งเดียว ระบบ prefill ให้ใบถัดไป</span></li>
+    <li><b>แก้ไขคำขอ (draft) ได้แล้ว</b><span class="sub">ปุ่ม "แก้ไข" — เติมข้อมูลย้อนหลังได้ ไม่ต้องลบสร้างใหม่</span></li>
+    <li><b>ปรับปรุง UX หน้ากรอกฟอร์ม + แสดงสถานะ journey</b><span class="sub">step ที่กรอกครบเปลี่ยนเป็นสีเขียว ✓ และ REC Guide บอกว่า "คุณอยู่ขั้นนี้"</span></li>
+    <li><b>เอกสารคู่มือ Field Mapping (PDF ภาษาไทย)</b><span class="sub">อธิบายทุกช่องของ SF-02/SF-04 ว่าค่ามาจากไหน ใครกรอก ตรงไหน</span></li>
+  </ul>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>2 / 7</span></div>
+</section>
+
+<!-- Slide 3: SF-04 export -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">เรื่องที่ 1</div>
+  <h2>Export ฟอร์ม SF-04: Issue Request ทางการ</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="card"><h3>ตรงตามฟอร์มจริงทุกหน้า</h3><p>สร้างเอกสาร Evident SF-04 v1.2.1 ครบทั้งชุด: หน้าปก, Document Control, Contents, Introduction, ฟอร์ม §1.1–1.6 และคำประกาศ SF-04A — ข้อความคงที่คัดลอกจาก PDF ต้นฉบับคำต่อคำ</p></div>
+      <div class="card"><h3>เติมข้อมูลจากคำขอโดยอัตโนมัติ</h3><p>วันที่ submit, ประเภทคำขอ (☑), ข้อมูลองค์กร/โรงไฟฟ้า, ช่วงเวลาผลิต, ยอด MWh แบบตารางตัวเลขทีละหลัก, บัญชีผู้รับใบรับรอง</p></div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>ใช้งานง่าย</h3><p>ปุ่ม "SF-04" อยู่บนทุกแถวของหน้า REC Issuance (ทุกสถานะ) — draft ก็ preview ได้ กด Print/PDF ได้ทันที</p></div>
+      <div class="card"><h3>ครบทั้ง 2 ฟอร์มแล้ว</h3><p>ตอนนี้ REC track มี export ทางการทั้ง SF-02 (ขึ้นทะเบียนโรงไฟฟ้า) และ SF-04 (ขอออกใบรับรอง) เทียบเท่า T-VER ที่มี PDD export</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>3 / 7</span></div>
+</section>
+
+<!-- Slide 4: fields + draft edit -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">เรื่องที่ 2–3</div>
+  <h2>เพิ่มข้อมูล SF-04 + แก้ไข Draft ได้</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="card"><h3>ช่องใหม่ 2 ช่อง</h3><p><b>Evident Facility ID/code</b> (รหัสที่ Evident ออกให้หลัง SF-02 ผ่าน) และ <b>Requested Labels</b> — เก็บลงฐานข้อมูลและแสดงใน SF-04 §1.2 ทั้งคู่เป็น optional ตามฟอร์มจริง</p></div>
+      <div class="card"><h3>พิมพ์ครั้งเดียวพอ</h3><p>คำขอใบถัดไปของโปรเจ็กต์เดียวกัน ระบบดึง Facility ID จากใบล่าสุดมาเติมให้อัตโนมัติ</p></div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>ปุ่ม "แก้ไข" บนแถว draft</h3><p>เปิดฟอร์มเดิมพร้อมข้อมูลที่เคยกรอก — เติม Receiving account, เปลี่ยนช่วงเวลา (ยอด MWh คำนวณใหม่ให้), แล้ว Save changes หรือ Save &amp; Submit ได้เลย</p></div>
+      <div class="card"><h3>ปิดปัญหาเดิม</h3><p>เมื่อก่อน draft ที่ข้อมูลไม่ครบต้องลบทิ้งสร้างใหม่ — ตอนนี้แก้ตรงจุดได้ พร้อมแจ้งเตือนชัดเจนเมื่อบันทึกสำเร็จ/ล้มเหลว</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>4 / 7</span></div>
+</section>
+
+<!-- Slide 5: UX -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">เรื่องที่ 4</div>
+  <h2>ปรับปรุง UX — เห็นความคืบหน้าชัดขึ้น</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="card"><h3>Step chips อ่านรู้เรื่อง</h3><p>หัวข้อขั้นตอนในหน้ากรอกฟอร์มแสดงชื่อ section จริง (เดิมเป็นแค่ตัวเลข 1. 2. 3.)</p></div>
+      <div class="card"><h3>กรอกครบ = เขียว ✓</h3><p>section ที่กรอกข้อมูลครบเปลี่ยนเป็นสีเขียวพร้อมเครื่องหมายถูก — เห็นทันทีว่าเหลืออะไร</p></div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>REC Guide บอกตำแหน่งปัจจุบัน</h3><p>ขั้นตอน ①–④ ที่ผ่านแล้วติ๊ก ✓ ขั้นที่กำลังอยู่มีป้าย "คุณอยู่ขั้นนี้" และเปิดหัวข้อนั้นให้อัตโนมัติ — คำนวณจากสถานะจริงของ registration ในระบบ</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>5 / 7</span></div>
+</section>
+
+<!-- Slide 6: docs -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">เรื่องที่ 5</div>
+  <h2>เอกสารคู่มือ Field Mapping (ภาษาไทย)</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="card"><h3>ครอบคลุมทั้ง SF-02 และ SF-04</h3><p>PDF 5 หน้า อธิบายทุกช่องของทั้ง 2 ฟอร์ม: ค่าคืออะไร กรอกที่หน้าไหนของระบบ หรือระบบคำนวณให้</p></div>
+      <div class="card"><h3>แยกแหล่งที่มา 6 ประเภท</h3><p>กรอกในระบบ · ดึงจาก Project record · ระบบคำนวณ · Snapshot จาก SF-02 · เว้นว่างโดยตั้งใจ · เซ็นบนกระดาษ</p></div>
+    </div>
+    <div class="col">
+      <div class="card"><h3>ใช้เป็นคู่มือทีมได้เลย</h3><p>รวมรายการเอกสารแนบที่ EGAT ต้องการ และเงื่อนไขสำคัญ เช่น ตอบ "No" เรื่องความเป็นเจ้าของแล้วต้องแนบ SF-02C</p></div>
+      <div class="card"><h3>ไฟล์</h3><p>docs/rec-sf02-sf04-field-guide.pdf (พร้อมไฟล์ HTML ต้นฉบับสำหรับแก้ไขภายหลัง)</p></div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>6 / 7</span></div>
+</section>
+
+<!-- Slide 7: quality + next -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">คุณภาพ &amp; ก้าวต่อไป</div>
+  <h2>ผลทดสอบ และแผนถัดไป</h2>
+  <div class="cols" style="flex:0 0 auto">
+    <div class="col"><div class="stat"><div class="v">422</div><div class="l">SPA tests ผ่านทั้งหมด</div></div></div>
+    <div class="col"><div class="stat"><div class="v">232</div><div class="l">Server tests ผ่านทั้งหมด</div></div></div>
+    <div class="col"><div class="stat"><div class="v">100%</div><div class="l">ทุกงานผ่าน code review 2 ชั้น</div></div></div>
+  </div>
+  <div class="flow">
+    <div class="step"><div class="t">รอ Facility ID</div><div class="d">หลัง EGAT/Evident อนุมัติ SF-02 จริง — นำรหัสมากรอกในระบบ</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">Evidence แนบไฟล์</div><div class="d">UI แนบหลักฐานให้คำขอ SF-04 (ยังไม่มี)</div></div>
+    <div class="arrow">→</div>
+    <div class="step"><div class="t">REC Token</div><div class="d">mint / transfer / redemption หลังออกใบรับรอง (แผนระยะถัดไป)</div></div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV — Weekly Update</span><span>7 / 7</span></div>
+</section>
+
+</body>
+</html>
