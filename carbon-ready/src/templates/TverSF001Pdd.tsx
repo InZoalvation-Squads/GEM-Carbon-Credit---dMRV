@@ -5,7 +5,7 @@ import { useStore } from '../store';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { computeFinancialTable, computeYearlyTable, computeEcPj, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
-import { parseSites, isBundle, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
+import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import type { EvidenceFile, PddComputedSource } from '../types';
 
@@ -293,8 +293,15 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const bundle = isBundle(d);
   const formLabel = bundle ? 'แบบควบรวม' : 'แบบเดี่ยว';
   const totalKwp = bundleCapacityKwp(ctx);
+  // The ตารางที่ 1 total specifically: null when no site row carries a capacity,
+  // so the รวม cell prints '-' rather than the parent project's capacity — a
+  // different physical quantity that no row above it sums to.
+  const totalSiteKwp = sumSiteCapacityKwp(sites);
   const totalYear1 = sumSiteYear1Kwh(sites);
   const startYear = creditingStartYear(ctx);
+  const bundleDegradationPct = Number.isFinite(Number(d.degradation_pct))
+    && d.degradation_pct !== null && d.degradation_pct !== ''
+    ? Number(d.degradation_pct) : 0;
   const table = computeYearlyTable(ctx);
   const fin = computeFinancialTable(ctx);
   const comp = (source: PddComputedSource) => resolveComputed(source, ctx);
@@ -505,7 +512,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                   ))}
                   <tr className="font-bold">
                     <td colSpan={2} className="text-center">รวม</td><td />
-                    <td className="text-right">{fmt(totalKwp, 3)}</td>
+                    <td className="text-right">{totalSiteKwp === null ? '-' : fmt(totalSiteKwp, 3)}</td>
                     <td className="text-right">{totalYear1 === null ? '-' : fmtInt(totalYear1)}</td>
                   </tr>
                 </tbody>
@@ -898,7 +905,11 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             {bundle && (() => {
               // Each site degrades from its own first-synchronisation year, so a
               // site that is not yet online shows blank — not a fabricated 0.
-              const m = siteGenerationMatrix(sites, startYear, years, Number(str('degradation_pct')) || 0.4);
+              // Fallback must match computeYearlyTable's `?? 0` exactly: this table
+              // and the totals table above it print the same years on the same
+              // page, so a different default would contradict it in the submitted
+              // document. Read from `d`, not str() — str() yields '-' when absent.
+              const m = siteGenerationMatrix(sites, startYear, years, bundleDegradationPct);
               return (
                 <>
                   <p className="mt-3 font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี (หน่วย: kWh)</p>

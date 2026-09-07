@@ -388,3 +388,52 @@ describe('TverSF001Pdd — aggregated (แบบควบรวม) mode', () =>
     expect(screen.queryByTestId('maintenance-table')).toBeNull();
   });
 });
+
+// A half-filled bundle is the ordinary state of a draft, and it is where a
+// fallback meant for single mode can leak a fabricated figure into an official
+// document. Every assertion here is a real-data-only guarantee.
+describe('TverSF001Pdd — aggregated mode with incomplete site rows', () => {
+  function seedPartialBundle(overrides: Record<string, unknown> = {}) {
+    const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+    const { sites: _sites, ...base } = pdd.section_data as Record<string, unknown>;
+    pdd.section_data = {
+      ...base,
+      project_owner: 'บริษัท ผู้พัฒนา จำกัด',
+      crediting_years: '3',
+      crediting_start: '2027-01-01',
+      project_form: 'แบบควบรวม',
+      sites: [{ owner: 'บริษัท ยังไม่กรอก จำกัด' }],
+      ...overrides,
+    };
+  }
+
+  it('prints "-" in the total row rather than the parent project capacity', () => {
+    // The parent Project is 200.16 kWp, but no site row carries a capacity —
+    // printing 200.160 would assert a figure nothing in the table sums to.
+    seedPartialBundle();
+    renderDoc();
+    const rows = within(screen.getByTestId('sites-table')).getAllByRole('row');
+    const total = rows[rows.length - 1];
+    expect(within(total).getAllByText('-').length).toBeGreaterThan(0);
+    expect(within(total).queryByText(/200\.160/)).toBeNull();
+  });
+
+  it('uses the same degradation fallback as the totals table', () => {
+    // degradation_pct absent on both the bundle and the site row. computeYearlyTable
+    // falls back to 0, so the per-site forecast must stay flat too — a different
+    // default would print two contradictory figures for the same year.
+    seedPartialBundle({ degradation_pct: '', sites: [{ owner: 'A', kwp: 100, year1_kwh: 1000000 }] });
+    renderDoc();
+    const rows = within(screen.getByTestId('sites-forecast')).getAllByRole('row');
+    const cells = within(rows[1]).getAllByRole('cell').slice(1).map((c) => c.textContent);
+    expect(cells).toEqual(['1,000,000', '1,000,000', '1,000,000']);
+  });
+
+  it('honours an explicit zero degradation rather than substituting a default', () => {
+    seedPartialBundle({ degradation_pct: 0, sites: [{ owner: 'A', kwp: 100, year1_kwh: 500000 }] });
+    renderDoc();
+    const rows = within(screen.getByTestId('sites-forecast')).getAllByRole('row');
+    const cells = within(rows[1]).getAllByRole('cell').slice(1).map((c) => c.textContent);
+    expect(cells).toEqual(['500,000', '500,000', '500,000']);
+  });
+});
