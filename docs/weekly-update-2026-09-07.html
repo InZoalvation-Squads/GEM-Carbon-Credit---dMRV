@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<title>Weekly Update — PDD แบบควบรวม</title>
+<style>
+  @page { size: 297mm 167mm; margin: 0; }
+  * { box-sizing: border-box; margin: 0; }
+  body { font-family: 'Sukhumvit Set', 'Thonburi', 'Helvetica Neue', Arial, sans-serif; color: #1c1c1c; }
+  .slide {
+    width: 297mm; height: 167mm; padding: 16mm 22mm;
+    break-after: page; position: relative; overflow: hidden;
+    display: flex; flex-direction: column;
+  }
+  .slide:last-child { break-after: auto; }
+  .footer {
+    position: absolute; bottom: 8mm; left: 22mm; right: 22mm;
+    display: flex; justify-content: space-between;
+    font-size: 12px; color: #8a8a8a;
+  }
+  .accent { position: absolute; top: 0; left: 0; width: 100%; height: 5mm; background: linear-gradient(90deg, #14532d, #16a34a); }
+  h1 { font-size: 52px; line-height: 1.2; color: #14532d; }
+  h2 { font-size: 32px; color: #14532d; margin-bottom: 3mm; }
+  .kicker { font-size: 16px; font-weight: 700; letter-spacing: 2px; color: #16a34a; text-transform: uppercase; margin-bottom: 2.5mm; }
+  .lede { font-size: 16px; color: #555; line-height: 1.5; margin-bottom: 3mm; }
+  ul.big { list-style: none; margin-top: 3mm; }
+  ul.big.tight { margin-top: 1mm; }
+  ul.big.tight > li { font-size: 17.5px; margin-bottom: 2.5mm; }
+  ul.big.tight > li .sub { font-size: 14px; }
+  ul.big > li { font-size: 19px; margin-bottom: 5mm; padding-left: 11mm; position: relative; line-height: 1.45; }
+  ul.big > li::before { content: '✓'; position: absolute; left: 0; top: 0; color: #16a34a; font-weight: 800; font-size: 22px; }
+  ul.big > li b { color: #14532d; }
+  ul.big > li .sub { display: block; font-size: 15px; color: #555; margin-top: 1mm; }
+  .cols { display: flex; gap: 9mm; margin-top: 3mm; flex: 1; }
+  .col { flex: 1; min-width: 0; }
+  .card { background: #f2f7f3; border-left: 4px solid #16a34a; border-radius: 6px; padding: 4.5mm 5.5mm; margin-bottom: 4mm; }
+  .card h3 { font-size: 17px; color: #14532d; margin-bottom: 1.5mm; }
+  .card p { font-size: 14px; color: #444; line-height: 1.5; }
+  /* Pinned above the footer rather than flowing after the list: the list length
+     varies week to week and margin-flow pushed these off the fixed-height slide. */
+  .stats { display: flex; gap: 6mm; margin-top: auto; margin-bottom: 11mm; }
+  .stat { flex: 1; text-align: center; padding: 4mm 3mm; background: #f2f7f3; border-radius: 8px; }
+  .stat .v { font-size: 36px; font-weight: 800; color: #14532d; font-variant-numeric: tabular-nums; line-height: 1.1; }
+  .stat .l { font-size: 13px; color: #555; margin-top: 1mm; line-height: 1.35; }
+  .title-slide { justify-content: center; background: linear-gradient(135deg, #0f3d22 0%, #14532d 55%, #1b6b3a 100%); color: #fff; }
+  .title-slide h1 { color: #fff; font-size: 58px; }
+  .title-slide .sub { font-size: 23px; color: #b9e4c7; margin-top: 5mm; }
+  .title-slide .meta { font-size: 16px; color: #8fcaa4; margin-top: 13mm; }
+
+  /* Comparison — the core message of this deck is a difference, so it gets its own shape. */
+  .vs { display: flex; gap: 0; margin-top: 4mm; border: 1px solid #d8e6dc; border-radius: 8px; overflow: hidden; }
+  .vs .side { flex: 1; padding: 5mm 6mm; }
+  .vs .side + .side { border-left: 1px solid #d8e6dc; }
+  .vs .side.single { background: #fafbfa; }
+  .vs .side.bundle { background: #f2f7f3; }
+  .vs .side h3 { font-size: 19px; color: #14532d; margin-bottom: 3mm; }
+  .vs .side h3 .tag { font-size: 12px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: #16a34a; display: block; margin-bottom: 1mm; }
+  .vs dl { font-size: 14.5px; line-height: 1.5; }
+  .vs dt { font-weight: 700; color: #14532d; margin-top: 3mm; }
+  .vs dt:first-child { margin-top: 0; }
+  .vs dd { color: #4a4a4a; }
+
+  table.data { width: 100%; border-collapse: collapse; font-size: 14.5px; margin-top: 3mm; }
+  table.data th { background: #14532d; color: #fff; padding: 2.5mm 3mm; text-align: left; font-size: 13.5px; font-weight: 700; }
+  table.data td { padding: 2.5mm 3mm; border-bottom: 1px solid #e4ece6; }
+  table.data td.num { text-align: right; font-variant-numeric: tabular-nums; }
+  table.data tr:last-child td { border-bottom: none; }
+  table.data tr.total td { font-weight: 800; color: #14532d; background: #f2f7f3; }
+
+  .note { background: #fdf6e9; border-left: 4px solid #b45309; border-radius: 6px; padding: 4.5mm 5.5mm; margin-top: 4mm; }
+  .note h3 { font-size: 17px; color: #92400e; margin-bottom: 1.5mm; }
+  .note p { font-size: 14px; color: #52410f; line-height: 1.5; }
+  .note p + p { margin-top: 2mm; }
+</style>
+</head>
+<body>
+
+<!-- 1. Title -->
+<section class="slide title-slide">
+  <div class="kicker" style="color:#7ddba0">Weekly Update · Carbon Ready dMRV</div>
+  <h1>PDD แบบควบรวม<br>หลายพื้นที่ใน 1 โครงการ</h1>
+  <p class="sub">สรุปงานสัปดาห์ 1 – 7 กันยายน 2026</p>
+  <p class="meta">ทีม IT · Rocks Foods</p>
+</section>
+
+<!-- 2. Overview -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">ภาพรวมสัปดาห์นี้</div>
+  <h2>ทำอะไรไปบ้าง</h2>
+  <p class="lede">เดิมออกเอกสาร PDD ได้เฉพาะ<b>แบบเดี่ยว</b> สัปดาห์นี้เพิ่ม<b>แบบควบรวม</b> — หลายพื้นที่ติดตั้งในโครงการเดียว ตามฟอร์ม T-VER-S-F001-PDD ของ อบก.</p>
+  <ul class="big tight">
+    <li><b>ออกเอกสาร PDD แบบควบรวมได้แล้ว</b><span class="sub">กรอกตารางพื้นที่ติดตั้ง ระบบรวมกำลังผลิตและคำนวณการลดก๊าซให้อัตโนมัติ</span></li>
+    <li><b>คำนวณแยกรายแห่ง ตามปีที่ขนานไฟจริง</b><span class="sub">แต่ละแห่งเสื่อมสภาพจากปีของตัวเอง ไม่ใช่เฉลี่ยรวม — ตรงกับวิธีคิดของ อบก.</span></li>
+    <li><b>ตรวจสอบเอกสารเทียบฟอร์มจริง พบช่องว่าง 18 จุด และแก้ครบแล้ว</b><span class="sub">ตารางที่ 1–5 · ภาคผนวกรายแห่ง · ประเภทโครงการครบ 15 ตัวเลือก · แผนบำรุงรักษา 9 หัวข้อ</span></li>
+    <li><b>ทำโครงการตัวอย่างไว้ในระบบแล้ว</b><span class="sub">6 พื้นที่ 2,009.30 kWp — เปิดดูและแก้ไขได้ทันที</span></li>
+  </ul>
+  <div class="stats">
+    <div class="stat"><div class="v">510</div><div class="l">การทดสอบอัตโนมัติ<br>ผ่านทั้งหมด</div></div>
+    <div class="stat"><div class="v">18</div><div class="l">ช่องว่างที่พบ<br>และแก้ครบ</div></div>
+    <div class="stat"><div class="v">23</div><div class="l">การเปลี่ยนแปลง<br>ที่บันทึกไว้</div></div>
+    <div class="stat"><div class="v">6</div><div class="l">พื้นที่ในโครงการ<br>ตัวอย่าง</div></div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV</span><span>1</span></div>
+</section>
+
+<!-- 3. The difference -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">ความต่าง</div>
+  <h2>แบบเดี่ยว กับ แบบควบรวม ต่างกันอย่างไร</h2>
+  <p class="lede">ระบบสลับโหมดอัตโนมัติเมื่อมีข้อมูลพื้นที่ติดตั้งตั้งแต่ 1 แห่งขึ้นไป — โครงการเดิมทั้งหมดทำงานเหมือนเดิมทุกประการ</p>
+  <div class="vs">
+    <div class="side single">
+      <h3><span class="tag">เดิม</span>แบบเดี่ยว</h3>
+      <dl>
+        <dt>กำลังการผลิต</dt>
+        <dd>ค่าเดียวจากทะเบียนโครงการ</dd>
+        <dt>ไฟฟ้าที่ผลิตได้</dt>
+        <dd>กรอกเองหรือคำนวณจากขนาดติดตั้ง</dd>
+        <dt>การเสื่อมของแผง</dt>
+        <dd>อัตราเดียวทั้งโครงการ</dd>
+        <dt>พยากรณ์รายปี</dt>
+        <dd>เส้นเดียว เริ่มนับจากปีแรกของโครงการ</dd>
+        <dt>ตารางในเอกสาร</dt>
+        <dd>ตารางอุปกรณ์ · ตารางสรุปรายปี</dd>
+      </dl>
+    </div>
+    <div class="side bundle">
+      <h3><span class="tag">เพิ่มใหม่</span>แบบควบรวม</h3>
+      <dl>
+        <dt>กำลังการผลิต</dt>
+        <dd>รวมจากทุกแห่งที่กรอก</dd>
+        <dt>ไฟฟ้าที่ผลิตได้</dt>
+        <dd>รวมจากไฟฟ้าปีแรกของแต่ละแห่ง</dd>
+        <dt>การเสื่อมของแผง</dt>
+        <dd><b>แยกรายแห่ง</b> — แต่ละแห่งใช้อัตราของตัวเองได้</dd>
+        <dt>พยากรณ์รายปี</dt>
+        <dd><b>แยกเส้นรายแห่ง</b> ตามปีที่ขนานไฟจริง แล้วรวมรายปี</dd>
+        <dt>ตารางในเอกสาร</dt>
+        <dd>เพิ่ม ตารางที่ 1–5 รายแห่ง · เจ้าของ/ที่ตั้ง/พิกัดรายแห่ง · ภาคผนวกรายแห่ง</dd>
+      </dl>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV</span><span>2</span></div>
+</section>
+
+<!-- 4. Why staggered years matter -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">จุดสำคัญทางเทคนิค</div>
+  <h2>ทำไมต้องคำนวณแยกรายแห่ง</h2>
+  <p class="lede">แต่ละพื้นที่ขนานไฟคนละปี พอถึงปีเริ่มคิดเครดิต บางแห่งเสื่อมสภาพมาแล้วหลายปี การเฉลี่ยรวมจะได้ตัวเลขที่ไม่ตรงกับเอกสารทางการ</p>
+  <div class="cols">
+    <div class="col">
+      <table class="data">
+        <thead><tr><th>พื้นที่</th><th style="text-align:center">ปีขนานไฟ</th><th class="num">ไฟฟ้าปีแรก (kWh)</th></tr></thead>
+        <tbody>
+          <tr><td>บริษัท A</td><td style="text-align:center">2569</td><td class="num">327,126</td></tr>
+          <tr><td>บริษัท B</td><td style="text-align:center">2568</td><td class="num">377,445</td></tr>
+          <tr><td>บริษัท C</td><td style="text-align:center">2569</td><td class="num">290,279</td></tr>
+          <tr><td>บริษัท D</td><td style="text-align:center">2570</td><td class="num">355,673</td></tr>
+          <tr><td>บริษัท E</td><td style="text-align:center">2569</td><td class="num">393,567</td></tr>
+          <tr><td>บริษัท F</td><td style="text-align:center">2568</td><td class="num">755,320</td></tr>
+          <tr class="total"><td colspan="2">รวม (ตารางที่ 1)</td><td class="num">2,499,410</td></tr>
+        </tbody>
+      </table>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>ตัวเลข 2 ชุด ถูกทั้งคู่</h3>
+        <p><b>2,499,410 kWh</b> — รวมไฟฟ้า<u>ปีแรกของแต่ละแห่งเอง</u> คือยอดใน ตารางที่ 1</p>
+        <p style="margin-top:2mm"><b>2,481,423 kWh</b> — รวมของ<u>ปี พ.ศ. 2570 ปีเดียวกัน</u> ซึ่งบริษัท B และ F เสื่อมมาแล้ว 2 ปี</p>
+      </div>
+      <div class="card">
+        <h3>ตรงกับเอกสารต้นฉบับ</h3>
+        <p>ระบบคำนวณได้ทั้งสองชุดตรงกับเอกสาร T-VER จริงที่ใช้อ้างอิง รวมถึงอัตราการเสื่อมที่ไม่เท่ากัน (0.55%/ปี ยกเว้นบริษัท D ที่ 0.60%)</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV</span><span>3</span></div>
+</section>
+
+<!-- 5. Quality + open question -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">คุณภาพ และเรื่องค้าง</div>
+  <h2>ตรวจสอบอะไรไปบ้าง</h2>
+  <div class="cols">
+    <div class="col">
+      <div class="card">
+        <h3>เทียบเอกสารทีละช่อง</h3>
+        <p>ตรวจเอกสารที่ระบบออก เทียบกับฟอร์มจริง 59 หน้า พบช่องว่าง 18 จุด แก้ครบทุกจุดแล้ว</p>
+      </div>
+      <div class="card">
+        <h3>พบข้อมูลที่ถูกกรอกแล้วไม่ถูกใช้</h3>
+        <p>4 ช่อง (ที่ตั้ง/พิกัดรายแห่ง และการระบุพื้นที่ของอุปกรณ์) ผู้ใช้กรอกแล้วแต่ไม่ปรากฏในเอกสาร — แก้แล้วทั้งหมด</p>
+      </div>
+      <div class="card">
+        <h3>โครงการเดิมไม่กระทบ</h3>
+        <p>มีการทดสอบเฉพาะที่ล็อกตัวเลขเดิมไว้ ยืนยันว่า PDD แบบเดี่ยวที่ทำไปแล้วยังออกเอกสารเหมือนเดิมทุกตัวอักษร</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>ตรวจสอบซ้ำทุกการแก้ไข</h3>
+        <p>ทุกจุดที่แก้ ทดลองย้อนกลับเพื่อดูว่าการทดสอบจับได้จริง ไม่ใช่การทดสอบที่ผ่านโดยบังเอิญ</p>
+      </div>
+      <div class="note">
+        <h3>เรื่องค้าง — ต้องการคำยืนยัน</h3>
+        <p>เอกสารต้นฉบับที่ใช้อ้างอิงมีตัวเลขขัดกันเอง: หัวข้อ 3.1 ระบุ <b>2,550,585.36 kWh</b> แต่ ตารางที่ 1 ของเอกสารเดียวกันรวมได้ <b>2,499,410 kWh</b> — ต่างกัน 51,175</p>
+        <p>ระบบคำนวณจากข้อมูลที่กรอกจริง (ได้ 2,499,410) <b>ควรสอบถามผู้จัดทำเอกสารต้นฉบับ</b>ว่าตัวเลขในหัวข้อ 3.1 มาจากไหน</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV</span><span>4</span></div>
+</section>
+
+<!-- 6. Next -->
+<section class="slide">
+  <div class="accent"></div>
+  <div class="kicker">ขั้นต่อไป</div>
+  <h2>สิ่งที่ยังไม่ได้ทำ</h2>
+  <p class="lede">แบบควบรวมออกเอกสาร PDD ได้ครบแล้ว แต่ยังมีข้อจำกัดที่จะสำคัญตอนขอเครดิตจริง</p>
+  <div class="cols">
+    <div class="col">
+      <div class="card">
+        <h3>แนบหลักฐานแยกรายแห่ง</h3>
+        <p>ตอนนี้แนบได้ระดับโครงการเท่านั้น ตอนทำ PDD ยังไม่กระทบ เพราะฟอร์มขอแค่สเปคอุปกรณ์กับค่าพยากรณ์</p>
+      </div>
+      <div class="card">
+        <h3>ต่อมิเตอร์ IoT แยกรายแห่ง</h3>
+        <p>จะจำเป็นตอนทวนสอบและขอเครดิตจริง ซึ่งแต่ละแห่งต้องมีข้อมูลมิเตอร์ของตัวเอง</p>
+      </div>
+    </div>
+    <div class="col">
+      <div class="card">
+        <h3>เตรียมทางไว้แล้ว</h3>
+        <p>ทุกแถวพื้นที่มีช่องรหัสโครงการว่างไว้ สำหรับผูกกับโครงการจริงทีละแห่งในอนาคต โดยไม่ต้องรื้อโครงสร้างข้อมูลที่กรอกไปแล้ว</p>
+      </div>
+      <div class="card">
+        <h3>ทดลองใช้ได้เลย</h3>
+        <p>โครงการ <b>Solar Rooftop รวม 6 แห่ง (แบบควบรวม)</b> อยู่ในระบบแล้ว เปิดดูเอกสารหรือแก้ไขข้อมูลได้ทันที</p>
+      </div>
+    </div>
+  </div>
+  <div class="footer"><span>Carbon Ready dMRV</span><span>5</span></div>
+</section>
+
+</body>
+</html>
