@@ -38,8 +38,94 @@ const PROJECT_TYPES = [
   'อื่นๆ',
 ] as const;
 
+/**
+ * §4.1 รายละเอียดแผนการบำรุงรักษาประจำปี — the official form's nine maintenance
+ * topics (p.22-23). Identical for every solar-PV T-VER project, so it is
+ * boilerplate here rather than section_data.
+ */
+const MAINTENANCE_TOPICS: ReadonlyArray<{ topic: string; items: readonly string[] }> = [
+  {
+    topic: 'แผงเซลล์แสงอาทิตย์ (Solar Panel)',
+    items: ['ตรวจสอบสภาพทั่วไป', 'ตรวจสอบจุด Hot Spot หรือเซลล์ที่เสียหาย', 'ตรวจสอบโครงสร้าง', 'ล้างแผงเซลล์แสงอาทิตย์'],
+  },
+  {
+    topic: 'โครงสร้างรองรับแผงเซลล์แสงอาทิตย์',
+    items: ['ตรวจสอบการจัดยึดกับแผง', 'ตรวจสอบสภาพหลังคา รอยรั่ว และจุดจับยึด', 'ตรวจสอบระบบ Grounding'],
+  },
+  {
+    topic: 'DC Combiner Box',
+    items: ['ตรวจสอบสภาพโดยรวม', 'ตรวจสอบป้ายและ Equipment Tag', 'ตรวจสอบสายไฟและจุดต่อสาย', 'ตรวจสอบกระบอกฟิวส์ DC', 'ตรวจสอบความต่อเนื่องของ DC Fuse', 'ทำความสะอาดตู้'],
+  },
+  {
+    topic: 'อินเวอร์เตอร์ (Inverter)',
+    items: ['ตรวจสอบสภาพความสมบูรณ์', 'ตรวจสอบแผ่นป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบระบบระบายอากาศ', 'ตรวจสอบอุณหภูมิภายใน', 'ตรวจสอบไฟแสดงสถานะ', 'ตรวจวัดกระแสไฟฟ้า', 'ทำความสะอาด'],
+  },
+  {
+    topic: 'Solar Distribution Panel',
+    items: ['ตรวจสอบสภาพอุปกรณ์', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟ บัสบาร์ เทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทดสอบ Circuit Breaker', 'ตรวจสอบไฟแสดงสถานะ', 'ตรวจสอบอุณหภูมิ', 'ทำความสะอาด'],
+  },
+  {
+    topic: 'เครื่องมือวัดคุณภาพไฟฟ้า (PQM)',
+    items: ['ตรวจสอบสภาพอุปกรณ์ภายใน', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทำความสะอาด', 'ตรวจสอบหน้าจอแสดงผล'],
+  },
+  {
+    topic: 'Datalogger และ Monitoring',
+    items: ['ตรวจสอบสภาพอุปกรณ์ภายใน', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทำความสะอาด'],
+  },
+  {
+    topic: 'ระบบน้ำทำความสะอาดแผงเซลล์แสงอาทิตย์',
+    items: ['ตรวจสอบก๊อกน้ำ', 'ตรวจสอบท่อน้ำ ข้อต่อ ถังเก็บน้ำ และลูกลอย', 'ตรวจสอบเครื่องสูบน้ำ'],
+  },
+  {
+    topic: 'สถานีวัดสภาพอากาศ',
+    items: ['ตรวจสอบความสมบูรณ์ของเครื่องวัดความเข้มแสง (Pyranometer)', 'ตรวจสอบความสะอาด', 'ตรวจสอบมุมรับแสง'],
+  },
+];
+
 const fmt = (n: number, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtInt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
+
+/**
+ * Total panel degradation accumulated by year `n` (1-based), as a percentage.
+ * Degradation compounds off the previous year's output, so the loss by year n is
+ * 1 − (1−d)^(n−1) — year 1 is the un-degraded reference and reads 0.
+ */
+function cumulativeDegradationPct(ratePct: number, n: number): number {
+  return (1 - (1 - ratePct / 100) ** Math.max(0, n - 1)) * 100;
+}
+
+/**
+ * ภาคผนวก per-site equipment block — the appendix lists each site's kit under
+ * fixed official labels, so free-text `item` values are bucketed by keyword.
+ * `อื่นๆ` is the catch-all: an unrecognised item is still the operator's data
+ * and must reach the reviewer rather than be silently dropped.
+ */
+const APPENDIX_EQUIPMENT_ROWS: ReadonlyArray<{ label: string; match: readonly string[] }> = [
+  { label: 'แผงเซลล์แสงอาทิตย์ (Solar Panel)', match: ['แผง', 'Panel'] },
+  { label: 'อินเวอร์เตอร์ (Inverter)', match: ['อินเวอร์', 'Inverter'] },
+  { label: 'เครื่องวัดไฟฟ้า (Energy Meter)', match: ['มิเตอร์', 'Meter'] },
+];
+
+/** Index of the APPENDIX_EQUIPMENT_ROWS bucket an item falls in, or -1 for อื่นๆ. */
+function appendixEquipmentCategory(item: string): number {
+  const lower = item.toLowerCase();
+  return APPENDIX_EQUIPMENT_ROWS.findIndex((c) => c.match.some((m) => lower.includes(m.toLowerCase())));
+}
+
+/** `ยี่ห้อ <brand> รุ่น <model>` per matching row, or '-' when the site has none. */
+function appendixEquipmentValue(rows: Array<Record<string, unknown>>): ReactNode {
+  if (rows.length === 0) return '-';
+  return rows.map((r, i) => {
+    const brand = r.brand === undefined || r.brand === null || r.brand === '' ? '-' : String(r.brand);
+    const model = r.model === undefined || r.model === null || r.model === '' ? '-' : String(r.model);
+    return (
+      <Fragment key={i}>
+        {i > 0 && <br />}
+        {`ยี่ห้อ ${brand} รุ่น ${model}`}
+      </Fragment>
+    );
+  });
+}
 
 function thaiDate(iso: unknown): string {
   if (typeof iso !== 'string' || !iso) return '-';
@@ -377,9 +463,6 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   // no installation photo silently disappears.
   const explicitCover = siteImages.find((img) => img.id === d.cover_evidence_id);
   const coverImage = pickCoverImage(siteImages, d.cover_evidence_id);
-  // Section-1 figures = site images minus an explicitly chosen cover; the
-  // monitoring diagrams continue that numbering (MCRU: photos 1-7 → 8, 9).
-  const figureCount = siteImages.filter((img) => img.id !== explicitCover?.id).length;
 
   return (
     <div className="mx-auto max-w-4xl">
@@ -585,7 +668,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                     </tr>
                   ))}
                   <tr className="font-bold">
-                    <td colSpan={2} className="text-center">รวม</td><td />
+                    {/* ลำดับ + เจ้าของโครงการ + ผู้พัฒนาโครงการ — the rowSpan above ends
+                        on the last site row, so the total row carries all three itself. */}
+                    <td colSpan={3} className="text-center">รวม</td>
                     <td className="text-right">{totalSiteKwp === null ? '-' : fmt(totalSiteKwp, 3)}</td>
                     <td className="text-right">{totalYear1 === null ? '-' : fmtInt(totalYear1)}</td>
                   </tr>
@@ -819,6 +904,23 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td>การขนส่งเชื้อเพลิง / ระบบก๊าซชีวภาพ</td><td className="text-center">CO₂, CH₄</td><td>ไม่เกี่ยวข้อง</td></tr>
             </tbody>
           </table>
+
+          {/* The official §2.3 carries a second table for carbon pools. Solar PV
+              stores no carbon, so every pool is "- ไม่มี -" for this methodology. */}
+          <p className="mt-3">แหล่งสะสมคาร์บอนและก๊าซเรือนกระจกที่นำมาใช้ในการคำนวณ</p>
+          <table data-testid="carbon-pool-table" className="doc-table mt-1 w-full">
+            <thead>
+              <tr className="bg-[#f2f2f2] text-center font-bold"><td>แหล่งสะสมคาร์บอน</td><td>ชนิดของก๊าซเรือนกระจก</td><td>รายละเอียดของกิจกรรมโครงการ</td></tr>
+            </thead>
+            <tbody>
+              <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การดูดซับ ดักจับ และกักเก็บก๊าซเรือนกระจกจากกรณีฐาน</td></tr>
+              <tr><td colSpan={3} className="text-center">- ไม่มี -</td></tr>
+              <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การดูดซับ ดักจับ และกักเก็บก๊าซเรือนกระจกจากการดำเนินโครงการ</td></tr>
+              <tr><td colSpan={3} className="text-center">- ไม่มี -</td></tr>
+              <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การปล่อยก๊าซเรือนกระจกนอกขอบเขตโครงการ</td></tr>
+              <tr><td colSpan={3} className="text-center">- ไม่มี -</td></tr>
+            </tbody>
+          </table>
         </Page>
 
         {/* ============ ส่วนที่ 3 การคำนวณ ============ */}
@@ -834,6 +936,13 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <tbody>
               <tr>
                 <td className="text-center">BE<sub>y</sub></td><td>ปริมาณการปล่อยก๊าซเรือนกระจกจากกรณีฐาน ในปี y</td>
+                <td className="text-center">การคำนวณ</td>
+                <td className="text-right">{table ? fmt(table.avg.be) : '-'}</td><td className="text-center">tCO₂/year</td>
+              </tr>
+              <tr>
+                {/* Grid-displacement baseline: the only baseline source for this
+                    methodology, so it equals BE_y. */}
+                <td className="text-center">BE<sub>EG,y</sub></td><td>ปริมาณการปล่อยก๊าซเรือนกระจกของการผลิตไฟฟ้าจากเชื้อเพลิงฟอสซิล ในปี y</td>
                 <td className="text-center">การคำนวณ</td>
                 <td className="text-right">{table ? fmt(table.avg.be) : '-'}</td><td className="text-center">tCO₂/year</td>
               </tr>
@@ -863,6 +972,19 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 <td className="text-right">{table ? fmt(table.avg.pe) : '-'}</td><td className="text-center">tCO₂/year</td>
               </tr>
               <tr>
+                {/* No fossil fuel is burned by a solar PV project — '-' rather than
+                    a fabricated 0, per the real-data-only rule. */}
+                <td className="text-center">PE<sub>FF,y</sub></td><td>ปริมาณการปล่อยก๊าซเรือนกระจกจากการใช้เชื้อเพลิงฟอสซิลในการดำเนินโครงการในปี y</td>
+                <td className="text-center">การคำนวณ</td>
+                <td className="text-right">-</td><td className="text-center">tCO₂/year</td>
+              </tr>
+              <tr>
+                {/* PE_FF,y is nil, so grid electricity is the whole of PE_y. */}
+                <td className="text-center">PE<sub>EL,y</sub></td><td>ปริมาณการปล่อยก๊าซเรือนกระจกจากการใช้ไฟฟ้าในการดำเนินโครงการในปี y</td>
+                <td className="text-center">การคำนวณ</td>
+                <td className="text-right">{table ? fmt(table.avg.pe) : '-'}</td><td className="text-center">tCO₂/year</td>
+              </tr>
+              <tr>
                 <td className="text-center">EC<sub>PJ,y</sub></td><td>ปริมาณไฟฟ้าจากระบบสายส่งที่ใช้ในการดำเนินโครงการ ในปี y</td>
                 <td className="text-center">คาดการณ์</td>
                 <td className="text-right">{fmt(ecPj)}</td><td className="text-center">kWh/year</td>
@@ -879,6 +1001,32 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="indent-8">ไม่เกี่ยวข้อง เนื่องจากเป็นโครงการผลิตไฟฟ้าจากพลังงานหมุนเวียน (พลังงานแสงอาทิตย์) ไม่มีการใช้เชื้อเพลิงชีวมวลหรือขยะมูลฝอย</p>
 
           <p className="mt-3 font-bold underline">3.4 สรุปปริมาณการลดก๊าซเรือนกระจก (ER<sub>y</sub> = BE<sub>y</sub> − PE<sub>y</sub> − LE<sub>y</sub>)</p>
+          <table data-testid="er-summary-table" className="doc-table mt-1 w-full">
+            <thead>
+              <tr className="bg-[#f2f2f2] text-center font-bold"><td>พารามิเตอร์</td><td>ความหมาย</td><td>ค่าที่ได้</td><td>หน่วย</td></tr>
+            </thead>
+            <tbody>
+              <tr>
+                <td className="text-center">ER<sub>y</sub></td><td>การลดการปล่อยก๊าซเรือนกระจกในปี y</td>
+                <td className="text-right">{table ? fmt(table.avg.er) : '-'}</td><td className="text-center">tCO₂e/year</td>
+              </tr>
+              <tr>
+                <td className="text-center">BE<sub>y</sub></td><td>การปล่อยก๊าซเรือนกระจกจากกรณีฐานในปี y</td>
+                <td className="text-right">{table ? fmt(table.avg.be) : '-'}</td><td className="text-center">tCO₂e/year</td>
+              </tr>
+              <tr>
+                <td className="text-center">PE<sub>y</sub></td><td>การปล่อยก๊าซเรือนกระจกจากการดำเนินโครงการในปี y</td>
+                <td className="text-right">{table ? fmt(table.avg.pe) : '-'}</td><td className="text-center">tCO₂e/year</td>
+              </tr>
+              <tr>
+                {/* Leakage is nil for this methodology (§3.3), so 0.00 is the
+                    methodology's value, not a stand-in for missing data. */}
+                <td className="text-center">LE<sub>y</sub></td><td>การปล่อยก๊าซเรือนกระจกนอกขอบเขตโครงการในปี y</td>
+                <td className="text-right">{fmt(0)}</td><td className="text-center">tCO₂e/year</td>
+              </tr>
+            </tbody>
+          </table>
+
           <p className="mt-3 font-bold underline">3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้ — {creditingLabel}</p>
           {table ? (
             <table className="doc-table mt-1 w-full" data-testid="yearly-table">
@@ -933,9 +1081,11 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </p>
           <p className="mt-1 indent-8">QA/QC: {str('qaqc_procedure')}</p>
           <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} />
-          <p className="text-center font-bold">ภาพที่ {figureCount + 1} รูปแสดงผังจุดตรวจวัด พร้อมข้อมูล/ตัวแปรที่จัดเก็บ</p>
+          {/* Fixed at 7 / 8 by the official form. Deriving them from the number of
+              uploaded site photos made the captions drift with the evidence set. */}
+          <p className="text-center font-bold">ภาพที่ 7 รูปแสดงผังจุดตรวจวัด พร้อมข้อมูล/ตัวแปรที่จัดเก็บ</p>
           <DataFlowDiagram measurement={str('measurement_method')} />
-          <p className="text-center font-bold">ภาพที่ {figureCount + 2} แผนผังขั้นตอนการจัดเก็บข้อมูล และกระบวนการควบคุมคุณภาพ</p>
+          <p className="text-center font-bold">ภาพที่ 8 แผนผังขั้นตอนการจัดเก็บข้อมูล และกระบวนการควบคุมคุณภาพ</p>
           {bundle && (
             <>
               <p className="mt-3 font-bold">ตารางที่ {maintenanceTableNo} แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
@@ -953,6 +1103,20 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
+
+          {/* The official form's annual maintenance checklist (p.22-23). Generic
+              solar-PV boilerplate, so it renders in both แบบเดี่ยว and แบบควบรวม. */}
+          <p className="mt-3 font-bold underline">รายละเอียดแผนการบำรุงรักษาประจำปี</p>
+          <ol data-testid="maintenance-detail" className="mt-1 list-decimal pl-12">
+            {MAINTENANCE_TOPICS.map((t) => (
+              <li key={t.topic} className="mt-1">
+                {t.topic}
+                <ul className="list-disc pl-6">
+                  {t.items.map((i) => <li key={i}>{i}</li>)}
+                </ul>
+              </li>
+            ))}
+          </ol>
 
           <p className="mt-3 font-bold underline">4.2 พารามิเตอร์ที่ไม่ต้องติดตามผล</p>
           <p className="pl-8">ไม่มีพารามิเตอร์ที่ไม่ต้องติดตาม ที่ใช้ในการคำนวณตามระเบียบวิธีการลดก๊าซเรือนกระจกที่เลือกใช้</p>
@@ -1020,6 +1184,52 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </Page>
         )}
 
+        {/* ============ ภาคผนวก — เอกสาร/หลักฐานประกอบ รายพื้นที่ ============
+            The official form gives every bundled site its own appendix block
+            (p.25-30); an aggregated submission without them is incomplete. */}
+        {bundle && (
+          <Page formLabel={formLabel}>
+            <SectionBar>เอกสาร/หลักฐานประกอบ</SectionBar>
+            <div data-testid="site-appendix">
+              {sites.map((s, i) => {
+                const siteRows = s.owner === '' ? [] : equipmentSpecs.filter((r) => String(r.site ?? '') === s.owner);
+                const support = s.owner === ''
+                  ? undefined
+                  : supportEquipment.find((r) => String(r.site ?? '') === s.owner);
+                const supportCell = (k: string) => {
+                  const v = support?.[k];
+                  return v === undefined || v === null || v === '' ? '-' : String(v);
+                };
+                const uncategorised = siteRows.filter((r) => appendixEquipmentCategory(String(r.item ?? '')) === -1);
+                return (
+                  <div key={`${s.owner}-${i}`} data-testid="site-appendix-block" className="keep-together mb-4">
+                    <p className="font-bold">{i + 1}) {s.owner || '-'}</p>
+                    <p className="mt-1">รายการอุปกรณ์สำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
+                    <table className="doc-table mt-1 w-full">
+                      <tbody>
+                        {APPENDIX_EQUIPMENT_ROWS.map((cat, ci) => (
+                          <tr key={cat.label}>
+                            <td className="w-1/2">{cat.label}</td>
+                            <td>{appendixEquipmentValue(siteRows.filter((r) => appendixEquipmentCategory(String(r.item ?? '')) === ci))}</td>
+                          </tr>
+                        ))}
+                        <tr><td>Smart Logger</td><td>{supportCell('smart_logger')}</td></tr>
+                        <tr><td>PQM</td><td>{supportCell('pqm')}</td></tr>
+                        <tr><td>Internet Router</td><td>{supportCell('router')}</td></tr>
+                        <tr><td>Water Pump</td><td>{supportCell('water_pump')}</td></tr>
+                        {uncategorised.length > 0 && (
+                          <tr><td>อื่นๆ</td><td>{appendixEquipmentValue(uncategorised)}</td></tr>
+                        )}
+                      </tbody>
+                    </table>
+                    <p className="mt-1">หลักฐานการเชื่อมต่อระบบผลิตไฟฟ้ากับระบบโครงข่ายไฟฟ้าการไฟฟ้าส่วนภูมิภาค/นครหลวง</p>
+                  </div>
+                );
+              })}
+            </div>
+          </Page>
+        )}
+
         {/* ============ ภาคผนวก — ปริมาณไฟฟ้าคาดการณ์รายปี ============ */}
         {table && (
           <Page formLabel={formLabel}>
@@ -1031,22 +1241,25 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 </tr>
               </thead>
               <tbody>
-                {table.rows.map((r) => (
+                {table.rows.map((r, i) => (
                   <tr key={r.year}>
                     <td className="text-center">{r.year}</td>
                     <td className="text-right">{fmtInt(r.generation_kwh)}</td>
-                    <td className="text-center">{fmt(Number(d.degradation_pct ?? 0))}%</td>
+                    <td className="text-center">{fmt(cumulativeDegradationPct(bundleDegradationPct, i + 1))}%</td>
                   </tr>
                 ))}
                 <tr className="font-bold">
                   <td className="text-center">รวม</td>
                   <td className="text-right">{fmtInt(table.rows.reduce((a, r) => a + r.generation_kwh, 0))}</td>
-                  <td className="text-center">{fmt(Number(d.degradation_pct ?? 0) * table.rows.length)}%</td>
+                  {/* Degradation compounds, so the run's figure is the final year's
+                      cumulative loss — not the per-year rate summed across rows. */}
+                  <td className="text-center">{fmt(cumulativeDegradationPct(bundleDegradationPct, table.rows.length))}%</td>
                 </tr>
                 <tr className="font-bold">
                   <td className="text-center">เฉลี่ยต่อปี</td>
                   <td className="text-right">{fmtInt(Math.round(table.rows.reduce((a, r) => a + r.generation_kwh, 0) / table.rows.length))}</td>
-                  <td className="text-center">{fmt(Number(d.degradation_pct ?? 0))}%</td>
+                  {/* the per-year rate, unchanged — this row is an annual average */}
+                  <td className="text-center">{fmt(bundleDegradationPct)}%</td>
                 </tr>
               </tbody>
             </table>

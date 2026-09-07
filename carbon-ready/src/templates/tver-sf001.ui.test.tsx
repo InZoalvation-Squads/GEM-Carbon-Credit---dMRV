@@ -699,3 +699,280 @@ describe('TverSF001Pdd — contact, dates and additionality detail', () => {
     expect(screen.queryByText(/ไม่ใช่การดำเนินงานทั่วไปในพื้นที่:/)).toBeNull();
   });
 });
+
+// ============================================================
+// ภาคผนวก per-site equipment blocks — pages 25-30 of the official form give
+// every bundled site its own two-column equipment table.
+// ============================================================
+describe('TverSF001Pdd — per-site appendix blocks', () => {
+  /** Label → value map of one appendix block's two-column table. */
+  function blockRows(block: HTMLElement): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const row of within(block).getAllByRole('row')) {
+      const cells = within(row).getAllByRole('cell');
+      out[cells[0].textContent ?? ''] = cells[1]?.textContent ?? '';
+    }
+    return out;
+  }
+
+  it('renders one block per site with the site equipment and support values', () => {
+    seedBundleDetail({ support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    const blocks = within(screen.getByTestId('site-appendix')).getAllByTestId('site-appendix-block');
+    expect(blocks).toHaveLength(TWO_SITES.length);
+    expect(blocks[0].textContent).toContain('1) บริษัท A จำกัด');
+    expect(blocks[1].textContent).toContain('2) บริษัท B จำกัด');
+
+    const a = blockRows(blocks[0]);
+    expect(a['แผงเซลล์แสงอาทิตย์ (Solar Panel)']).toBe('ยี่ห้อ Trinasolar รุ่น TSM-NEG21C.20');
+    expect(a['อินเวอร์เตอร์ (Inverter)']).toBe('ยี่ห้อ Huawei รุ่น SUN2000-50KTL-M3');
+    // ตู้ควบคุมไฟฟ้า carries an empty site, so it belongs to no block at all.
+    expect(a['เครื่องวัดไฟฟ้า (Energy Meter)']).toBe('-');
+    expect(a['Smart Logger']).toBe('Huawei SmartLogger3000');
+    expect(a['PQM']).toBe('Schneider PM2200');
+    expect(a['Internet Router']).toBe('Huawei AR617');
+    expect(a['Water Pump']).toBe('Mitsubishi WP-155Q');
+
+    // Site B's half-filled support row prints '-' rather than a guess.
+    const b = blockRows(blocks[1]);
+    expect(b['แผงเซลล์แสงอาทิตย์ (Solar Panel)']).toBe('ยี่ห้อ Jinko รุ่น JKM580N');
+    expect(b['อินเวอร์เตอร์ (Inverter)']).toBe('-');
+    expect(b['Smart Logger']).toBe('Huawei SmartLogger3000');
+    expect(b['PQM']).toBe('-');
+    expect(b['Water Pump']).toBe('-');
+
+    expect(screen.getAllByText('เอกสาร/หลักฐานประกอบ').length).toBeGreaterThan(0);
+    expect(blocks[0].textContent).toContain('หลักฐานการเชื่อมต่อระบบผลิตไฟฟ้ากับระบบโครงข่ายไฟฟ้าการไฟฟ้าส่วนภูมิภาค/นครหลวง');
+  });
+
+  it('gives a site with no equipment at all a block of "-" rows', () => {
+    seedBundleDetail({ equipment_specs: [], support_equipment: [] });
+    renderDoc();
+    const blocks = screen.getAllByTestId('site-appendix-block');
+    expect(blocks).toHaveLength(2);
+    for (const label of ['แผงเซลล์แสงอาทิตย์ (Solar Panel)', 'อินเวอร์เตอร์ (Inverter)',
+      'เครื่องวัดไฟฟ้า (Energy Meter)', 'Smart Logger', 'PQM', 'Internet Router', 'Water Pump']) {
+      expect(blockRows(blocks[0])[label], label).toBe('-');
+    }
+  });
+
+  it('files an item matching no official category under อื่นๆ instead of dropping it', () => {
+    seedBundleDetail({
+      equipment_specs: [
+        { site: 'บริษัท A จำกัด', item: 'ตู้ควบคุมไฟฟ้า', brand: 'Schneider', model: 'NSX250' },
+        { site: 'บริษัท A จำกัด', item: 'มิเตอร์วัดไฟฟ้า', brand: 'Socomec', model: 'E23' },
+      ],
+    });
+    renderDoc();
+    const rows = blockRows(screen.getAllByTestId('site-appendix-block')[0]);
+    expect(rows['อื่นๆ']).toBe('ยี่ห้อ Schneider รุ่น NSX250');
+    expect(rows['เครื่องวัดไฟฟ้า (Energy Meter)']).toBe('ยี่ห้อ Socomec รุ่น E23');
+    // Site B has nothing uncategorised, so it gets no อื่นๆ row.
+    expect(blockRows(screen.getAllByTestId('site-appendix-block')[1])['อื่นๆ']).toBeUndefined();
+  });
+
+  it('joins several rows of the same category onto separate lines', () => {
+    seedBundleDetail({
+      equipment_specs: [
+        { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trinasolar', model: 'TSM-1' },
+        { site: 'บริษัท A จำกัด', item: 'Solar Panel (เพิ่มเติม)', brand: 'Jinko', model: 'JKM-2' },
+      ],
+    });
+    renderDoc();
+    const cell = within(screen.getAllByTestId('site-appendix-block')[0])
+      .getByText('แผงเซลล์แสงอาทิตย์ (Solar Panel)').nextElementSibling as HTMLElement;
+    expect(cell.querySelectorAll('br')).toHaveLength(1);
+    expect(cell.textContent).toBe('ยี่ห้อ Trinasolar รุ่น TSM-1ยี่ห้อ Jinko รุ่น JKM-2');
+  });
+
+  it('single-project mode renders no per-site appendix', () => {
+    seedOfficialData();
+    renderDoc();
+    expect(screen.queryByTestId('site-appendix')).toBeNull();
+    expect(screen.queryAllByTestId('site-appendix-block')).toHaveLength(0);
+  });
+});
+
+describe('TverSF001Pdd — §3.4 summary and the §3.1/§3.2 parameter rows', () => {
+  /** พารามิเตอร์ → ค่า for a parameter table, keyed by the first cell. */
+  function paramValues(table: HTMLElement, valueIndex: number): Record<string, string> {
+    const out: Record<string, string> = {};
+    for (const row of within(table).getAllByRole('row')) {
+      const cells = within(row).getAllByRole('cell');
+      if (cells.length > valueIndex) out[cells[0].textContent ?? ''] = cells[valueIndex].textContent ?? '';
+    }
+    return out;
+  }
+
+  /** The <table> immediately after the "สมการที่ใช้:" line whose text starts with `eq`. */
+  function equationTable(eq: string): HTMLElement {
+    const p = screen.getAllByText((_, el) => el?.tagName === 'P'
+      && (el.textContent ?? '').startsWith(`สมการที่ใช้: ${eq}`))
+      .filter((el) => el.tagName === 'P');
+    expect(p, eq).toHaveLength(1);
+    return p[0].nextElementSibling as HTMLElement;
+  }
+
+  it('§3.4 lists ER/BE/PE/LE with the computed averages', () => {
+    seedMcruData();
+    renderDoc();
+    const table = screen.getByTestId('er-summary-table');
+    // header + 4 parameter rows
+    expect(within(table).getAllByRole('row')).toHaveLength(5);
+    const v = paramValues(table, 2);
+    // avg.er is truncated by the calc layer; §3.4 must echo the yearly table's
+    // headline figure, not a separately-rounded one.
+    expect(v['ERy']).toBe('443.00');
+    expect(v['BEy']).toBe('445.93');
+    expect(v['PEy']).toBe('2.72');
+    expect(v['LEy']).toBe('0.00');
+    expect(within(table).getAllByText('tCO₂e/year')).toHaveLength(4);
+  });
+
+  it('§3.4 prints "-" for every computed value when no emission factor exists', () => {
+    seedMcruData();
+    useStore.setState({ factors: [] });
+    renderDoc();
+    const v = paramValues(screen.getByTestId('er-summary-table'), 2);
+    expect(v['ERy']).toBe('-');
+    expect(v['BEy']).toBe('-');
+    expect(v['PEy']).toBe('-');
+    // Leakage is nil by methodology, not missing data.
+    expect(v['LEy']).toBe('0.00');
+  });
+
+  it('§3.1 carries the BE_EG,y row equal to BE_y', () => {
+    seedMcruData();
+    renderDoc();
+    const table = equationTable('BEy');
+    const v = paramValues(table, 3);
+    expect(v['BEEG,y']).toBe('445.93');
+    expect(v['BEy']).toBe('445.93');
+    // BE_y, BE_EG,y, EG_Consumer,PJ,y, EF_EC,PJ,y — the official four, in order.
+    expect(within(table).getAllByRole('row').slice(1)
+      .map((r) => within(r).getAllByRole('cell')[0].textContent))
+      .toEqual(['BEy', 'BEEG,y', 'EGConsumer,PJ,y', 'EFEC,PJ,y']);
+  });
+
+  it('§3.2 carries PE_FF,y (no fossil fuel → "-") and PE_EL,y (= PE_y)', () => {
+    seedMcruData();
+    renderDoc();
+    const table = equationTable('PEy');
+    const v = paramValues(table, 3);
+    expect(v['PEFF,y']).toBe('-');
+    expect(v['PEEL,y']).toBe('2.72');
+    expect(v['PEy']).toBe('2.72');
+    expect(within(table).getAllByRole('row').slice(1)
+      .map((r) => within(r).getAllByRole('cell')[0].textContent))
+      .toEqual(['PEy', 'PEFF,y', 'PEEL,y', 'ECPJ,y', 'EFEC,PJ,y']);
+  });
+});
+
+describe('TverSF001Pdd — §2.3 carbon-pool table', () => {
+  it('renders the three carbon-pool sections, each answered - ไม่มี -', () => {
+    seedMcruData();
+    renderDoc();
+    const table = screen.getByTestId('carbon-pool-table');
+    expect(screen.getByText('แหล่งสะสมคาร์บอนและก๊าซเรือนกระจกที่นำมาใช้ในการคำนวณ')).toBeInTheDocument();
+    expect(within(table).getAllByText('- ไม่มี -')).toHaveLength(3);
+    for (const section of [
+      'การดูดซับ ดักจับ และกักเก็บก๊าซเรือนกระจกจากกรณีฐาน',
+      'การดูดซับ ดักจับ และกักเก็บก๊าซเรือนกระจกจากการดำเนินโครงการ',
+      'การปล่อยก๊าซเรือนกระจกนอกขอบเขตโครงการ',
+    ]) expect(within(table).getByText(section), section).toBeInTheDocument();
+    // header + 3 section rows + 3 answer rows
+    expect(within(table).getAllByRole('row')).toHaveLength(7);
+  });
+});
+
+describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
+  const TOPICS = [
+    'แผงเซลล์แสงอาทิตย์ (Solar Panel)', 'โครงสร้างรองรับแผงเซลล์แสงอาทิตย์', 'DC Combiner Box',
+    'อินเวอร์เตอร์ (Inverter)', 'Solar Distribution Panel', 'เครื่องมือวัดคุณภาพไฟฟ้า (PQM)',
+    'Datalogger และ Monitoring', 'ระบบน้ำทำความสะอาดแผงเซลล์แสงอาทิตย์', 'สถานีวัดสภาพอากาศ',
+  ];
+
+  function topicTexts(): string[] {
+    const list = screen.getByTestId('maintenance-detail');
+    return Array.from(list.children).map((li) => (li.firstChild?.textContent ?? '').trim());
+  }
+
+  it('lists all nine numbered topics with their bullet sub-items (single mode)', () => {
+    seedOfficialData();
+    renderDoc();
+    expect(screen.getByTestId('maintenance-detail').tagName).toBe('OL');
+    expect(topicTexts()).toEqual(TOPICS);
+    expect(screen.getByText('รายละเอียดแผนการบำรุงรักษาประจำปี')).toBeInTheDocument();
+    // Sub-items hang off their topic, e.g. the Pyranometer check under สถานีวัดสภาพอากาศ.
+    const weather = screen.getByText('สถานีวัดสภาพอากาศ', { selector: 'li' });
+    expect(within(weather).getByText('ตรวจสอบความสมบูรณ์ของเครื่องวัดความเข้มแสง (Pyranometer)')).toBeInTheDocument();
+    expect(within(weather).getAllByRole('listitem')).toHaveLength(3);
+  });
+
+  it('renders the same nine topics in aggregated mode', () => {
+    seedBundleDetail();
+    renderDoc();
+    expect(topicTexts()).toEqual(TOPICS);
+  });
+});
+
+describe('TverSF001Pdd — fixed diagram numbering and cumulative degradation', () => {
+  it('numbers the monitoring diagrams ภาพที่ 7 and ภาพที่ 8 regardless of site photos', () => {
+    seedOfficialData();
+    renderDoc();
+    expect(screen.getByText(/^ภาพที่ 7 รูปแสดงผังจุดตรวจวัด/)).toBeInTheDocument();
+    expect(screen.getByText(/^ภาพที่ 8 แผนผังขั้นตอนการจัดเก็บข้อมูล/)).toBeInTheDocument();
+    // prj-0001 carries site-photo evidence in the demo fixtures; the captions
+    // must not shift with it.
+    expect(pddSiteImages(useStore.getState().evidence, 'prj-0001').length).toBeGreaterThan(0);
+    expect(screen.queryByText(/ภาพที่ \d+ รูปแสดงผังจุดตรวจวัด/)?.textContent).toContain('ภาพที่ 7');
+  });
+
+  it('keeps ภาพที่ 7/8 when the project has no image evidence at all', () => {
+    useStore.setState({ evidence: [] });
+    seedOfficialData();
+    renderDoc();
+    expect(screen.getByText(/^ภาพที่ 7 รูปแสดงผังจุดตรวจวัด/)).toBeInTheDocument();
+    expect(screen.getByText(/^ภาพที่ 8 แผนผังขั้นตอนการจัดเก็บข้อมูล/)).toBeInTheDocument();
+  });
+
+  it('compounds the degradation column: year 1 is 0.00 and 0.5%/yr reaches 1.00 by year 3', () => {
+    seedMcruData({ degradation_pct: 0.5, crediting_years: '7' });
+    renderDoc();
+    const rows = within(screen.getByTestId('forecast-table')).getAllByRole('row');
+    const pct = (i: number) => within(rows[i]).getAllByRole('cell')[2].textContent;
+    expect(pct(1)).toBe('0.00%');                      // year 1 — the reference year
+    expect(pct(2)).toBe('0.50%');                      // 1-(0.995)^1
+    expect(pct(3)).toBe('1.00%');                      // 1-(0.995)^2 = 0.9975% → 1.00
+    expect(pct(7)).toBe('2.96%');                      // 1-(0.995)^6
+    // รวม shows the final year's cumulative loss, not 7 × 0.5%.
+    expect(within(rows[8]).getAllByRole('cell')[2].textContent).toBe('2.96%');
+    expect(within(rows[9]).getAllByRole('cell')[2].textContent).toBe('0.50%'); // เฉลี่ยต่อปี = the annual rate
+  });
+
+  it('prints a flat 0.00% column when no degradation rate is set', () => {
+    seedMcruData({ degradation_pct: '' });
+    renderDoc();
+    const rows = within(screen.getByTestId('forecast-table')).getAllByRole('row');
+    expect(within(rows[1]).getAllByRole('cell')[2].textContent).toBe('0.00%');
+    expect(within(rows[7]).getAllByRole('cell')[2].textContent).toBe('0.00%');
+  });
+});
+
+describe('TverSF001Pdd — ตารางที่ 1 total row cell count', () => {
+  it('spans the three label columns so the row matches the 5-column header', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('sites-table');
+    const rows = within(table).getAllByRole('row');
+    const total = rows[rows.length - 1];
+    const cells = within(total).getAllByRole('cell');
+    expect(cells).toHaveLength(3); // รวม(colspan 3) + kWp + kWh
+    expect(cells[0].getAttribute('colspan')).toBe('3');
+    expect(cells[0].textContent).toBe('รวม');
+    expect(cells[1].textContent).toBe('250.000');
+    expect(cells[2].textContent).toBe('500,000');
+    // Column count matches the header: 3 spanned + 2 value cells = 5.
+    expect(within(rows[0]).getAllByRole('columnheader')).toHaveLength(5);
+  });
+});
