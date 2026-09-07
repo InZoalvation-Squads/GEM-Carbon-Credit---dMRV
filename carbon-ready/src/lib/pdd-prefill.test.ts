@@ -88,7 +88,7 @@ describe('buildPrefill', () => {
 });
 
 describe('TVER solar methodology prefill data', () => {
-  it('buildDefaults seeds exactly the 9 standard values', () => {
+  it('buildDefaults seeds exactly the 10 standard values', () => {
     expect(buildDefaults(TVER_SOLAR_METHODOLOGY)).toEqual({
       technology: 'Solar PV rooftop',
       grid_connection: 'Grid-connected',
@@ -99,6 +99,7 @@ describe('TVER solar methodology prefill data', () => {
       measurement_method: 'Revenue-grade bi-directional meter',
       monitoring_frequency: 'Monthly',
       baseline_scenario: 'Grid electricity displaced by solar generation', // single-option rule
+      project_form: 'แบบเดี่ยว',  // aggregated-PDD selector; single is the standard case
     });
   });
 

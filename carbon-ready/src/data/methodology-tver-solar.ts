@@ -29,8 +29,11 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
         { key: 'owner_name', label: 'เจ้าของโครงการ', type: 'text', required: false,
           help: 'เว้นว่างได้ถ้าเป็นรายเดียวกับผู้พัฒนาโครงการ' },
         { key: 'co_developer', label: 'ผู้พัฒนาโครงการร่วม', type: 'text', required: false },
+        // Not required: an absent value already means แบบเดี่ยว, so demanding it
+        // would retroactively invalidate every PDD written before this field
+        // existed — including registered ones whose content hash is frozen.
         { key: 'project_form', label: 'รูปแบบการดำเนินโครงการ', type: 'select',
-          options: ['แบบเดี่ยว', 'แบบควบรวม'], required: true, defaultValue: 'แบบเดี่ยว',
+          options: ['แบบเดี่ยว', 'แบบควบรวม'], required: false, defaultValue: 'แบบเดี่ยว',
           help: 'แบบควบรวม = หลายพื้นที่ติดตั้งภายใต้โครงการเดียว — กรอกรายละเอียดแต่ละแห่งในตาราง "พื้นที่ติดตั้งในโครงการ"' },
         { key: 'sites', label: 'พื้นที่ติดตั้งในโครงการ (แบบควบรวม)', type: 'table',
           required: false, siteSpecific: true,
