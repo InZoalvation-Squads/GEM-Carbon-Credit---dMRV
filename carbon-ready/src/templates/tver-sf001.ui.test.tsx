@@ -437,3 +437,119 @@ describe('TverSF001Pdd — aggregated mode with incomplete site rows', () => {
     expect(cells).toEqual(['500,000', '500,000', '500,000']);
   });
 });
+
+// ============================================================
+// Per-site detail that แบบควบรวม used to discard: ตารางที่ 2 (equipment by
+// site), the site column + renumbering of the installations table, and the
+// per-site owner/address/coordinate rows on the cover detail table.
+// ============================================================
+const SITE_EQUIPMENT = [
+  { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trinasolar', model: 'TSM-NEG21C.20', spec: 'ขนาด 695 วัตต์', qty: 180 },
+  { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์', brand: 'Huawei', model: 'SUN2000-50KTL-M3', qty: 2 },
+  { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko', model: 'JKM580N', qty: 260 },
+  // No site column at all — must land in ไม่ระบุพื้นที่, never be dropped.
+  { site: '', item: 'ตู้ควบคุมไฟฟ้า', brand: 'Schneider', qty: 1 },
+];
+
+const SITE_INSTALLATIONS = [
+  { site: 'บริษัท A จำกัด', building: 'อาคาร A1', coordinates: '13.57, 100.35', panels: 180, inverters: 2, kwp: 100 },
+  { site: 'บริษัท B จำกัด', building: 'อาคาร B1', coordinates: '13.45, 101.06', panels: 260, inverters: 3, kwp: 150 },
+];
+
+/** seedBundleData + the per-site equipment / installation rows. */
+function seedBundleDetail(overrides: Record<string, unknown> = {}) {
+  seedBundleData();
+  const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  pdd.section_data = {
+    ...pdd.section_data,
+    equipment_specs: SITE_EQUIPMENT,
+    installations: SITE_INSTALLATIONS,
+    ...overrides,
+  };
+}
+
+describe('TverSF001Pdd — aggregated mode keeps per-site detail', () => {
+  it('ตารางที่ 2 groups equipment rows under their site', () => {
+    seedBundleDetail();
+    renderDoc();
+    const table = screen.getByTestId('equipment-by-site');
+    expect(screen.getByText(/ตารางที่ 2 รายการอุปกรณ์หลัก/)).toBeInTheDocument();
+    // header + 2 rows for A + 1 for B + 1 orphan
+    expect(within(table).getAllByRole('row')).toHaveLength(5);
+    const groupCells = within(table).getAllByRole('cell').filter((c) => c.getAttribute('rowspan'));
+    // ลำดับ + ชื่อโครงการ per group, three groups (A, B, ไม่ระบุพื้นที่)
+    expect(groupCells.map((c) => c.textContent)).toEqual(['1', 'บริษัท A จำกัด', '2', 'บริษัท B จำกัด', '3', 'ไม่ระบุพื้นที่']);
+    // Site A's ชื่อโครงการ cell spans both of its equipment rows.
+    expect(groupCells[1].getAttribute('rowspan')).toBe('2');
+    expect(within(table).getByText('TSM-NEG21C.20')).toBeInTheDocument();
+    expect(within(table).getByText('JKM580N')).toBeInTheDocument();
+  });
+
+  it('keeps an equipment row whose site matches nothing under ไม่ระบุพื้นที่', () => {
+    seedBundleDetail();
+    renderDoc();
+    const table = screen.getByTestId('equipment-by-site');
+    const orphanRow = within(table).getByText('ไม่ระบุพื้นที่').closest('tr')!;
+    expect(within(orphanRow).getByText('ตู้ควบคุมไฟฟ้า')).toBeInTheDocument();
+    expect(within(orphanRow).getByText('Schneider')).toBeInTheDocument();
+  });
+
+  it('gives a site with no equipment rows a placeholder row rather than dropping it', () => {
+    seedBundleDetail({ equipment_specs: [SITE_EQUIPMENT[0]] });
+    renderDoc();
+    const table = screen.getByTestId('equipment-by-site');
+    const bRow = within(table).getByText('บริษัท B จำกัด').closest('tr')!;
+    expect(within(bRow).getAllByText('-').length).toBeGreaterThan(0);
+  });
+
+  it('renumbers the installations table to ตารางที่ 3 and adds the site column', () => {
+    seedBundleDetail();
+    renderDoc();
+    expect(screen.getByText('ตารางที่ 3 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ')).toBeInTheDocument();
+    expect(screen.queryByText('ตารางที่ 1 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ')).toBeNull();
+    const caption = screen.getByText('ตารางที่ 3 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ');
+    const table = caption.nextElementSibling as HTMLElement;
+    expect(within(table).getByText('พื้นที่ติดตั้ง (แห่ง)')).toBeInTheDocument();
+    const rows = within(table).getAllByRole('row');
+    expect(within(rows[1]).getAllByRole('cell')[0].textContent).toBe('บริษัท A จำกัด');
+    // The รวม label spans ลำดับ+พื้นที่+พิกัด so the totals stay under their columns.
+    expect(within(rows[rows.length - 1]).getAllByRole('cell')[0].getAttribute('colspan')).toBe('3');
+  });
+
+  it('lists every site owner, address and coordinate on the cover detail table', () => {
+    seedBundleDetail();
+    renderDoc();
+    const owners = screen.getByTestId('owners-by-site');
+    for (const s of TWO_SITES) {
+      expect(within(owners).getByText(s.owner)).toBeInTheDocument();
+      expect(within(owners).getByText(s.address)).toBeInTheDocument();
+    }
+    const coords = screen.getByTestId('coords-by-site');
+    expect(coords.textContent).toContain('13.57, 100.35');
+    expect(coords.textContent).toContain('13.45, 101.06');
+    expect(coords.textContent).toContain('1. บริษัท A จำกัด');
+    // ที่ตั้งโครงการ numbers each site's address.
+    expect(screen.getByText('1. สมุทรสาคร')).toBeInTheDocument();
+    expect(screen.getByText('2. ชลบุรี')).toBeInTheDocument();
+  });
+
+  it('ตารางที่ 4 labels its name column เจ้าของโครงการ, matching the site owner it prints', () => {
+    seedBundleDetail();
+    renderDoc();
+    const table = screen.getByTestId('maintenance-table');
+    const header = within(table).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('columnheader').map((c) => c.textContent))
+      .toEqual(['ลำดับ', 'เจ้าของโครงการ', 'ความถี่ (ครั้ง/ปี)']);
+  });
+
+  it('leaves single-project output untouched', () => {
+    seedOfficialData();
+    renderDoc();
+    expect(screen.queryByTestId('equipment-by-site')).toBeNull();
+    expect(screen.queryByTestId('owners-by-site')).toBeNull();
+    expect(screen.queryByTestId('coords-by-site')).toBeNull();
+    expect(screen.getByText('ตารางที่ 1 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ')).toBeInTheDocument();
+    expect(screen.queryByText(/ตารางที่ 3 รายละเอียดอุปกรณ์หลัก/)).toBeNull();
+    expect(screen.queryByText('พื้นที่ติดตั้ง (แห่ง)')).toBeNull();
+  });
+});

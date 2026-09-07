@@ -313,6 +313,22 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const has = (k: string, val: string) => d[k] === val;
   const installations = (Array.isArray(d.installations) ? d.installations : []) as Array<Record<string, unknown>>;
   const equipmentSpecs = (Array.isArray(d.equipment_specs) ? d.equipment_specs : []) as Array<Record<string, unknown>>;
+  // ตารางที่ 2 (แบบควบรวม): equipment rows grouped under the site they belong to.
+  // Rows whose `site` matches no site row are kept in a trailing ไม่ระบุพื้นที่
+  // group rather than dropped — an unmatched row is a data-entry problem the
+  // reviewer must see, not something the document may silently swallow.
+  const equipmentGroups: Array<{ label: string; rows: Array<Record<string, unknown>> }> = bundle
+    ? (() => {
+        const matched = new Set<Record<string, unknown>>();
+        const groups = sites.map((s) => {
+          const rows = equipmentSpecs.filter((r) => String(r.site ?? '') === s.owner && s.owner !== '');
+          rows.forEach((r) => matched.add(r));
+          return { label: s.owner || '-', rows };
+        });
+        const orphans = equipmentSpecs.filter((r) => !matched.has(r));
+        return orphans.length > 0 ? [...groups, { label: 'ไม่ระบุพื้นที่', rows: orphans }] : groups;
+      })()
+    : [];
   const address = typeof d.project_address === 'string' && d.project_address !== '' ? d.project_address : project.location;
   const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
@@ -363,12 +379,46 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td>{str('project_title_en')}</td></tr>
               <tr><td className="font-bold">ผู้พัฒนาโครงการ</td><td>{str('project_owner')}</td></tr>
               <tr><td className="font-bold">ผู้พัฒนาโครงการร่วม</td><td>{str('co_developer')}</td></tr>
-              <tr><td className="font-bold">เจ้าของโครงการ</td><td>{ownerName}</td></tr>
-              <tr><td className="font-bold">ที่ตั้งโครงการ</td><td className="whitespace-pre-wrap">{address}</td></tr>
+              {/* แบบควบรวม: owner / address / coordinates are per-site (official form p.2-3),
+                  so these three rows read from sites[] instead of the parent scalars. */}
+              <tr>
+                <td className="font-bold">เจ้าของโครงการ</td>
+                <td>
+                  {bundle ? (
+                    <table data-testid="owners-by-site" className="doc-table w-full">
+                      <tbody>
+                        {sites.map((s, i) => (
+                          <tr key={`${s.owner}-${i}`}>
+                            <td>{s.owner || '-'}</td>
+                            <td className="whitespace-pre-wrap">{s.address || '-'}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  ) : ownerName}
+                </td>
+              </tr>
+              <tr>
+                <td className="font-bold">ที่ตั้งโครงการ</td>
+                <td className="whitespace-pre-wrap">
+                  {bundle
+                    ? sites.map((s, i) => <div key={`${s.owner}-${i}`}>{i + 1}. {s.address || '-'}</div>)
+                    : address}
+                </td>
+              </tr>
               <tr>
                 <td className="font-bold">พิกัดที่ตั้งโครงการ</td>
                 <td>
-                  {installations.length === 0 ? '-' : installations.map((r, i) => (
+                  {bundle ? (
+                    <div data-testid="coords-by-site">
+                      {sites.map((s, i) => (
+                        <div key={`${s.owner}-${i}`} className="flex items-baseline justify-between gap-4">
+                          <span>{i + 1}. {s.owner || '-'}</span>
+                          <span className="whitespace-nowrap text-right [font-variant-numeric:tabular-nums]">{s.coordinates}</span>
+                        </div>
+                      ))}
+                    </div>
+                  ) : installations.length === 0 ? '-' : installations.map((r, i) => (
                     // Reference layout: building name left, lat/long as a flush-right column.
                     <div key={i} className="flex items-baseline justify-between gap-4">
                       <span>{i + 1}. {String(r.building ?? '-')}</span>
@@ -524,25 +574,59 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           {equipmentSpecs.length > 0 && (
             <>
               <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
-              <ol className="list-decimal pl-14">
-                {equipmentSpecs.map((r, i) => (
-                  <li key={i}>
-                    {String(r.item ?? '-')}
-                    {r.brand !== undefined && r.brand !== '' ? ` ยี่ห้อ ${String(r.brand)}` : ''}
-                    {r.model !== undefined && r.model !== '' ? ` รุ่น ${String(r.model)}` : ''}
-                    {r.spec !== undefined && r.spec !== '' ? ` ${String(r.spec)}` : ''}
-                    {r.qty !== undefined && r.qty !== '' ? ` จำนวน ${fmtInt(Number(r.qty))}` : ''}
-                  </li>
-                ))}
-              </ol>
+              {bundle ? (
+                <>
+                  <p className="mt-2 text-center font-bold">ตารางที่ 2 รายการอุปกรณ์หลักสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
+                  <table data-testid="equipment-by-site" className="doc-table mt-1 w-full">
+                    <thead>
+                      <tr className="bg-[#f2f2f2] text-center font-bold">
+                        <td>ลำดับ</td><td>ชื่อโครงการ</td><td>รายการ</td><td>ยี่ห้อ</td><td>รุ่น</td><td>ขนาด/สเปค</td><td>จำนวน</td>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {equipmentGroups.map((g, gi) => {
+                        // A site with no equipment rows still gets one row of '-' so the
+                        // reviewer sees the gap instead of the site disappearing.
+                        const rows = g.rows.length > 0 ? g.rows : [null];
+                        return rows.map((r, ri) => (
+                          <tr key={`${g.label}-${gi}-${ri}`}>
+                            {ri === 0 && <td rowSpan={rows.length} className="text-center">{gi + 1}</td>}
+                            {ri === 0 && <td rowSpan={rows.length}>{g.label}</td>}
+                            <td>{r === null ? '-' : String(r.item ?? '-')}</td>
+                            <td>{r === null || r.brand === undefined || r.brand === '' ? '-' : String(r.brand)}</td>
+                            <td>{r === null || r.model === undefined || r.model === '' ? '-' : String(r.model)}</td>
+                            <td>{r === null || r.spec === undefined || r.spec === '' ? '-' : String(r.spec)}</td>
+                            <td className="text-center">{r === null || r.qty === undefined || r.qty === '' ? '-' : fmtInt(Number(r.qty))}</td>
+                          </tr>
+                        ));
+                      })}
+                    </tbody>
+                  </table>
+                </>
+              ) : (
+                <ol className="list-decimal pl-14">
+                  {equipmentSpecs.map((r, i) => (
+                    <li key={i}>
+                      {String(r.item ?? '-')}
+                      {r.brand !== undefined && r.brand !== '' ? ` ยี่ห้อ ${String(r.brand)}` : ''}
+                      {r.model !== undefined && r.model !== '' ? ` รุ่น ${String(r.model)}` : ''}
+                      {r.spec !== undefined && r.spec !== '' ? ` ${String(r.spec)}` : ''}
+                      {r.qty !== undefined && r.qty !== '' ? ` จำนวน ${fmtInt(Number(r.qty))}` : ''}
+                    </li>
+                  ))}
+                </ol>
+              )}
             </>
           )}
           {installations.length > 0 && (
             <>
-              <p className="mt-2 text-center font-bold">ตารางที่ 1 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ</p>
+              {/* ตารางที่ 3 in bundle mode — ตารางที่ 1 is the site capacity table
+                  and ตารางที่ 2 the per-site equipment table above. */}
+              <p className="mt-2 text-center font-bold">{bundle ? 'ตารางที่ 3' : 'ตารางที่ 1'} รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ</p>
               <table className="doc-table mt-1 w-full">
                 <thead>
                   <tr className="bg-[#f2f2f2] text-center font-bold">
+                    {bundle && <td>พื้นที่ติดตั้ง (แห่ง)</td>}
                     <td>พื้นที่ติดตั้ง</td><td>พิกัด</td><td>จำนวนแผงเซลล์แสงอาทิตย์ (แผ่น)</td>
                     <td>จำนวนอินเวอร์เตอร์ (เครื่อง)</td><td>ขนาดการติดตั้งรวม (kWp)</td>
                   </tr>
@@ -550,6 +634,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 <tbody>
                   {installations.map((r, i) => (
                     <tr key={i}>
+                      {bundle && <td>{String(r.site ?? '-')}</td>}
                       <td>{String(r.building ?? '-')}</td>
                       <td className="text-center">{String(r.coordinates ?? '-')}</td>
                       <td className="text-center">{r.panels === undefined || r.panels === '' ? '-' : fmtInt(Number(r.panels))}</td>
@@ -558,7 +643,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                     </tr>
                   ))}
                   <tr className="font-bold">
-                    <td className="text-center" colSpan={2}>รวม</td>
+                    <td className="text-center" colSpan={bundle ? 3 : 2}>รวม</td>
                     <td className="text-center">{fmtInt(installations.reduce((a, r) => a + (Number(r.panels) || 0), 0))}</td>
                     <td className="text-center">{fmtInt(installations.reduce((a, r) => a + (Number(r.inverters) || 0), 0))}</td>
                     <td className="text-right">{fmt(installations.reduce((a, r) => a + (Number(r.kwp) || 0), 0))}</td>
@@ -792,7 +877,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <>
               <p className="mt-3 font-bold">ตารางที่ 4 แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
               <table data-testid="maintenance-table" className="doc-table w-full">
-                <thead><tr><th>ลำดับ</th><th>ชื่อโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
+                <thead><tr><th>ลำดับ</th><th>เจ้าของโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
                 <tbody>
                   {sites.map((s, i) => (
                     <tr key={`${s.owner}-${i}`}>
