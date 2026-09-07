@@ -62,8 +62,14 @@ bundle's PDD never carries its sites over.
 | `kwp` | number | ตารางที่ 1, aggregate capacity |
 | `year1_kwh` | number | ตารางที่ 1, yearly forecast |
 | `first_sync_year` | number | staggered crediting start (p.31) |
+| `degradation_pct` | number | per-site panel degradation (p.31) |
 | `maintenance_per_year` | number | ตารางที่ 4 (p.22) |
 | `project_id` | text (nullable) | seam for promoting a site to a real `Project` |
+
+Per-site `degradation_pct` is required, not a convenience: the reference PDD uses
+0.55%/yr for sites A, B, C, E, and F but 0.60%/yr for site D. A single bundle-wide rate
+cannot reproduce its page-31 table. When a site row leaves `degradation_pct` empty, the
+bundle-level `degradation_pct` field is used as the fallback.
 
 ### New field: `project_form`
 
@@ -157,7 +163,8 @@ render blank when their input rows are incomplete. No aggregate is defaulted or 
 ## Testing
 
 - Unit tests for the staggered forecast, using the reference PDD's page-31 table as the
-  fixture — real published values, not invented ones.
+  fixture — real published values, not invented ones — asserted **within a ±2 kWh
+  per-cell and ±5 kWh per-year-total tolerance** (see below).
 - Regression test asserting single-project output is unchanged.
 - UI test for bundle-mode rendering.
 - Validation tests for the empty-`sites` and incomplete-row cases.
@@ -169,6 +176,30 @@ Explicitly deferred, with the nullable `project_id` column as the forward seam:
 - Per-site evidence attachment
 - Per-site IoT meter readings
 - Promoting a site row to a real `Project` record
+
+### Fixture tolerance, and why it is required
+
+The reference PDD's page-31 table is not exactly reproducible by any clean model.
+Measured against its published values:
+
+- **Chained rounding** (the current `generationForecast()` behaviour) differs by ±1 kWh
+  on roughly 15 of 42 cells.
+- **Unrounded power** (`year1 × (1−d)^k`, rounded once) reproduces sites E and F exactly
+  but still differs by ±1 kWh on scattered cells of A, B, C, and D.
+
+The residual is float and rounding noise from the spreadsheet that produced the original
+document — the year-1 figures in the table are themselves rounded values of unrounded
+upstream numbers. No implementation will match cell-for-cell.
+
+**Decision:** keep the existing chained-rounding `generationForecast()` unchanged, and
+assert the fixture within ±2 kWh per cell and ±5 kWh per year total. This validates the
+staggering model against real published data without encoding another tool's arithmetic
+noise as a requirement.
+
+`generationForecast()` is deliberately **not** switched to unrounded power. Its current
+behaviour was chosen against a different reference (the PEA/TGO appendix,
+963,915 → 941,011, documented at `lib/pdd.ts:130-134`), and changing it to chase ±1 kWh
+here would risk a regression there.
 
 ## Open questions
 
