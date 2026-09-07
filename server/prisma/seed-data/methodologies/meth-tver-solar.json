@@ -73,6 +73,80 @@
           "required": false
         },
         {
+          "key": "project_form",
+          "label": "รูปแบบการดำเนินโครงการ",
+          "type": "select",
+          "options": [
+            "แบบเดี่ยว",
+            "แบบควบรวม"
+          ],
+          "required": false,
+          "defaultValue": "แบบเดี่ยว",
+          "help": "แบบควบรวม = หลายพื้นที่ติดตั้งภายใต้โครงการเดียว — กรอกรายละเอียดแต่ละแห่งในตาราง \"พื้นที่ติดตั้งในโครงการ\""
+        },
+        {
+          "key": "sites",
+          "label": "พื้นที่ติดตั้งในโครงการ (แบบควบรวม)",
+          "type": "table",
+          "required": false,
+          "siteSpecific": true,
+          "showIf": {
+            "field": "project_form",
+            "equals": "แบบควบรวม"
+          },
+          "help": "หนึ่งแถวต่อหนึ่งพื้นที่ติดตั้ง — กำลังผลิตรวมและไฟฟ้าที่ผลิตได้รวมคำนวณจากตารางนี้",
+          "columns": [
+            {
+              "key": "owner",
+              "label": "เจ้าของโครงการ",
+              "type": "text"
+            },
+            {
+              "key": "address",
+              "label": "ที่ตั้งโครงการ",
+              "type": "text"
+            },
+            {
+              "key": "coordinates",
+              "label": "พิกัด",
+              "type": "text"
+            },
+            {
+              "key": "kwp",
+              "label": "กำลังการผลิตติดตั้ง",
+              "type": "number",
+              "unit": "kWp"
+            },
+            {
+              "key": "year1_kwh",
+              "label": "ไฟฟ้าปีที่ 1",
+              "type": "number",
+              "unit": "kWh/ปี"
+            },
+            {
+              "key": "first_sync_year",
+              "label": "ปีที่ขนานไฟครั้งแรก (พ.ศ.)",
+              "type": "number"
+            },
+            {
+              "key": "degradation_pct",
+              "label": "อัตราการเสื่อมต่อปี",
+              "type": "number",
+              "unit": "%"
+            },
+            {
+              "key": "maintenance_per_year",
+              "label": "บำรุงรักษา (ครั้ง/ปี)",
+              "type": "number"
+            },
+            {
+              "key": "project_id",
+              "label": "รหัสโครงการในระบบ (ถ้ามี)",
+              "type": "text"
+            }
+          ]
+        },
+        {
           "key": "project_address",
           "label": "ที่ตั้งโครงการ (เต็ม)",
           "type": "textarea",
@@ -274,6 +348,11 @@
           "siteSpecific": true,
           "columns": [
             {
+              "key": "site",
+              "label": "พื้นที่ติดตั้ง (แบบควบรวม)",
+              "type": "text"
+            },
+            {
               "key": "building",
               "label": "พื้นที่ติดตั้ง",
               "type": "text"
@@ -308,6 +387,11 @@
           "required": false,
           "help": "รายการอุปกรณ์หลักตามข้อ 1.2 ของฟอร์ม เช่น แผงเซลล์ อินเวอร์เตอร์ Smart Logger",
           "columns": [
+            {
+              "key": "site",
+              "label": "พื้นที่ติดตั้ง (แบบควบรวม)",
+              "type": "text"
+            },
             {
               "key": "item",
               "label": "รายการ",
