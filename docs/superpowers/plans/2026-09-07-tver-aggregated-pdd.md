@@ -262,13 +262,16 @@ Append to `carbon-ready/src/lib/pdd-sites.test.ts`:
 import { sumSiteCapacityKwp, sumSiteYear1Kwh } from './pdd-sites';
 
 // Reference PDD ตารางที่ 1 (p.7): six sites, 2,009.30 kWp / 2,499,410 kWh.
+// year1_kwh is each site's output in its OWN first synchronisation year, which
+// is what ตารางที่ 1 totals — not the calendar-2570 column on p.31, whose sites
+// have already been degrading for up to two years by then.
 const REF_TABLE1 = [
-  { owner: 'บริษัท A จำกัด', kwp: 261.6, year1_kwh: 325326 },
-  { owner: 'บริษัท B จำกัด', kwp: 249.61, year1_kwh: 373305 },
-  { owner: 'บริษัท C จำกัด', kwp: 234.895, year1_kwh: 288682 },
+  { owner: 'บริษัท A จำกัด', kwp: 261.6, year1_kwh: 327126 },
+  { owner: 'บริษัท B จำกัด', kwp: 249.61, year1_kwh: 377445 },
+  { owner: 'บริษัท C จำกัด', kwp: 234.895, year1_kwh: 290279 },
   { owner: 'บริษัท D จำกัด', kwp: 311.605, year1_kwh: 355673 },
-  { owner: 'บริษัท E จำกัด', kwp: 351.0, year1_kwh: 391402 },
-  { owner: 'บริษัท F จำกัด', kwp: 600.59, year1_kwh: 747034 },
+  { owner: 'บริษัท E จำกัด', kwp: 351.0, year1_kwh: 393567 },
+  { owner: 'บริษัท F จำกัด', kwp: 600.59, year1_kwh: 755320 },
 ];
 
 describe('sumSiteCapacityKwp', () => {

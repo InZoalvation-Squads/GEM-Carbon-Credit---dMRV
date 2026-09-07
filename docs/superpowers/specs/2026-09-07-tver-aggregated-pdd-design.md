@@ -117,6 +117,22 @@ while sites B and F have already been degrading for two years.
 resolves from the parent project's location: all sites in an aggregated T-VER project are
 domestic, and the form publishes one EF.
 
+### `year1_kwh` means the site's own first year
+
+A site row's `year1_kwh` is its output in **its own first synchronisation year**, not its
+output in the first year of the crediting period. The two differ for any site that
+synchronised before crediting began.
+
+The reference PDD demonstrates both readings, and they must not be confused:
+
+- **ตารางที่ 1 (p.7) totals 2,499,410 kWh** — the sum of each site's own first-year output
+  (327,126 + 377,445 + 290,279 + 355,673 + 393,567 + 755,320).
+- **Page 31's 2570 column totals 2,481,423 kWh** — the sum for that calendar year, by
+  which point the sites that synchronised in 2568 and 2569 have already degraded.
+
+`sumSiteYear1Kwh()` reproduces the first. `siteGenerationMatrix()` reproduces the second,
+by degrading each site from its own `first_sync_year`.
+
 ### Known discrepancy in the reference PDD
 
 In the supplied reference document, per-site year-1 values sum to 2,499,410 kWh (ตารางที่ 1,
