@@ -5,6 +5,7 @@ import type {
 import { canonical, shortHash } from './hash';
 import { locationToCountryCode } from './geo';
 import { generationForecast } from './pdd-forecast';
+import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from './pdd-sites';
 
 const SUN_HOURS_PER_DAY = 4.0;      // matches seed generation model
 const DEFAULT_PERFORMANCE_RATIO = 0.8;
@@ -93,6 +94,19 @@ function numOrNull(v: unknown): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/** Installed capacity: Σ site rows in bundle mode, else the parent project's. */
+export function bundleCapacityKwp(ctx: ComputeContext): number {
+  const sites = parseSites(ctx.sectionData.sites);
+  return sumSiteCapacityKwp(sites) ?? ctx.project.capacity_kwp;
+}
+
+/** Buddhist-calendar year the crediting period starts, for the site matrix. */
+export function creditingStartYear(ctx: ComputeContext): number {
+  const iso = ctx.sectionData.crediting_start;
+  const gregorian = typeof iso === 'string' && iso.length >= 4 ? Number(iso.slice(0, 4)) : NaN;
+  return Number.isNaN(gregorian) ? 2570 : gregorian + 543;
+}
+
 /** Σ project electricity consumers (kWh/yr): direct kwh_year, else rated_w × hours ÷ 1000. */
 export function computeEcPj(rows: unknown): number {
   if (!Array.isArray(rows)) return 0;
@@ -107,8 +121,11 @@ export function computeEcPj(rows: unknown): number {
   return round2(total);
 }
 
-/** Year-1 generation: explicit PVsyst-style override, else the capacity model. */
+/** Year-1 generation: Σ site rows in bundle mode, else override, else the capacity model. */
 export function year1GenerationKwh(ctx: ComputeContext): number {
+  if (isBundle(ctx.sectionData)) {
+    return sumSiteYear1Kwh(parseSites(ctx.sectionData.sites)) ?? 0;
+  }
   const override = numOrNull(ctx.sectionData.year1_generation_kwh);
   if (override !== null && override > 0) return override;
   const raw = numOrNull(ctx.sectionData.performance_ratio);
@@ -144,7 +161,11 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const d = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
   const gen1 = year1GenerationKwh(ctx);
   const pe = round2((computeEcPj(ctx.sectionData.consumers) * ef) / 1000);
-  const gens = generationForecast(gen1, d, years);
+  // Bundle mode: each site degrades from its own first-synchronisation year, so
+  // the yearly total is the staggered sum rather than one aggregate curve.
+  const gens = isBundle(ctx.sectionData)
+    ? siteGenerationMatrix(parseSites(ctx.sectionData.sites), creditingStartYear(ctx), years, d).totals
+    : generationForecast(gen1, d, years);
   const rows: PddYearlyRow[] = [];
   for (let y = 1; y <= years; y++) {
     const gen = gens[y - 1];

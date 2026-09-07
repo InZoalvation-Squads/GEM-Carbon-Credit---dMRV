@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeFinancialTable, computeYearlyTable } from './pdd';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeFinancialTable, computeYearlyTable, bundleCapacityKwp, year1GenerationKwh } from './pdd';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -324,5 +324,55 @@ describe('computeFinancialTable — PEA-style 25-year cash flow', () => {
 
   it('returns null without an investment figure', () => {
     expect(computeFinancialTable({ project: PROJECT, factors: TGO_FACTORS, sectionData: MCRU_DATA })).toBeNull();
+  });
+});
+
+const BUNDLE_SITES = [
+  { owner: 'A', kwp: 100, year1_kwh: 200000, first_sync_year: 2570, degradation_pct: 0.5 },
+  { owner: 'B', kwp: 150, year1_kwh: 300000, first_sync_year: 2570, degradation_pct: 0.5 },
+];
+
+describe('bundle mode', () => {
+  it('sums site capacity instead of using the parent project capacity', () => {
+    expect(bundleCapacityKwp({ project: PROJECT, factors: FACTORS, sectionData: {} })).toBe(820);
+    expect(bundleCapacityKwp({
+      project: PROJECT, factors: FACTORS, sectionData: { sites: BUNDLE_SITES },
+    })).toBe(250);
+  });
+
+  it('uses summed site generation for year-1 output', () => {
+    const ctx = { project: PROJECT, factors: FACTORS, sectionData: { sites: BUNDLE_SITES } };
+    expect(year1GenerationKwh(ctx)).toBe(500000);
+  });
+
+  it('ignores the single-project override once sites exist', () => {
+    const ctx = {
+      project: PROJECT, factors: FACTORS,
+      sectionData: { sites: BUNDLE_SITES, year1_generation_kwh: 999999 },
+    };
+    expect(year1GenerationKwh(ctx)).toBe(500000);
+  });
+
+  it('builds the yearly table from the staggered site matrix', () => {
+    const ctx = {
+      project: PROJECT, factors: FACTORS,
+      sectionData: { sites: BUNDLE_SITES, crediting_years: 2, crediting_start: '2027-01-01' },
+    };
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows).toHaveLength(2);
+    expect(t.rows[0].generation_kwh).toBe(500000);
+    // 0.5%/yr on each site, summed: 199000 + 298500.
+    expect(t.rows[1].generation_kwh).toBe(497500);
+    // BE = gen × EF ÷ 1000, EF = 0.51.
+    expect(t.rows[0].be).toBe(255);
+  });
+
+  it('leaves single-project behaviour untouched', () => {
+    const ctx = {
+      project: PROJECT, factors: FACTORS,
+      sectionData: { year1_generation_kwh: 1000000, degradation_pct: 0.4, crediting_years: 3 },
+    };
+    const t = computeYearlyTable(ctx)!;
+    expect(t.rows.map((r) => r.generation_kwh)).toEqual([1000000, 996000, 992016]);
   });
 });
