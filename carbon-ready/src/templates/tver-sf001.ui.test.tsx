@@ -14,7 +14,9 @@ function seedOfficialData() {
   // demoFixtures reuses module-level objects across seedDemo() calls, so a
   // `sites` array written by an aggregated-mode test would otherwise leak in
   // here and silently flip this single-project fixture into bundle mode.
-  const { sites: _sites, ...base } = pdd.section_data as Record<string, unknown>;
+  const {
+    sites: _sites, support_equipment: _se, project_type: _pt, ...base
+  } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
     ...base,
     project_title_th: 'โครงการทดสอบพลังงานแสงอาทิตย์',
@@ -88,7 +90,8 @@ function seedMcruData(overrides: Record<string, unknown> = {}) {
   // optional keys mutated by an earlier test would otherwise leak into this one.
   const {
     permit_no: _p1, permit_date: _p2, owner_name: _p3, project_address: _p4,
-    equipment_specs: _p5, sites: _p6, ...base
+    equipment_specs: _p5, sites: _p6, support_equipment: _p7, project_type: _p8,
+    project_start_date: _p9, coordinator_fax: _p10, ...base
   } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
     ...base,
@@ -328,8 +331,11 @@ const TWO_SITES = [
 
 function seedBundleData() {
   const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  // demoFixtures reuses module-level objects across seedDemo() calls, so optional
+  // keys written by an earlier test must be dropped rather than inherited.
+  const { support_equipment: _se, project_type: _pt, ...base } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
-    ...pdd.section_data,
+    ...base,
     project_title_th: 'โครงการทดสอบแบบควบรวม',
     project_owner: 'บริษัท ผู้พัฒนา จำกัด',
     degradation_pct: 0.4,
@@ -545,11 +551,151 @@ describe('TverSF001Pdd — aggregated mode keeps per-site detail', () => {
   it('leaves single-project output untouched', () => {
     seedOfficialData();
     renderDoc();
+    expect(screen.queryByTestId('support-equipment')).toBeNull();
     expect(screen.queryByTestId('equipment-by-site')).toBeNull();
     expect(screen.queryByTestId('owners-by-site')).toBeNull();
     expect(screen.queryByTestId('coords-by-site')).toBeNull();
     expect(screen.getByText('ตารางที่ 1 รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ')).toBeInTheDocument();
     expect(screen.queryByText(/ตารางที่ 3 รายละเอียดอุปกรณ์หลัก/)).toBeNull();
     expect(screen.queryByText('พื้นที่ติดตั้ง (แห่ง)')).toBeNull();
+  });
+});
+
+// ============================================================
+// อุปกรณ์สนับสนุน (support equipment) — the official form's per-site table of
+// Smart Logger / PQM / Router / Water Pump, and the table renumbering it forces.
+// ============================================================
+const SUPPORT_EQUIPMENT = [
+  { site: 'บริษัท A จำกัด', smart_logger: 'Huawei SmartLogger3000', pqm: 'Schneider PM2200',
+    router: 'Huawei AR617', water_pump: 'Mitsubishi WP-155Q' },
+  // Half-filled row: a real draft state. Blank cells must print '-', never a guess.
+  { site: 'บริษัท B จำกัด', smart_logger: 'Huawei SmartLogger3000' },
+];
+
+describe('TverSF001Pdd — support-equipment table (อุปกรณ์สนับสนุน)', () => {
+  it('renders one row per site under ตารางที่ 4 in aggregated mode', () => {
+    seedBundleDetail({ support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    expect(screen.getByText(/ตารางที่ 4 รายการอุปกรณ์สนับสนุน/)).toBeInTheDocument();
+    const table = screen.getByTestId('support-equipment');
+    expect(within(table).getAllByRole('row')).toHaveLength(3); // header + 2 sites
+    const header = within(table).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['ลำดับ', 'ชื่อโครงการ', 'Smart Logger', 'PQM', 'Internet Router', 'Water Pump']);
+    const rowA = within(table).getAllByRole('row')[1];
+    expect(within(rowA).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['1', 'บริษัท A จำกัด', 'Huawei SmartLogger3000', 'Schneider PM2200', 'Huawei AR617', 'Mitsubishi WP-155Q']);
+  });
+
+  it('prints "-" for the columns a half-filled site row leaves blank', () => {
+    seedBundleDetail({ support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    const table = screen.getByTestId('support-equipment');
+    const rowB = within(table).getAllByRole('row')[2];
+    expect(within(rowB).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['2', 'บริษัท B จำกัด', 'Huawei SmartLogger3000', '-', '-', '-']);
+  });
+
+  it('pushes the maintenance table to ตารางที่ 5 when support equipment exists', () => {
+    seedBundleDetail({ support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    expect(screen.getByText(/ตารางที่ 5 แผนการบำรุงรักษา/)).toBeInTheDocument();
+    expect(screen.queryByText(/ตารางที่ 4 แผนการบำรุงรักษา/)).toBeNull();
+  });
+
+  it('keeps the maintenance table at ตารางที่ 4 when no support equipment exists', () => {
+    seedBundleDetail();
+    renderDoc();
+    expect(screen.queryByTestId('support-equipment')).toBeNull();
+    expect(screen.getByText(/ตารางที่ 4 แผนการบำรุงรักษา/)).toBeInTheDocument();
+    expect(screen.queryByText(/ตารางที่ 5 แผนการบำรุงรักษา/)).toBeNull();
+  });
+
+  it('numbers the table ตารางที่ 2 in single mode', () => {
+    seedMcruData({ support_equipment: [SUPPORT_EQUIPMENT[0]] });
+    renderDoc();
+    expect(screen.getByText(/ตารางที่ 2 รายการอุปกรณ์สนับสนุน/)).toBeInTheDocument();
+    expect(within(screen.getByTestId('support-equipment')).getByText('Schneider PM2200')).toBeInTheDocument();
+  });
+});
+
+describe('TverSF001Pdd — ประเภทโครงการ full option list', () => {
+  const ALL_TYPES = [
+    'พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล',
+    'การเพิ่มประสิทธิภาพในการผลิตไฟฟ้าและการผลิตความร้อน',
+    'การใช้ระบบขนส่งสาธารณะ',
+    'การใช้ยานพาหนะไฟฟ้า',
+    'การเพิ่มประสิทธิภาพเครื่องยนต์',
+    'การเพิ่มประสิทธิภาพการใช้พลังงานในอาคารและโรงงาน และในครัวเรือน',
+    'การปรับเปลี่ยนสารทำความเย็นธรรมชาติ',
+    'การใช้วัสดุทดแทนปูนเม็ด',
+    'การจัดการขยะมูลฝอย',
+    'การจัดการน้ำเสียชุมชน',
+    'การนำก๊าซมีเทนกลับมาใช้ประโยชน์',
+    'การจัดการน้ำเสียอุตสาหกรรม',
+    'การลด ดูดซับ และการกักเก็บก๊าซเรือนกระจกจากภาคป่าไม้และการเกษตร',
+    'การดักจับ กักเก็บ และ/หรือการใช้ประโยชน์จากก๊าซเรือนกระจก',
+    'อื่นๆ',
+  ];
+
+  it('renders all 15 official categories, ticking only the selected one', () => {
+    seedMcruData({ project_type: 'การจัดการขยะมูลฝอย' });
+    renderDoc();
+    // Every option renders exactly once...
+    for (const t of ALL_TYPES) expect(checkboxStates(t), t).toHaveLength(1);
+    // ...and exactly the selected one is ticked.
+    const ticked = ALL_TYPES.filter((t) => checkboxStates(t)[0] === '☑');
+    expect(ticked).toEqual(['การจัดการขยะมูลฝอย']);
+  });
+
+  it('ticks the renewable-energy option for a PDD carrying no project_type', () => {
+    seedMcruData();
+    renderDoc();
+    expect(checkboxStates('พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล')).toEqual(['☑']);
+    const ticked = ALL_TYPES.filter((t) => checkboxStates(t)[0] === '☑');
+    expect(ticked).toEqual(['พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล']);
+  });
+});
+
+describe('TverSF001Pdd — contact, dates and additionality detail', () => {
+  it('renders the โทรสาร row with its value', () => {
+    seedMcruData({ coordinator_fax: '032-123-456' });
+    renderDoc();
+    const faxLabel = screen.getByText('โทรสาร');
+    expect(faxLabel.closest('tr')!.textContent).toContain('032-123-456');
+  });
+
+  it('§1.5 prints project_start_date when set', () => {
+    // 2024-05-20 → พ.ศ. 2567, distinct from the 2026 crediting start.
+    seedMcruData({ project_start_date: '2024-05-20' });
+    renderDoc();
+    expect(screen.getByText(/วันเริ่มดำเนินโครงการ:/).textContent).toContain('2567');
+  });
+
+  it('§1.5 falls back to crediting_start when project_start_date is absent', () => {
+    seedMcruData();
+    renderDoc();
+    // crediting_start 2026-01-01 → พ.ศ. 2569
+    expect(screen.getByText(/วันเริ่มดำเนินโครงการ:/).textContent).toContain('2569');
+  });
+
+  it('§1.4 non-micro branch prints the barrier and common-practice answers', () => {
+    seedMcruData({
+      project_scale: 'ใหญ่',
+      barrier_type: 'Investment', investment_metric: 'IRR', common_practice: true,
+    });
+    renderDoc();
+    const barrier = screen.getByText(/อุปสรรคหลัก:/);
+    expect(barrier.textContent).toContain('Investment');
+    expect(barrier.textContent).toContain('ตัวชี้วัด: IRR');
+    expect(screen.getByText(/ไม่ใช่การดำเนินงานทั่วไปในพื้นที่:/).textContent).toContain('ใช่');
+  });
+
+  it('§1.4 micro-scale (Positive List) branch shows no additionality detail lines', () => {
+    seedMcruData({ barrier_type: 'Investment', common_practice: true });
+    renderDoc();
+    expect(screen.getByText(/Positive List/)).toBeInTheDocument();
+    expect(screen.queryByText(/อุปสรรคหลัก:/)).toBeNull();
+    expect(screen.queryByText(/ไม่ใช่การดำเนินงานทั่วไปในพื้นที่:/)).toBeNull();
   });
 });

@@ -225,3 +225,46 @@ describe('aggregated-PDD schema', () => {
     expect(defaults.sites).toBeUndefined();
   });
 });
+
+describe('official-form completeness fields (T-VER-S-F001-PDD)', () => {
+  const fields = TVER_SOLAR_METHODOLOGY.pdd_sections.flatMap((s) => s.fields);
+  const byKey = (k: string) => fields.find((f) => f.key === k);
+
+  // A new field marked required retroactively invalidates registered PDDs whose
+  // content hash is frozen — this has already happened once in this project.
+  it('adds all four fields as optional', () => {
+    for (const k of ['support_equipment', 'project_type', 'coordinator_fax', 'project_start_date']) {
+      expect(byKey(k), `missing field ${k}`).toBeDefined();
+      expect(byKey(k)!.required, `${k} must stay optional`).toBe(false);
+    }
+  });
+
+  it('declares support_equipment as a per-site table with the ตารางที่ 3 columns', () => {
+    const f = byKey('support_equipment');
+    expect(f?.type).toBe('table');
+    expect(f?.columns?.map((c) => c.key)).toEqual(['site', 'smart_logger', 'pqm', 'router', 'water_pump']);
+    expect(f?.columns?.every((c) => c.type === 'text')).toBe(true);
+  });
+
+  it('declares project_type as a select carrying all 15 official categories', () => {
+    const f = byKey('project_type');
+    expect(f?.type).toBe('select');
+    expect(f?.options).toHaveLength(15);
+    expect(f?.options?.[0]).toBe('พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล');
+    expect(f?.options?.[14]).toBe('อื่นๆ');
+    // Deliberately unseeded — the template's absent-key fallback covers it, and a
+    // defaultValue would change buildDefaults() for every new PDD.
+    expect(f?.defaultValue).toBeUndefined();
+  });
+
+  it('declares coordinator_fax as text and project_start_date as a site-specific date', () => {
+    expect(byKey('coordinator_fax')?.type).toBe('text');
+    expect(byKey('project_start_date')?.type).toBe('date');
+    expect(byKey('project_start_date')?.siteSpecific).toBe(true);
+  });
+
+  it('still round-trips through the JSON contract with the new fields', () => {
+    const res = parseMethodologyJson(methodologyToJson(TVER_SOLAR_METHODOLOGY));
+    expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
+  });
+});

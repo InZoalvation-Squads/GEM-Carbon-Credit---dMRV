@@ -56,7 +56,33 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
         { key: 'permit_date', label: 'ใบอนุญาตฯ ลงวันที่', type: 'date', required: false, siteSpecific: true },
         { key: 'investment_mthb', label: 'เงินลงทุนทั้งหมดของโครงการ', type: 'number', required: false, unit: 'ล้านบาท', siteSpecific: true },
         { key: 'project_scale', label: 'ขนาดโครงการ', type: 'select', options: ['เล็กมาก', 'เล็ก', 'ใหญ่'], required: true, siteSpecific: true },
+        // Not required: PDDs written before this field existed carry no value, and
+        // the template falls back to the renewable-energy category for them.
+        // No defaultValue: the template already ticks the renewable-energy option
+        // when the key is absent (every PDD written before this field existed), so
+        // seeding it would add nothing to the rendered form while changing what
+        // buildDefaults() writes into every new PDD.
+        { key: 'project_type', label: 'ประเภทโครงการ', type: 'select', required: false,
+          options: [
+            'พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล',
+            'การเพิ่มประสิทธิภาพในการผลิตไฟฟ้าและการผลิตความร้อน',
+            'การใช้ระบบขนส่งสาธารณะ',
+            'การใช้ยานพาหนะไฟฟ้า',
+            'การเพิ่มประสิทธิภาพเครื่องยนต์',
+            'การเพิ่มประสิทธิภาพการใช้พลังงานในอาคารและโรงงาน และในครัวเรือน',
+            'การปรับเปลี่ยนสารทำความเย็นธรรมชาติ',
+            'การใช้วัสดุทดแทนปูนเม็ด',
+            'การจัดการขยะมูลฝอย',
+            'การจัดการน้ำเสียชุมชน',
+            'การนำก๊าซมีเทนกลับมาใช้ประโยชน์',
+            'การจัดการน้ำเสียอุตสาหกรรม',
+            'การลด ดูดซับ และการกักเก็บก๊าซเรือนกระจกจากภาคป่าไม้และการเกษตร',
+            'การดักจับ กักเก็บ และ/หรือการใช้ประโยชน์จากก๊าซเรือนกระจก',
+            'อื่นๆ',
+          ] },
         { key: 'crediting_years', label: 'ระยะเวลาคิดคาร์บอนเครดิต', type: 'select', options: ['7', '10'], required: true, unit: 'ปี', defaultValue: '7' },
+        { key: 'project_start_date', label: 'วันเริ่มดำเนินโครงการ', type: 'date', required: false, siteSpecific: true,
+          help: 'วันที่เริ่มดำเนินโครงการจริง เช่น วันที่ได้รับอนุญาตขนานไฟฟ้าครั้งแรก — เว้นว่างเพื่อใช้วันเริ่มคิดเครดิต' },
         { key: 'crediting_start', label: 'วันเริ่มคิดเครดิต (Crediting Start Date)', type: 'date', required: true, siteSpecific: true },
       ],
     },
@@ -73,6 +99,7 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
         { key: 'coordinator_name', label: 'ผู้ประสานงาน — ชื่อ-นามสกุล', type: 'text', required: true },
         { key: 'coordinator_position', label: 'ผู้ประสานงาน — ตำแหน่ง', type: 'text', required: false },
         { key: 'coordinator_phone', label: 'ผู้ประสานงาน — โทรศัพท์', type: 'text', required: false },
+        { key: 'coordinator_fax', label: 'ผู้ประสานงาน — โทรสาร', type: 'text', required: false },
         { key: 'coordinator_email', label: 'ผู้ประสานงาน — E-mail', type: 'email', required: false },
       ],
     },
@@ -108,6 +135,15 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
             { key: 'model', label: 'รุ่น', type: 'text' },
             { key: 'spec', label: 'ขนาด/สเปค', type: 'text' },
             { key: 'qty', label: 'จำนวน', type: 'number' },
+          ] },
+        { key: 'support_equipment', label: 'อุปกรณ์สนับสนุนรายพื้นที่ (ตารางที่ 3)', type: 'table', required: false,
+          help: 'อุปกรณ์ประกอบที่ใช้ไฟฟ้าในโครงการ เช่น Smart Logger, PQM, Internet Router, ปั๊มน้ำล้างแผง — กรอกหนึ่งแถวต่อหนึ่งพื้นที่',
+          columns: [
+            { key: 'site', label: 'ชื่อโครงการ', type: 'text' },
+            { key: 'smart_logger', label: 'Smart Logger', type: 'text' },
+            { key: 'pqm', label: 'PQM', type: 'text' },
+            { key: 'router', label: 'Internet Router', type: 'text' },
+            { key: 'water_pump', label: 'Water Pump', type: 'text' },
           ] },
       ],
     },

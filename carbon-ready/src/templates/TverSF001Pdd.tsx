@@ -19,6 +19,25 @@ import type { EvidenceFile, PddComputedSource } from '../types';
 const FORM_CODE = 'T-VER-S-F001-PDD';
 const FORM_VERSION = 'VERSION 2.1';
 
+/** ประเภทโครงการ — the official form's full checkbox list (p.2-3). */
+const PROJECT_TYPES = [
+  'พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล',
+  'การเพิ่มประสิทธิภาพในการผลิตไฟฟ้าและการผลิตความร้อน',
+  'การใช้ระบบขนส่งสาธารณะ',
+  'การใช้ยานพาหนะไฟฟ้า',
+  'การเพิ่มประสิทธิภาพเครื่องยนต์',
+  'การเพิ่มประสิทธิภาพการใช้พลังงานในอาคารและโรงงาน และในครัวเรือน',
+  'การปรับเปลี่ยนสารทำความเย็นธรรมชาติ',
+  'การใช้วัสดุทดแทนปูนเม็ด',
+  'การจัดการขยะมูลฝอย',
+  'การจัดการน้ำเสียชุมชน',
+  'การนำก๊าซมีเทนกลับมาใช้ประโยชน์',
+  'การจัดการน้ำเสียอุตสาหกรรม',
+  'การลด ดูดซับ และการกักเก็บก๊าซเรือนกระจกจากภาคป่าไม้และการเกษตร',
+  'การดักจับ กักเก็บ และ/หรือการใช้ประโยชน์จากก๊าซเรือนกระจก',
+  'อื่นๆ',
+] as const;
+
 const fmt = (n: number, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtInt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
 
@@ -313,6 +332,15 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const has = (k: string, val: string) => d[k] === val;
   const installations = (Array.isArray(d.installations) ? d.installations : []) as Array<Record<string, unknown>>;
   const equipmentSpecs = (Array.isArray(d.equipment_specs) ? d.equipment_specs : []) as Array<Record<string, unknown>>;
+  const supportEquipment = (Array.isArray(d.support_equipment) ? d.support_equipment : []) as Array<Record<string, unknown>>;
+  // Table numbering is a single running sequence in แบบควบรวม: 1 sites, 2 equipment
+  // by site, 3 installations, then the support-equipment table only when it has
+  // rows — so maintenance is 5 with it and 4 without. Single mode never renders
+  // the first two, so its maintenance table does not exist at all.
+  const maintenanceTableNo = bundle ? (supportEquipment.length > 0 ? 5 : 4) : 4;
+  // Existing PDDs predate project_type; this methodology is solar-only, so an
+  // absent value means the renewable-energy category rather than "none ticked".
+  const projectType = str('project_type') !== '-' ? str('project_type') : PROJECT_TYPES[0];
   // ตารางที่ 2 (แบบควบรวม): equipment rows grouped under the site they belong to.
   // Rows whose `site` matches no site row are kept in a trailing ไม่ระบุพื้นที่
   // group rather than dropped — an unmatched row is a data-entry problem the
@@ -430,12 +458,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr>
                 <td className="font-bold">ประเภทโครงการ</td>
                 <td>
-                  <Check on>พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล</Check>
-                  <Check on={false}>การเพิ่มประสิทธิภาพในการผลิตไฟฟ้าและการผลิตความร้อน</Check>
-                  <Check on={false}>การเพิ่มประสิทธิภาพการใช้พลังงานในอาคารและโรงงาน และในครัวเรือน</Check>
-                  <Check on={false}>การจัดการขยะมูลฝอย / น้ำเสีย / ก๊าซมีเทน</Check>
-                  <Check on={false}>การลด ดูดซับ และการกักเก็บก๊าซเรือนกระจกจากภาคป่าไม้และการเกษตร</Check>
-                  <Check on={false}>อื่นๆ</Check>
+                  {PROJECT_TYPES.map((t) => <Check key={t} on={projectType === t}>{t}</Check>)}
                 </td>
               </tr>
               <tr>
@@ -511,6 +534,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="font-bold">ตำแหน่ง</td><td>{str('coordinator_position')}</td></tr>
               <tr><td className="font-bold">ที่อยู่</td><td className="whitespace-pre-wrap">{address}</td></tr>
               <tr><td className="font-bold">โทรศัพท์</td><td>{str('coordinator_phone')}</td></tr>
+              <tr><td className="font-bold">โทรสาร</td><td>{str('coordinator_fax')}</td></tr>
               <tr><td className="font-bold">E-mail</td><td>{str('coordinator_email')}</td></tr>
             </tbody>
           </table>
@@ -652,6 +676,34 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
+          {supportEquipment.length > 0 && (
+            <>
+              {/* อุปกรณ์สนับสนุน — the official form lists these per site directly
+                  after the main-equipment table. */}
+              <p className="mt-2 text-center font-bold">
+                {bundle ? 'ตารางที่ 4' : 'ตารางที่ 2'} รายการอุปกรณ์สนับสนุนสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ
+              </p>
+              <table data-testid="support-equipment" className="doc-table mt-1 w-full">
+                <thead>
+                  <tr className="bg-[#f2f2f2] text-center font-bold">
+                    <td>ลำดับ</td><td>ชื่อโครงการ</td><td>Smart Logger</td><td>PQM</td><td>Internet Router</td><td>Water Pump</td>
+                  </tr>
+                </thead>
+                <tbody>
+                  {supportEquipment.map((r, i) => (
+                    <tr key={i}>
+                      <td className="text-center">{i + 1}</td>
+                      <td>{r.site === undefined || r.site === '' ? '-' : String(r.site)}</td>
+                      <td>{r.smart_logger === undefined || r.smart_logger === '' ? '-' : String(r.smart_logger)}</td>
+                      <td>{r.pqm === undefined || r.pqm === '' ? '-' : String(r.pqm)}</td>
+                      <td>{r.router === undefined || r.router === '' ? '-' : String(r.router)}</td>
+                      <td>{r.water_pump === undefined || r.water_pump === '' ? '-' : String(r.water_pump)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
           <EvidenceFigures projectId={project.id} excludeId={explicitCover?.id} />
 
           <p className="mt-3 font-bold underline">1.3 การนับซ้ำ</p>
@@ -670,6 +722,14 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <div className="mt-1 pl-8">
             <Check on={has('project_scale', 'เล็กมาก')}>ไม่ต้องพิสูจน์การดำเนินงานเพิ่มจากการดำเนินงานตามปกติ</Check>
             <Check on={!has('project_scale', 'เล็กมาก')}>ต้องพิสูจน์การดำเนินงานเพิ่มจากการดำเนินงานตามปกติ</Check>
+            {/* The methodology collects the barrier / common-practice answers; the
+                official form expects them printed under this branch. */}
+            {!has('project_scale', 'เล็กมาก') && (
+              <div className="ml-6 mt-1">
+                <p>อุปสรรคหลัก: {str('barrier_type')}{str('investment_metric') !== '-' ? ` (ตัวชี้วัด: ${str('investment_metric')})` : ''}</p>
+                <p>ไม่ใช่การดำเนินงานทั่วไปในพื้นที่: {d.common_practice === true ? 'ใช่' : d.common_practice === false ? 'ไม่ใช่' : '-'}</p>
+              </div>
+            )}
           </div>
           {has('project_scale', 'เล็กมาก') ? (
             <p className="mt-1 indent-8">
@@ -683,7 +743,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
           <p className="mt-3 font-bold underline">1.5 ระยะเวลาการคิดเครดิตของโครงการ</p>
           <div className="mt-1 pl-8">
-            <p>วันเริ่มดำเนินโครงการ: {thaiDate(d.crediting_start)}</p>
+            {/* Commencement and crediting start are distinct on the official form;
+                fall back to the crediting date so PDDs predating the field are
+                unchanged. */}
+            <p>วันเริ่มดำเนินโครงการ: {thaiDate(d.project_start_date !== undefined && d.project_start_date !== '' ? d.project_start_date : d.crediting_start)}</p>
             <Check on={has('crediting_years', '7')}>7 ปี</Check>
             <Check on={has('crediting_years', '10')}>10 ปี</Check>
           </div>
@@ -875,7 +938,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="text-center font-bold">ภาพที่ {figureCount + 2} แผนผังขั้นตอนการจัดเก็บข้อมูล และกระบวนการควบคุมคุณภาพ</p>
           {bundle && (
             <>
-              <p className="mt-3 font-bold">ตารางที่ 4 แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
+              <p className="mt-3 font-bold">ตารางที่ {maintenanceTableNo} แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
               <table data-testid="maintenance-table" className="doc-table w-full">
                 <thead><tr><th>ลำดับ</th><th>เจ้าของโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
                 <tbody>
