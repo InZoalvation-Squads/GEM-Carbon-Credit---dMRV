@@ -47,3 +47,26 @@ export function parseSites(raw: unknown): PddSite[] {
 export function isBundle(sectionData: Record<string, unknown>): boolean {
   return parseSites(sectionData.sites).length > 0;
 }
+
+/**
+ * Σ of a numeric site column, or null when no row carries a value. Null rather
+ * than 0 so an incomplete site table renders blank instead of publishing a
+ * confidently wrong total (real-data-only rule).
+ */
+function sumColumn(sites: PddSite[], pick: (s: PddSite) => number | null): number | null {
+  const values = sites.map(pick).filter((v): v is number => v !== null);
+  if (values.length === 0) return null;
+  // Round to 3 dp: kWp values carry 3 decimals and float addition drifts
+  // (261.6 + 249.61 + … = 2009.3000000000002).
+  return Math.round(values.reduce((a, b) => a + b, 0) * 1000) / 1000;
+}
+
+/** Total installed capacity across sites (ตารางที่ 1 รวม). */
+export function sumSiteCapacityKwp(sites: PddSite[]): number | null {
+  return sumColumn(sites, (s) => s.kwp);
+}
+
+/** Total year-1 generation across sites (ตารางที่ 1 รวม). */
+export function sumSiteYear1Kwh(sites: PddSite[]): number | null {
+  return sumColumn(sites, (s) => s.year1_kwh);
+}
