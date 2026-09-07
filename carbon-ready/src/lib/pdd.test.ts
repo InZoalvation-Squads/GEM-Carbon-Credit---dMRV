@@ -388,3 +388,43 @@ describe('bundle mode', () => {
     expect(resolveComputed('site_count', ctx)).toBe(0);
   });
 });
+
+describe('validatePdd — aggregated mode', () => {
+  const METH_SITES: Methodology = {
+    ...METH,
+    pdd_sections: [{ key: 'cover', title: 'Cover', fields: [
+      { key: 'project_form', label: 'รูปแบบ', type: 'select',
+        options: ['แบบเดี่ยว', 'แบบควบรวม'], required: false },
+      { key: 'sites', label: 'พื้นที่ติดตั้ง', type: 'table', required: false, columns: [] },
+    ] }],
+  };
+
+  it('flags a site row missing its capacity', () => {
+    const r = validatePdd(METH_SITES, {
+      sites: [{ owner: 'A', kwp: 100, year1_kwh: 200000 }, { owner: 'B', year1_kwh: 300000 }],
+    });
+    expect(r.ok).toBe(false);
+    expect(r.missing.some((m) => m.field === 'sites' && m.label.includes('2'))).toBe(true);
+  });
+
+  it('flags a site row missing its year-1 generation', () => {
+    const r = validatePdd(METH_SITES, { sites: [{ owner: 'A', kwp: 100 }] });
+    expect(r.ok).toBe(false);
+    expect(r.missing.some((m) => m.field === 'sites' && m.label.includes('1'))).toBe(true);
+  });
+
+  it('passes with complete site rows', () => {
+    const r = validatePdd(METH_SITES, {
+      sites: [{ owner: 'A', kwp: 100, year1_kwh: 200000 }],
+    });
+    expect(r.ok).toBe(true);
+  });
+
+  it('applies no aggregated rules when there are no site rows', () => {
+    expect(validatePdd(METH_SITES, {}).ok).toBe(true);
+    expect(validatePdd(METH_SITES, { sites: [] }).ok).toBe(true);
+    // A selector set to aggregated with no rows yet is an in-progress draft,
+    // not an error — the rows themselves are the trigger.
+    expect(validatePdd(METH_SITES, { project_form: 'แบบควบรวม' }).ok).toBe(true);
+  });
+});
