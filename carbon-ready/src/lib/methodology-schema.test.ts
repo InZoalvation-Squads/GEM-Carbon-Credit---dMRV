@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest';
 import { parseMethodologyJson, methodologyToJson } from './methodology-schema';
 import { seedMethodologies } from '../data/seed';
+import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
+import { buildDefaults } from './pdd-prefill';
 
 describe('methodology JSON schema v2', () => {
   it('accepts every bundled methodology (export → import parity)', () => {
@@ -188,5 +190,38 @@ describe('REC production facility registration doc (SF-02)', () => {
       'registration_info', 'registrant_contact', 'facility_details',
       'fuel_technology', 'business_details', 'verification_agent', 'additional_info',
     ]);
+  });
+});
+
+describe('aggregated-PDD schema', () => {
+  const fields = TVER_SOLAR_METHODOLOGY.pdd_sections.flatMap((s) => s.fields);
+  const byKey = (k: string) => fields.find((f) => f.key === k);
+
+  it('offers the single/aggregated form selector, defaulting to single', () => {
+    const f = byKey('project_form');
+    expect(f?.type).toBe('select');
+    expect(f?.options).toEqual(['แบบเดี่ยว', 'แบบควบรวม']);
+    expect(f?.defaultValue).toBe('แบบเดี่ยว');
+  });
+
+  it('declares the sites table with every column the aggregated form needs', () => {
+    const f = byKey('sites');
+    expect(f?.type).toBe('table');
+    expect(f?.siteSpecific).toBe(true);
+    expect(f?.columns?.map((c) => c.key)).toEqual([
+      'owner', 'address', 'coordinates', 'kwp', 'year1_kwh',
+      'first_sync_year', 'degradation_pct', 'maintenance_per_year', 'project_id',
+    ]);
+  });
+
+  it('attributes equipment rows to a site', () => {
+    expect(byKey('installations')?.columns?.[0].key).toBe('site');
+    expect(byKey('equipment_specs')?.columns?.[0].key).toBe('site');
+  });
+
+  it('seeds project_form but not sites into a new PDD', () => {
+    const defaults = buildDefaults(TVER_SOLAR_METHODOLOGY);
+    expect(defaults.project_form).toBe('แบบเดี่ยว');
+    expect(defaults.sites).toBeUndefined();
   });
 });
