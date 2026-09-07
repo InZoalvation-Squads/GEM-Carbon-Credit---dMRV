@@ -192,6 +192,11 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
     le: 0,
     er: rows.reduce((a, r) => a + r.er, 0),
   };
+  // avg.er rounds a total of already-floored yearly values. That looks like a
+  // double truncation, and it is — but it is TGO's own arithmetic: the reference
+  // PDD's §3.5 prints yearly ER 1041/1035/1030/1024/1018/1013/1007, total 7,168
+  // and average 1,024, which this reproduces exactly. Averaging the unfloored
+  // BE−PE instead would disagree with the published document. Do not "fix" it.
   const avg = { be: round2(totals.be / years), pe, le: 0, er: Math.round(totals.er / years) };
   return { rows, totals, avg, ef, years };
 }
