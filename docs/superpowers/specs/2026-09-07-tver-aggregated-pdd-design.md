@@ -221,3 +221,24 @@ here would risk a regression there.
 
 1. The §3.1 `EG_Consumer,PJ,y` discrepancy described above, to be confirmed with the
    reference PDD's preparer. The implementation computes from rows in the meantime.
+
+## Deferred review findings
+
+Raised in the final review, judged safe to defer. None affects correctness today.
+
+- `validatePdd`'s aggregated error hardcodes `section: 'cover'`. Correct while `sites`
+  lives in the cover section; deriving the section by scanning `pdd_sections` would be
+  self-maintaining if it ever moves.
+- `creditingStartYear()` falls back to Buddhist year 2570 when `crediting_start` is
+  absent or unparseable. It happens to match the reference PDD, which is what makes it
+  fragile — an invented value in a codebase with a real-data-only rule. Blast radius is
+  limited to year labels and relative site staggering.
+- React keys in the bundle tables use `${owner}-${index}`. `project_id` is already parsed
+  and would be the natural stable key where present.
+- `parseSites()` runs repeatedly over the same rows (`isBundle` then the caller). Pure and
+  cheap at realistic row counts; `isBundle` taking `PddSite[]` would remove it.
+- `siteGenerationMatrix`'s `fallbackDegradationPct` reads as a fraction until you find
+  `d / 100` in `pdd-forecast.ts`. Worth a `@param` note.
+- A pre-existing PDD with no `project_form` key will not show the sites table in the
+  editor until the selector is set, because `sites` is gated by `showIf`. Benign — such a
+  PDD is single-mode — but it is the legacy-editing path.
