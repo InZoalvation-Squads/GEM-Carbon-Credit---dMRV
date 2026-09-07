@@ -141,12 +141,34 @@ const AGGREGATED_SECTION_DATA = {
     { equipment: 'Smart Logger — Huawei SLogger3000A', rated_w: 8, hours_per_year: 8760, note: '5 ชุด' },
     { equipment: 'PQM — Janitza UMG511', rated_w: 10, hours_per_year: 8760, note: '3 ชุด' },
   ],
-  // Equipment attributed per site (ภาคผนวก), showing the `site` column in use.
+  // Equipment attributed per site (ตารางที่ 2 + ภาคผนวก), from the reference
+  // document's pages 9 and 25-30 — panel, inverter and meter for each site.
   equipment_specs: [
-    { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W', spec: '545 W', qty: 480 },
-    { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4', spec: '545 W', qty: 458 },
-    { site: 'บริษัท C จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Longi',       model: 'LR5-72HPH-545M', spec: '545 W', qty: 431 },
+    { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W',  spec: '545 W',  qty: 480 },
+    { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-60KTL-M0', spec: '60 kW', qty: 3 },
+    { site: 'บริษัท A จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',            spec: '',      qty: 1 },
+    { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 458 },
+    { site: 'บริษัท B จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-50KTL-M3', spec: '50 kW', qty: 4 },
+    { site: 'บริษัท B จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',            spec: '',      qty: 1 },
+    { site: 'บริษัท C จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Longi',       model: 'LR5-72HPH-545M',  spec: '545 W', qty: 431 },
+    { site: 'บริษัท C จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-100KTL-M2', spec: '100 kW', qty: 2 },
+    { site: 'บริษัท D จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 13 },
+    { site: 'บริษัท E จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Ureco',       model: 'FBK540M8W',       spec: '540 W', qty: 650 },
+    { site: 'บริษัท F จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 1102 },
+    { site: 'บริษัท F จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Sungrow',     model: 'SG125CX-P2',      spec: '125 kW', qty: 4 },
   ],
+  // อุปกรณ์สนับสนุน per site (ตารางที่ 3), reference document page 9.
+  support_equipment: [
+    { site: 'บริษัท A จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR6400',   water_pump: 'Super pump / UMCH-755S.15' },
+    { site: 'บริษัท B จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / CP-255R' },
+    { site: 'บริษัท C จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / TL-MR100',    water_pump: 'Calpeda / PTV-24A' },
+    { site: 'บริษัท D จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / DWR-M920',    water_pump: 'Dayuan / A3-800Y' },
+    { site: 'บริษัท E จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR100',    water_pump: 'MITSUBISHI / WP-305R' },
+    { site: 'บริษัท F จำกัด', smart_logger: 'Sungrow / COM100E',     pqm: 'JANITZA / UMG512 Pro', router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / WCH-1505T' },
+  ],
+  project_type: 'พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล',
+  project_start_date: '2020-05-07',   // วันที่ได้รับอนุญาตขนานไฟฟ้าของ บริษัท B (แห่งแรก)
+  coordinator_fax: '-',
 };
 
 const snap = (m: Methodology) => `${m.code} ${m.version}`;
