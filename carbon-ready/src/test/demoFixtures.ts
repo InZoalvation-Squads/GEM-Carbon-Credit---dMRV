@@ -48,9 +48,10 @@ export const demoProjects: Project[] = [
   // แบบควบรวม (aggregated) demo — six rooftop sites bundled under one developer.
   // capacity_kwp is the bundle total, but in aggregated mode the site rows drive
   // every figure; the project-level number is only a fallback the form never reads.
-  // Registered, not pdd_draft: an editable-stage project would count as an
-  // eligible registration candidate and change the Registration entry flow.
   { id: 'prj-0011', organization_id: seedOrg.id, name: 'Solar Rooftop รวม 6 แห่ง (แบบควบรวม)', location: 'Samut Sakhon, Thailand', capacity_kwp: 2009.3, commission_date: '2020-05-07', status: 'active', lifecycle_stage: 'registered',      created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
+  // Editable twin of prj-0011: same six sites, left in pdd_draft so the
+  // aggregated form can actually be filled in and recalculated in the demo.
+  { id: 'prj-0012', organization_id: seedOrg.id, name: 'Solar Rooftop แบบควบรวม (ฉบับร่าง)',   location: 'Samut Sakhon, Thailand', capacity_kwp: 2009.3, commission_date: '2020-05-07', status: 'active', lifecycle_stage: 'pdd_draft',       created_at: '2026-09-05T00:00:00Z', updated_at: '2026-09-05T00:00:00Z' },
 ];
 
 const VALIDATOR = 'Daniel Okoye';
@@ -241,6 +242,18 @@ export const demoPdds: ProjectDesignDocument[] = [
     section_data: AGGREGATED_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: VALIDATOR, submitted_at: '2026-09-02T00:00:00Z',
     validated_at: '2026-09-06T00:00:00Z', content_hash: shortHash('PDD-2010-registered'), ipfs_cid: null, credential_id: null,
+  },
+  // แบบควบรวม — editable draft. Same six sites as PDD-2010, but open for
+  // editing: add or remove a site row and every total, the yearly BE/PE/ER
+  // table and the per-site forecast recalculate from the rows.
+  // structuredClone so editing this draft can never mutate PDD-2010's rows —
+  // both would otherwise share one array (the registered PDD's hash is frozen).
+  {
+    id: 'PDD-2011', project_id: 'prj-0012', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: snap(TVER_SOLAR_METHODOLOGY), state: 'draft',
+    section_data: structuredClone(AGGREGATED_SECTION_DATA), evidence_ids: [],
+    assigned_validator_name: VALIDATOR, submitted_at: null,
+    validated_at: null, content_hash: null, ipfs_cid: null, credential_id: null,
   },
 ];
 

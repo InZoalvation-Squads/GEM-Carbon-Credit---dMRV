@@ -192,3 +192,35 @@ describe('aggregated demo fixture (PDD-2010)', () => {
     expect(sites.filter((s) => s.degradation_pct === 0.55)).toHaveLength(5);
   });
 });
+
+// The editable twin of PDD-2010. Its value is that a user can add or remove a
+// site row and watch every total move — so what matters is that the rows are
+// live data, and that editing them cannot reach back into the registered PDD.
+describe('aggregated demo draft (PDD-2011)', () => {
+  const draft = () => demoPdds.find((p) => p.id === 'PDD-2011')!;
+
+  it('is an editable draft carrying the same six sites', () => {
+    expect(draft().state).toBe('draft');
+    expect(draft().content_hash).toBeNull();
+    expect(parseSites((draft().section_data as Record<string, unknown>).sites)).toHaveLength(6);
+  });
+
+  it('does not share its site rows with the registered PDD-2010', () => {
+    const registered = demoPdds.find((p) => p.id === 'PDD-2010')!;
+    const draftSites = (draft().section_data as Record<string, unknown>).sites;
+    const regSites = (registered.section_data as Record<string, unknown>).sites;
+    // Same values, different arrays: mutating the draft must never alter a
+    // registered PDD whose content hash is already frozen.
+    expect(draftSites).toEqual(regSites);
+    expect(draftSites).not.toBe(regSites);
+    expect((draftSites as unknown[])[0]).not.toBe((regSites as unknown[])[0]);
+  });
+
+  it('recalculates totals when a site row is dropped', () => {
+    const all = parseSites((draft().section_data as Record<string, unknown>).sites);
+    const without = all.slice(0, 5);
+    expect(sumSiteCapacityKwp(all)).toBe(2009.3);
+    expect(sumSiteCapacityKwp(without)).toBe(1408.71);   // less บริษัท F (600.590)
+    expect(sumSiteYear1Kwh(without)).toBe(1744090);      // less 755,320
+  });
+});

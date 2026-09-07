@@ -97,14 +97,18 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(pressed).toHaveLength(0);
   });
 
-  it('clicking a card pops up the modal; with no eligible projects it opens straight on the create form', () => {
+  it('clicking a card pops up the modal on the picker, then reaches the create form', () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     expect(screen.queryByText(/Start PDD —/)).toBeNull();
     fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
     expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
-    expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
+    // The aggregated draft (prj-0012) is an eligible solar candidate, so the
+    // modal opens on the picker; only projects of THIS methodology show up.
+    expect(screen.getByRole('button', { name: /Solar Rooftop แบบควบรวม/ })).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Ubon Regenerative Rice/ })).toBeNull();
+    fireEvent.click(screen.getByRole('button', { name: /Create a new project/ }));
+    expect(screen.getByLabelText('Project Name')).toBeInTheDocument();
   });
 
   it('create & start: makes the project, opens its PDD editor', async () => {
@@ -327,6 +331,8 @@ describe('New-PDD prefill & clone-from-previous', () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    // Eligible solar projects exist, so the modal opens on the picker.
+    fireEvent.click(screen.getByRole('button', { name: /Create a new project/ }));
     fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ทดสอบดีฟอลต์' } });
     fireEvent.change(screen.getByLabelText('Location'), { target: { value: 'Khon Kaen, Thailand' } });
     fireEvent.change(screen.getByLabelText('Capacity (kWp)'), { target: { value: '100' } });
