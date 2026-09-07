@@ -367,7 +367,8 @@ export type PddFieldType =
 export type PddComputedSource =
   | 'capacity_kwp' | 'project_location' | 'commission_date'
   | 'grid_factor' | 'er_estimate'
-  | 'annual_generation' | 'ec_pj' | 'be_annual' | 'pe_annual' | 'er_annual';
+  | 'annual_generation' | 'ec_pj' | 'be_annual' | 'pe_annual' | 'er_annual'
+  | 'bundle_capacity' | 'site_count';
 
 export interface PddTableColumn {
   key: string;

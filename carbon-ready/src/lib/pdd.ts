@@ -82,6 +82,8 @@ export function resolveComputed(source: PddComputedSource, ctx: ComputeContext):
       if (!t) return null;
       return source === 'be_annual' ? t.avg.be : source === 'pe_annual' ? t.avg.pe : t.avg.er;
     }
+    case 'bundle_capacity': return bundleCapacityKwp(ctx);
+    case 'site_count': return parseSites(ctx.sectionData.sites).length;
     default: return null;
   }
 }

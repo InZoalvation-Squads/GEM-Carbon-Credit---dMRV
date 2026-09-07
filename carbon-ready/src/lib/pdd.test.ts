@@ -375,4 +375,16 @@ describe('bundle mode', () => {
     const t = computeYearlyTable(ctx)!;
     expect(t.rows.map((r) => r.generation_kwh)).toEqual([1000000, 996000, 992016]);
   });
+
+  it('resolves bundle_capacity and site_count as computed sources', () => {
+    const ctx = { project: PROJECT, factors: FACTORS, sectionData: { sites: BUNDLE_SITES } };
+    expect(resolveComputed('bundle_capacity', ctx)).toBe(250);
+    expect(resolveComputed('site_count', ctx)).toBe(2);
+  });
+
+  it('falls back to the parent project capacity with no sites', () => {
+    const ctx = { project: PROJECT, factors: FACTORS, sectionData: {} };
+    expect(resolveComputed('bundle_capacity', ctx)).toBe(820);
+    expect(resolveComputed('site_count', ctx)).toBe(0);
+  });
 });
