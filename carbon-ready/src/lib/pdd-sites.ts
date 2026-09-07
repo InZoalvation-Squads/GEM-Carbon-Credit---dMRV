@@ -4,6 +4,8 @@
 // promoting a site to a real Project later. All bundle logic lives here so
 // pdd.ts only gains thin fallback branches.
 
+import { generationForecast } from './pdd-forecast';
+
 export interface PddSite {
   owner: string;
   address: string;
@@ -69,4 +71,56 @@ export function sumSiteCapacityKwp(sites: PddSite[]): number | null {
 /** Total year-1 generation across sites (ตารางที่ 1 รวม). */
 export function sumSiteYear1Kwh(sites: PddSite[]): number | null {
   return sumColumn(sites, (s) => s.year1_kwh);
+}
+
+export interface SiteGenerationRow {
+  site: PddSite;
+  /** kWh per crediting year; 0 for years before the site synchronised. */
+  generation: number[];
+}
+
+export interface SiteGenerationMatrix {
+  /** Calendar (Buddhist) year labels, one per crediting year. */
+  years: number[];
+  rows: SiteGenerationRow[];
+  /** Σ of all sites live in each year. */
+  totals: number[];
+}
+
+/**
+ * Per-site generation across the crediting period, each site degrading from its
+ * own first-synchronisation year.
+ *
+ * A site that synchronised before the crediting period has already been
+ * degrading: its year-1 figure is the output in its *own* first year, so by the
+ * time crediting starts it is several years down the curve. A site that
+ * synchronises mid-period contributes 0 until it comes online. This staggering
+ * is what reproduces the reference PDD's page-31 table, where sites B and F run
+ * two years ahead of the period and site D starts a year into it.
+ *
+ * Each site reuses generationForecast() — the same chained rounding the
+ * single-project path uses — so bundle and single mode stay arithmetically
+ * consistent.
+ */
+export function siteGenerationMatrix(
+  sites: PddSite[],
+  startYear: number,
+  years: number,
+  fallbackDegradationPct: number,
+): SiteGenerationMatrix {
+  const yearLabels = Array.from({ length: years }, (_, i) => startYear + i);
+  const rows: SiteGenerationRow[] = sites.map((site) => {
+    const gen1 = site.year1_kwh;
+    if (gen1 === null) return { site, generation: new Array(years).fill(0) };
+    const sync = site.first_sync_year ?? startYear;
+    const d = site.degradation_pct ?? fallbackDegradationPct;
+    // Forecast from the site's own sync year through the end of the period, so
+    // a pre-period site arrives already degraded.
+    const span = Math.max(0, startYear + years - sync);
+    const series = generationForecast(gen1, d, span);
+    const generation = yearLabels.map((y) => (y < sync ? 0 : series[y - sync] ?? 0));
+    return { site, generation };
+  });
+  const totals = yearLabels.map((_, i) => rows.reduce((sum, r) => sum + r.generation[i], 0));
+  return { years: yearLabels, rows, totals };
 }

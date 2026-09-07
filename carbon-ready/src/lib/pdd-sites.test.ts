@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest';
-import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh } from './pdd-sites';
+import {
+  parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix,
+} from './pdd-sites';
 
 describe('isBundle', () => {
   it('is false when sites is absent, empty, or not an array', () => {
@@ -71,5 +73,89 @@ describe('sumSiteYear1Kwh', () => {
   });
   it('returns null when no row carries a year-1 figure', () => {
     expect(sumSiteYear1Kwh(parseSites([{ owner: 'A' }]))).toBeNull();
+  });
+});
+
+// Reference PDD p.31: per-site kWh across the 7-year crediting period
+// (Buddhist years 2570–2576). Sites B and F synchronised in 2568 and have
+// already degraded two years by the time crediting starts; site D starts in
+// 2570. Site D degrades at 0.60%/yr, every other site at 0.55%/yr.
+const REF_P31_SITES = [
+  { owner: 'A', year1_kwh: 327126, first_sync_year: 2569, degradation_pct: 0.55 },
+  { owner: 'B', year1_kwh: 377445, first_sync_year: 2568, degradation_pct: 0.55 },
+  { owner: 'C', year1_kwh: 290279, first_sync_year: 2569, degradation_pct: 0.55 },
+  { owner: 'D', year1_kwh: 355673, first_sync_year: 2570, degradation_pct: 0.60 },
+  { owner: 'E', year1_kwh: 393567, first_sync_year: 2569, degradation_pct: 0.55 },
+  { owner: 'F', year1_kwh: 755320, first_sync_year: 2568, degradation_pct: 0.55 },
+];
+
+const REF_P31_EXPECTED: Record<string, number[]> = {
+  A: [325326, 323537, 321758, 319988, 318228, 316478, 314737],
+  B: [373305, 371252, 369210, 367179, 365160, 363151, 361154],
+  C: [288682, 287094, 285515, 283945, 282383, 280830, 279286],
+  D: [355673, 353539, 351418, 349309, 347214, 345130, 343059],
+  E: [391402, 389250, 387109, 384980, 382862, 380757, 378662],
+  F: [747034, 742926, 738840, 734776, 730735, 726716, 722719],
+};
+const REF_P31_TOTALS = [2481423, 2467598, 2453850, 2440177, 2426582, 2413062, 2399618];
+
+describe('siteGenerationMatrix', () => {
+  // The published table is not exactly reproducible: it came from a spreadsheet
+  // whose year-1 figures are themselves rounded, so any clean model differs by
+  // ~1 kWh on scattered cells. ±2 per cell validates the staggering model
+  // without encoding another tool's float noise as a requirement.
+  it('reproduces the reference PDD page-31 table within ±2 kWh per cell', () => {
+    const m = siteGenerationMatrix(parseSites(REF_P31_SITES), 2570, 7, 0.4);
+    expect(m.years).toEqual([2570, 2571, 2572, 2573, 2574, 2575, 2576]);
+    for (const row of m.rows) {
+      const expected = REF_P31_EXPECTED[row.site.owner];
+      row.generation.forEach((got, i) => {
+        expect(Math.abs(got - expected[i])).toBeLessThanOrEqual(2);
+      });
+    }
+  });
+
+  it('reproduces the reference PDD yearly totals within ±5 kWh', () => {
+    const m = siteGenerationMatrix(parseSites(REF_P31_SITES), 2570, 7, 0.4);
+    m.totals.forEach((got, i) => {
+      expect(Math.abs(got - REF_P31_TOTALS[i])).toBeLessThanOrEqual(5);
+    });
+  });
+
+  it('degrades a late-starting site from its own first year, not the period start', () => {
+    const m = siteGenerationMatrix(
+      parseSites([{ owner: 'D', year1_kwh: 355673, first_sync_year: 2570, degradation_pct: 0.6 }]),
+      2570, 2, 0.4,
+    );
+    expect(m.rows[0].generation[0]).toBe(355673);
+  });
+
+  it('falls back to the bundle degradation rate when a site omits its own', () => {
+    const m = siteGenerationMatrix(
+      parseSites([{ owner: 'X', year1_kwh: 100000, first_sync_year: 2570 }]),
+      2570, 2, 10,
+    );
+    expect(m.rows[0].generation[1]).toBe(90000);
+  });
+
+  it('treats a site with no first_sync_year as starting at the period start', () => {
+    const m = siteGenerationMatrix(
+      parseSites([{ owner: 'X', year1_kwh: 1000 }]), 2570, 1, 0,
+    );
+    expect(m.rows[0].generation[0]).toBe(1000);
+  });
+
+  it('contributes zero for years before a site synchronises', () => {
+    const m = siteGenerationMatrix(
+      parseSites([{ owner: 'late', year1_kwh: 1000, first_sync_year: 2572 }]),
+      2570, 3, 0,
+    );
+    expect(m.rows[0].generation).toEqual([0, 0, 1000]);
+    expect(m.totals).toEqual([0, 0, 1000]);
+  });
+
+  it('reports zero rather than null for a site with no year-1 figure', () => {
+    const m = siteGenerationMatrix(parseSites([{ owner: 'blank' }]), 2570, 2, 0.4);
+    expect(m.rows[0].generation).toEqual([0, 0]);
   });
 });
