@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen } from '@testing-library/react';
+import { render, screen, within } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TverSF001Pdd, pddSiteImages } from './TverSF001Pdd';
 import { seedDemo } from '../test/demoFixtures';
@@ -11,8 +11,12 @@ beforeEach(() => { localStorage.clear(); seedDemo(); });
 // official-form data the template renders.
 function seedOfficialData() {
   const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  // demoFixtures reuses module-level objects across seedDemo() calls, so a
+  // `sites` array written by an aggregated-mode test would otherwise leak in
+  // here and silently flip this single-project fixture into bundle mode.
+  const { sites: _sites, ...base } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
-    ...pdd.section_data,
+    ...base,
     project_title_th: 'โครงการทดสอบพลังงานแสงอาทิตย์',
     project_title_en: 'Test Solar Project',
     project_owner: 'บริษัท ทดสอบ จำกัด',
@@ -84,7 +88,7 @@ function seedMcruData(overrides: Record<string, unknown> = {}) {
   // optional keys mutated by an earlier test would otherwise leak into this one.
   const {
     permit_no: _p1, permit_date: _p2, owner_name: _p3, project_address: _p4,
-    equipment_specs: _p5, ...base
+    equipment_specs: _p5, sites: _p6, ...base
   } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
     ...base,
@@ -308,5 +312,79 @@ describe('TverSF001Pdd — reference-completeness additions', () => {
     delete pdd.section_data.investment_mthb;
     renderDoc();
     expect(screen.queryByTestId('financial-table')).toBeNull();
+  });
+});
+
+// ============================================================
+// แบบควบรวม (aggregated) — several installation sites bundled under one
+// project developer. Site rows live in section_data.sites.
+// ============================================================
+const TWO_SITES = [
+  { owner: 'บริษัท A จำกัด', address: 'สมุทรสาคร', coordinates: '13.57, 100.35',
+    kwp: 100, year1_kwh: 200000, first_sync_year: 2569, degradation_pct: 0.5, maintenance_per_year: 4 },
+  { owner: 'บริษัท B จำกัด', address: 'ชลบุรี', coordinates: '13.45, 101.06',
+    kwp: 150, year1_kwh: 300000, first_sync_year: 2570, degradation_pct: 0.5, maintenance_per_year: 2 },
+];
+
+function seedBundleData() {
+  const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+  pdd.section_data = {
+    ...pdd.section_data,
+    project_title_th: 'โครงการทดสอบแบบควบรวม',
+    project_owner: 'บริษัท ผู้พัฒนา จำกัด',
+    degradation_pct: 0.4,
+    crediting_years: '7',
+    crediting_start: '2027-01-01',
+    project_form: 'แบบควบรวม',
+    sites: TWO_SITES,
+  };
+}
+
+describe('TverSF001Pdd — aggregated (แบบควบรวม) mode', () => {
+  it('labels the document แบบควบรวม instead of แบบเดี่ยว', () => {
+    seedBundleData();
+    renderDoc();
+    expect(screen.getAllByText(/แบบควบรวม/).length).toBeGreaterThan(0);
+    expect(screen.getAllByText('เอกสารข้อเสนอโครงการ (PDD) แบบควบรวม').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText('เอกสารข้อเสนอโครงการ (PDD) แบบเดี่ยว')).toHaveLength(0);
+  });
+
+  it('renders one ตารางที่ 1 row per site plus a summed total row', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('sites-table');
+    // header + 2 site rows + total row
+    expect(within(table).getAllByRole('row')).toHaveLength(4);
+    expect(within(table).getByText('บริษัท A จำกัด')).toBeInTheDocument();
+    expect(within(table).getByText('250.000')).toBeInTheDocument();   // 100 + 150 kWp
+    expect(within(table).getByText('500,000')).toBeInTheDocument();   // 200000 + 300000 kWh
+  });
+
+  it('renders the per-site yearly forecast with blanks before a site synchronises', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('sites-forecast');
+    expect(table).toBeInTheDocument();
+    // Site B synchronises in 2570 — the crediting period starts 2570 (2027 CE),
+    // so both sites are live from year 1 and no cell should be blank here.
+    expect(within(table).getAllByRole('row')).toHaveLength(4); // header + 2 sites + total
+  });
+
+  it('renders per-site maintenance frequency', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('maintenance-table');
+    expect(within(table).getAllByRole('row')).toHaveLength(3); // header + 2 sites
+  });
+
+  it('keeps single-project output unchanged when no sites exist', () => {
+    seedOfficialData();
+    renderDoc();
+    // The TGO header box repeats on every page, so the label appears once per sheet.
+    expect(screen.getAllByText('เอกสารข้อเสนอโครงการ (PDD) แบบเดี่ยว').length).toBeGreaterThan(0);
+    expect(screen.queryAllByText(/เอกสารข้อเสนอโครงการ \(PDD\) แบบควบรวม/)).toHaveLength(0);
+    expect(screen.queryByTestId('sites-table')).toBeNull();
+    expect(screen.queryByTestId('sites-forecast')).toBeNull();
+    expect(screen.queryByTestId('maintenance-table')).toBeNull();
   });
 });

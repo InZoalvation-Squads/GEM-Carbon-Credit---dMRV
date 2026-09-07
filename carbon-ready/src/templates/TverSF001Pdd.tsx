@@ -4,7 +4,8 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { computeFinancialTable, computeYearlyTable, computeEcPj, resolveComputed } from '../lib/pdd';
+import { computeFinancialTable, computeYearlyTable, computeEcPj, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
+import { parseSites, isBundle, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import type { EvidenceFile, PddComputedSource } from '../types';
 
@@ -37,7 +38,7 @@ function Check({ on, children }: { on: boolean; children: ReactNode }) {
   );
 }
 
-function HeaderBox() {
+function HeaderBox({ formLabel }: { formLabel: string }) {
   // Inline verticalAlign: the sheet-wide `.doc-table td { vertical-align: top }`
   // outranks Tailwind's align-middle utility, so the logo/code/page cells pin
   // their centering here. Page number comes from the `formpage` CSS counter.
@@ -57,7 +58,7 @@ function HeaderBox() {
         </tr>
         <tr><td>Standard T-VER</td></tr>
         <tr>
-          <td>เอกสารข้อเสนอโครงการ (PDD) แบบเดี่ยว</td>
+          <td>เอกสารข้อเสนอโครงการ (PDD) {formLabel}</td>
           <td className="text-center">{FORM_VERSION}</td>
         </tr>
       </tbody>
@@ -83,11 +84,11 @@ function Footer() {
  * (tfoot) repeat on every printed sheet when a section overflows one page —
  * the official form carries them on every page.
  */
-function Page({ children }: { children: ReactNode }) {
+function Page({ children, formLabel }: { children: ReactNode; formLabel: string }) {
   return (
     <table className="doc-page page-frame">
       <thead>
-        <tr><td><HeaderBox /></td></tr>
+        <tr><td><HeaderBox formLabel={formLabel} /></td></tr>
       </thead>
       <tbody>
         <tr><td>{children}</td></tr>
@@ -100,7 +101,7 @@ function Page({ children }: { children: ReactNode }) {
 }
 
 /** สารบัญ — the official form's contents page (print pagination is dynamic, so no page numbers). */
-function TocPage() {
+function TocPage({ formLabel }: { formLabel: string }) {
   const items = [
     'ส่วนที่ 1 รายละเอียดโครงการ',
     'ส่วนที่ 2 ระเบียบวิธีลดก๊าซเรือนกระจกภาคสมัครใจ',
@@ -109,7 +110,7 @@ function TocPage() {
     'ภาคผนวก เอกสาร/หลักฐานประกอบ',
   ];
   return (
-    <Page>
+    <Page formLabel={formLabel}>
       <p className="text-center text-[16px] font-bold">สารบัญ</p>
       <div data-testid="toc" className="mx-auto mt-6 w-[85%]">
         {items.map((t) => (
@@ -242,7 +243,7 @@ function EvidenceFigures({ projectId, excludeId }: { projectId: string; excludeI
  * site photo, developer name. The official cover carries no header box or
  * TGO footer, so it does not use the Page frame.
  */
-function CoverPage({ projectId, developer, coverId }: { projectId: string; developer: string; coverId?: string }) {
+function CoverPage({ projectId, developer, coverId, formLabel }: { projectId: string; developer: string; coverId?: string; formLabel: string }) {
   const { images, urls } = useSiteImages(projectId);
   const cover = images.find((img) => img.id === coverId && urls[img.id]);
   return (
@@ -257,7 +258,7 @@ function CoverPage({ projectId, developer, coverId }: { projectId: string; devel
       <div className="mt-20 space-y-6 text-center text-[26px] font-bold">
         <p>เอกสารข้อเสนอโครงการ</p>
         <p>(Project Design Document: PDD)</p>
-        <p className="text-[22px]">แบบเดี่ยว</p>
+        <p className="text-[22px]">{formLabel}</p>
       </div>
       {cover && (
         <img
@@ -286,6 +287,14 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
   const d = pdd.section_data as Record<string, unknown>;
   const ctx = { project, factors, sectionData: d };
+  // แบบควบรวม: several installation sites bundled under one developer. Site
+  // rows drive the capacity/generation totals in place of the parent project.
+  const sites = parseSites(d.sites);
+  const bundle = isBundle(d);
+  const formLabel = bundle ? 'แบบควบรวม' : 'แบบเดี่ยว';
+  const totalKwp = bundleCapacityKwp(ctx);
+  const totalYear1 = sumSiteYear1Kwh(sites);
+  const startYear = creditingStartYear(ctx);
   const table = computeYearlyTable(ctx);
   const fin = computeFinancialTable(ctx);
   const comp = (source: PddComputedSource) => resolveComputed(source, ctx);
@@ -333,10 +342,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
       <div className="tver-doc bg-white p-8 text-[13px] leading-relaxed text-black shadow print:p-0 print:shadow-none">
 
         {/* ============ หน้าปก ============ */}
-        <CoverPage projectId={project.id} developer={str('project_owner')} coverId={coverImage?.id} />
+        <CoverPage projectId={project.id} developer={str('project_owner')} coverId={coverImage?.id} formLabel={formLabel} />
 
         {/* ============ รายละเอียดโครงการ ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>รายละเอียดโครงการ</SectionBar>
           <table className="doc-table w-full">
             <tbody>
@@ -375,8 +384,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr>
                 <td className="font-bold">รูปแบบการดำเนินโครงการ</td>
                 <td>
-                  <Check on>แบบเดี่ยว</Check>
-                  <Check on={false}>แบบควบรวม</Check>
+                  <Check on={!bundle}>แบบเดี่ยว</Check>
+                  <Check on={bundle}>แบบควบรวม</Check>
                 </td>
               </tr>
               <tr>
@@ -393,7 +402,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
         {/* ============ รายละเอียดโครงการ (ต่อ) — the official form splits this
             table across two pages and repeats the section bar ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>รายละเอียดโครงการ</SectionBar>
           <table className="doc-table w-full">
             <tbody>
@@ -425,7 +434,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         </Page>
 
         {/* ============ ผู้จัดทำเอกสาร / ผู้พัฒนาโครงการ ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>รายละเอียดการจัดทำเอกสาร</SectionBar>
           <table className="doc-table w-full">
             <tbody>
@@ -451,10 +460,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         </Page>
 
         {/* ============ สารบัญ ============ */}
-        <TocPage />
+        <TocPage formLabel={formLabel} />
 
         {/* ============ ส่วนที่ 1 รายละเอียดโครงการ ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>ส่วนที่ 1 รายละเอียดโครงการ</SectionBar>
 
           <p className="font-bold underline">1.1 รายละเอียดและกิจกรรมของโครงการ</p>
@@ -471,10 +480,39 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
           <p className="mt-3 font-bold underline">1.2 ขอบเขตการดำเนินโครงการ</p>
           <p className="indent-8">
-            โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(project.capacity_kwp)} kWp
+            โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(totalKwp)} kWp
             ({str('technology')}, {str('grid_connection')}) เพื่อทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
           </p>
-          <BoundaryDiagram capacityKwp={fmt(project.capacity_kwp)} owner={ownerName} />
+          {bundle && (
+            <>
+              <p className="mt-3 font-bold">ตารางที่ 1 รายละเอียดโครงการเบื้องต้น กำลังผลิตติดตั้งและปริมาณไฟฟ้าที่คาดว่าจะผลิตได้</p>
+              <table data-testid="sites-table" className="doc-table w-full">
+                <thead>
+                  <tr>
+                    <th>ลำดับ</th><th>เจ้าของโครงการ</th><th>ผู้พัฒนาโครงการ</th>
+                    <th>กำลังการผลิตติดตั้ง (kWp)</th><th>ปริมาณไฟฟ้าปีที่ 1 (kWh/year)</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {sites.map((s, i) => (
+                    <tr key={`${s.owner}-${i}`}>
+                      <td className="text-center">{i + 1}</td>
+                      <td>{s.owner || '-'}</td>
+                      {i === 0 && <td rowSpan={sites.length} className="text-center align-middle">{str('project_owner')}</td>}
+                      <td className="text-right">{s.kwp === null ? '-' : fmt(s.kwp, 3)}</td>
+                      <td className="text-right">{s.year1_kwh === null ? '-' : fmtInt(s.year1_kwh)}</td>
+                    </tr>
+                  ))}
+                  <tr className="font-bold">
+                    <td colSpan={2} className="text-center">รวม</td><td />
+                    <td className="text-right">{fmt(totalKwp, 3)}</td>
+                    <td className="text-right">{totalYear1 === null ? '-' : fmtInt(totalYear1)}</td>
+                  </tr>
+                </tbody>
+              </table>
+            </>
+          )}
+          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} />
           <p className="text-center font-bold">รูปที่ 1 ขอบเขตของโครงการ</p>
           {equipmentSpecs.length > 0 && (
             <>
@@ -563,7 +601,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         </Page>
 
         {/* ============ ส่วนที่ 2 ระเบียบวิธี ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>ส่วนที่ 2 ระเบียบวิธีลดก๊าซเรือนกระจกภาคสมัครใจ</SectionBar>
 
           <p className="font-bold underline">2.1 ระเบียบวิธีลดก๊าซเรือนกระจก (T-VER Methodology) และเครื่องมือคำนวณ (Tools) ที่ใช้</p>
@@ -629,7 +667,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         </Page>
 
         {/* ============ ส่วนที่ 3 การคำนวณ ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>ส่วนที่ 3 การคำนวณการลดก๊าซเรือนกระจก</SectionBar>
 
           <p className="font-bold underline">3.1 การคำนวณปริมาณก๊าซเรือนกระจกกรณีฐาน (Baseline Emission)</p>
@@ -730,7 +768,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         </Page>
 
         {/* ============ ส่วนที่ 4 แผนการติดตามผล ============ */}
-        <Page>
+        <Page formLabel={formLabel}>
           <SectionBar>ส่วนที่ 4 แผนการติดตามผลการดำเนินโครงการ</SectionBar>
 
           <p className="font-bold underline">4.1 สรุปแนวทางการติดตามผล</p>
@@ -739,10 +777,27 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             ความถี่: {str('monitoring_frequency')}
           </p>
           <p className="mt-1 indent-8">QA/QC: {str('qaqc_procedure')}</p>
-          <BoundaryDiagram capacityKwp={fmt(project.capacity_kwp)} owner={ownerName} />
+          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} />
           <p className="text-center font-bold">ภาพที่ {figureCount + 1} รูปแสดงผังจุดตรวจวัด พร้อมข้อมูล/ตัวแปรที่จัดเก็บ</p>
           <DataFlowDiagram measurement={str('measurement_method')} />
           <p className="text-center font-bold">ภาพที่ {figureCount + 2} แผนผังขั้นตอนการจัดเก็บข้อมูล และกระบวนการควบคุมคุณภาพ</p>
+          {bundle && (
+            <>
+              <p className="mt-3 font-bold">ตารางที่ 4 แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
+              <table data-testid="maintenance-table" className="doc-table w-full">
+                <thead><tr><th>ลำดับ</th><th>ชื่อโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
+                <tbody>
+                  {sites.map((s, i) => (
+                    <tr key={`${s.owner}-${i}`}>
+                      <td className="text-center">{i + 1}</td>
+                      <td>{s.owner || '-'}</td>
+                      <td className="text-center">{s.maintenance_per_year === null ? '-' : s.maintenance_per_year}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </>
+          )}
 
           <p className="mt-3 font-bold underline">4.2 พารามิเตอร์ที่ไม่ต้องติดตามผล</p>
           <p className="pl-8">ไม่มีพารามิเตอร์ที่ไม่ต้องติดตาม ที่ใช้ในการคำนวณตามระเบียบวิธีการลดก๊าซเรือนกระจกที่เลือกใช้</p>
@@ -779,7 +834,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
         {/* ============ ภาคผนวก ============ */}
         {consumers.length > 0 && (
-          <Page>
+          <Page formLabel={formLabel}>
             <SectionBar>ภาคผนวก — รายการอุปกรณ์ไฟฟ้าและประมาณการไฟฟ้าที่ใช้ในโครงการ</SectionBar>
             <table className="doc-table w-full">
               <thead>
@@ -812,7 +867,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
 
         {/* ============ ภาคผนวก — ปริมาณไฟฟ้าคาดการณ์รายปี ============ */}
         {table && (
-          <Page>
+          <Page formLabel={formLabel}>
             <p className="text-center font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี</p>
             <table className="doc-table mt-2 w-full" data-testid="forecast-table">
               <thead>
@@ -840,17 +895,44 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 </tr>
               </tbody>
             </table>
+            {bundle && (() => {
+              // Each site degrades from its own first-synchronisation year, so a
+              // site that is not yet online shows blank — not a fabricated 0.
+              const m = siteGenerationMatrix(sites, startYear, years, Number(str('degradation_pct')) || 0.4);
+              return (
+                <>
+                  <p className="mt-3 font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี (หน่วย: kWh)</p>
+                  <table data-testid="sites-forecast" className="doc-table w-full">
+                    <thead>
+                      <tr><th>รายชื่อโครงการ</th>{m.years.map((y) => <th key={y}>{y}</th>)}</tr>
+                    </thead>
+                    <tbody>
+                      {m.rows.map((r, i) => (
+                        <tr key={`${r.site.owner}-${i}`}>
+                          <td>{r.site.owner || '-'}</td>
+                          {r.generation.map((g, j) => <td key={j} className="text-right">{g === 0 ? '' : fmtInt(g)}</td>)}
+                        </tr>
+                      ))}
+                      <tr className="font-bold">
+                        <td className="text-center">รวม</td>
+                        {m.totals.map((t, j) => <td key={j} className="text-right">{fmtInt(t)}</td>)}
+                      </tr>
+                    </tbody>
+                  </table>
+                </>
+              );
+            })()}
           </Page>
         )}
 
         {/* ============ ภาคผนวก — การประเมินทางด้านการเงิน (รูปแบบ PEA) ============ */}
         {fin && (
-          <Page>
+          <Page formLabel={formLabel}>
             <p className="text-center font-bold">รายละเอียดโครงการ Solar PV จากการประเมินทางด้านการเงินของระบบผลิตไฟฟ้า</p>
             <table className="doc-table mt-2 w-full text-[10.5px]" data-testid="financial-summary">
               <tbody>
                 <tr>
-                  <td className="font-bold">ขนาดติดตั้ง Solar Rooftop</td><td>{fmt(project.capacity_kwp)} kWp</td>
+                  <td className="font-bold">ขนาดติดตั้ง Solar Rooftop</td><td>{fmt(totalKwp)} kWp</td>
                   <td className="font-bold">เงินลงทุน</td><td className="text-right">{fmtInt(fin.investment_thb)} บาท</td>
                 </tr>
                 <tr>
