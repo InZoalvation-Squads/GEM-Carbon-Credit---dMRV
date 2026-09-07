@@ -45,6 +45,12 @@ export const demoProjects: Project[] = [
   // monitoring records (below) drive the SF-04 REC issuance demo fixtures with
   // exact, deterministic MWh totals (no dependency on the solar day-generation formula).
   { id: 'prj-0010', organization_id: seedOrg.id, name: 'Ayutthaya Solar REC Facility', location: 'Ayutthaya, Thailand',         capacity_kwp: 800,   commission_date: '2025-09-01', status: 'active', lifecycle_stage: 'registered',       created_at: '2025-09-01T00:00:00Z', updated_at: '2025-09-01T00:00:00Z' },
+  // แบบควบรวม (aggregated) demo — six rooftop sites bundled under one developer.
+  // capacity_kwp is the bundle total, but in aggregated mode the site rows drive
+  // every figure; the project-level number is only a fallback the form never reads.
+  // Registered, not pdd_draft: an editable-stage project would count as an
+  // eligible registration candidate and change the Registration entry flow.
+  { id: 'prj-0011', organization_id: seedOrg.id, name: 'Solar Rooftop รวม 6 แห่ง (แบบควบรวม)', location: 'Samut Sakhon, Thailand', capacity_kwp: 2009.3, commission_date: '2020-05-07', status: 'active', lifecycle_stage: 'registered',      created_at: '2026-09-01T00:00:00Z', updated_at: '2026-09-01T00:00:00Z' },
 ];
 
 const VALIDATOR = 'Daniel Okoye';
@@ -93,6 +99,53 @@ const REC_SECTION_DATA = {
   onsite_consumer: 'No', aux_energy_sources: 'No',
   import_routes: 'None', other_schemes: 'None', public_funding: 'No',
   effective_reg_date: '2025-09-01',
+};
+
+/**
+ * แบบควบรวม (aggregated) demo — six rooftop sites under one developer, modelled
+ * on a real registered T-VER project so the arithmetic is demonstrably right
+ * rather than plausible-looking.
+ *
+ * Two things this fixture exists to show:
+ *  - `year1_kwh` is each site's output in ITS OWN first year, so these sum to
+ *    2,499,410 (ตารางที่ 1), not to the 2,481,423 of calendar year 2570.
+ *  - degradation is per-site: 0.55%/yr everywhere except site D at 0.60%/yr.
+ *    A single bundle-wide rate cannot reproduce the published forecast table.
+ *
+ * Owners are anonymised (บริษัท A–F) exactly as the source document publishes them.
+ */
+const AGGREGATED_SITES = [
+  { owner: 'บริษัท A จำกัด', address: 'อำเภอเมืองสมุทรสาคร จังหวัดสมุทรสาคร 74000',  coordinates: '13.570489, 100.358081', kwp: 261.600, year1_kwh: 327126, first_sync_year: 2569, degradation_pct: 0.55, maintenance_per_year: 4, project_id: '' },
+  { owner: 'บริษัท B จำกัด', address: 'อำเภอบางบ่อ จังหวัดสมุทรปราการ 10560',        coordinates: '13.545597, 100.811215', kwp: 249.610, year1_kwh: 377445, first_sync_year: 2568, degradation_pct: 0.55, maintenance_per_year: 4, project_id: '' },
+  { owner: 'บริษัท C จำกัด', address: 'อำเภอคลองหลวง จังหวัดปทุมธานี 12120',          coordinates: '14.112810, 100.610769', kwp: 234.895, year1_kwh: 290279, first_sync_year: 2569, degradation_pct: 0.55, maintenance_per_year: 4, project_id: '' },
+  { owner: 'บริษัท D จำกัด', address: 'อำเภอเมืองสมุทรสงคราม จังหวัดสมุทรสงคราม 75000', coordinates: '13.378807, 99.9846779', kwp: 311.605, year1_kwh: 355673, first_sync_year: 2570, degradation_pct: 0.60, maintenance_per_year: 3, project_id: '' },
+  { owner: 'บริษัท E จำกัด', address: 'อำเภอลาดหลุมแก้ว จังหวัดปทุมธานี 12140',        coordinates: '14.080784, 100.433560', kwp: 351.000, year1_kwh: 393567, first_sync_year: 2569, degradation_pct: 0.55, maintenance_per_year: 3, project_id: '' },
+  { owner: 'บริษัท F จำกัด', address: 'อำเภอพานทอง จังหวัดชลบุรี 20160',              coordinates: '13.451122, 101.061046', kwp: 600.590, year1_kwh: 755320, first_sync_year: 2568, degradation_pct: 0.55, maintenance_per_year: 2, project_id: '' },
+];
+
+const AGGREGATED_SECTION_DATA = {
+  ...SOLAR_SECTION_DATA,
+  project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา ขนาดติดตั้งรวม 2,009.30 กิโลวัตต์สูงสุด',
+  project_title_en: '2,009.30 kWp Solar Rooftop (Aggregated)',
+  project_owner: 'บริษัท ผู้พัฒนาโครงการ จำกัด',
+  project_form: 'แบบควบรวม',
+  sites: AGGREGATED_SITES,
+  // Crediting starts 2027 CE = 2570 BE, matching the forecast table's first column.
+  crediting_start: '2027-01-01', crediting_years: '7',
+  project_scale: 'เล็กมาก',
+  // Bundle-level fallback for any site row that omits its own rate. Every row
+  // here carries one, so this is only the safety net.
+  degradation_pct: 0.55,
+  consumers: [
+    { equipment: 'Smart Logger — Huawei SLogger3000A', rated_w: 8, hours_per_year: 8760, note: '5 ชุด' },
+    { equipment: 'PQM — Janitza UMG511', rated_w: 10, hours_per_year: 8760, note: '3 ชุด' },
+  ],
+  // Equipment attributed per site (ภาคผนวก), showing the `site` column in use.
+  equipment_specs: [
+    { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W', spec: '545 W', qty: 480 },
+    { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4', spec: '545 W', qty: 458 },
+    { site: 'บริษัท C จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Longi',       model: 'LR5-72HPH-545M', spec: '545 W', qty: 431 },
+  ],
 };
 
 const snap = (m: Methodology) => `${m.code} ${m.version}`;
@@ -178,6 +231,16 @@ export const demoPdds: ProjectDesignDocument[] = [
     section_data: REC_SECTION_DATA, evidence_ids: [],
     assigned_validator_name: 'EGAT (Local Issuer)', submitted_at: '2025-09-02T00:00:00Z',
     validated_at: '2025-09-10T00:00:00Z', content_hash: shortHash('PDD-2009-registered'), ipfs_cid: null, credential_id: null,
+  },
+  // แบบควบรวม (aggregated) — six rooftop sites bundled under one developer.
+  // Registered to match its project's lifecycle_stage; the official form renders
+  // ตารางที่ 1, ตารางที่ 4 and the per-site forecast from its `sites` rows.
+  {
+    id: 'PDD-2010', project_id: 'prj-0011', methodology_id: TVER_SOLAR_METHODOLOGY.id,
+    methodology_snapshot: snap(TVER_SOLAR_METHODOLOGY), state: 'registered',
+    section_data: AGGREGATED_SECTION_DATA, evidence_ids: [],
+    assigned_validator_name: VALIDATOR, submitted_at: '2026-09-02T00:00:00Z',
+    validated_at: '2026-09-06T00:00:00Z', content_hash: shortHash('PDD-2010-registered'), ipfs_cid: null, credential_id: null,
   },
 ];
 

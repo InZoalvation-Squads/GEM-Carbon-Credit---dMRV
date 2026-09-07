@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest';
 import {
   parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix,
 } from './pdd-sites';
+import { demoPdds } from '../test/demoFixtures';
 
 describe('isBundle', () => {
   it('is false when sites is absent, empty, or not an array', () => {
@@ -157,5 +158,37 @@ describe('siteGenerationMatrix', () => {
   it('reports zero rather than null for a site with no year-1 figure', () => {
     const m = siteGenerationMatrix(parseSites([{ owner: 'blank' }]), 2570, 2, 0.4);
     expect(m.rows[0].generation).toEqual([0, 0]);
+  });
+});
+
+// The demo fixture doubles as executable documentation of the aggregated form:
+// if someone edits a site row, these assertions say which published figure broke.
+describe('aggregated demo fixture (PDD-2010)', () => {
+  const sites = parseSites(
+    (demoPdds.find((p) => p.id === 'PDD-2010')!.section_data as Record<string, unknown>).sites,
+  );
+
+  it('carries the six sites of the reference project', () => {
+    expect(sites).toHaveLength(6);
+    expect(sites.every((s) => s.kwp !== null && s.year1_kwh !== null)).toBe(true);
+  });
+
+  it('sums to the published ตารางที่ 1 totals', () => {
+    expect(sumSiteCapacityKwp(sites)).toBe(2009.3);
+    expect(sumSiteYear1Kwh(sites)).toBe(2499410);
+  });
+
+  it('reproduces the published page-31 forecast for calendar 2570', () => {
+    // Crediting starts 2027 CE = 2570 BE. Sites B and F have been degrading
+    // since 2568, so the first column is below the ตารางที่ 1 total above.
+    const m = siteGenerationMatrix(sites, 2570, 7, 0.55);
+    expect(Math.abs(m.totals[0] - 2481423)).toBeLessThanOrEqual(5);
+    expect(Math.abs(m.totals[6] - 2399618)).toBeLessThanOrEqual(5);
+  });
+
+  it('keeps per-site degradation — site D differs from the rest', () => {
+    const d = sites.find((s) => s.owner.includes('D'))!;
+    expect(d.degradation_pct).toBe(0.6);
+    expect(sites.filter((s) => s.degradation_pct === 0.55)).toHaveLength(5);
   });
 });
