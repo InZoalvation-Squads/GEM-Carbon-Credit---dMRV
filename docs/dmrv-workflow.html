@@ -1,0 +1,236 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>GEM Carbon Ready — dMRV Workflow ทุกบทบาท</title>
+<style>
+  :root {
+    --bg: #ffffff;
+    --surface: #ffffff;
+    --ink: #12312e;
+    --ink-soft: #4a6360;
+    --ink-faint: #7e918f;
+    --line: #d5e0dd;
+    --header: #0d3230;
+    --header-ink: #eafff5;
+    --accent: #0e9f6e;
+    --accent-soft: #e2f5ec;
+    --lime: #a3e635;
+    --prop: #0e9f6e;   --prop-bg: #e2f5ec;
+    --esg: #b45309;    --esg-bg: #fdf0dd;
+    --vvb: #6d4fc4;    --vvb-bg: #ede9fb;
+    --reg: #1d6fb8;    --reg-bg: #e3effa;
+    --sys: #3d5a57;    --sys-bg: #e8eeed;
+    --chain: #0d9488;
+  }
+  :root[data-theme="light"] {
+    --bg: #ffffff; --surface: #ffffff; --ink: #12312e; --ink-soft: #4a6360;
+    --ink-faint: #7e918f; --line: #d5e0dd; --header: #0d3230; --header-ink: #eafff5;
+    --accent: #0e9f6e; --accent-soft: #e2f5ec;
+    --prop: #0e9f6e; --prop-bg: #e2f5ec; --esg: #b45309; --esg-bg: #fdf0dd;
+    --vvb: #6d4fc4; --vvb-bg: #ede9fb; --reg: #1d6fb8; --reg-bg: #e3effa;
+    --sys: #3d5a57; --sys-bg: #e8eeed; --chain: #0d9488;
+  }
+
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; background: var(--bg); color: var(--ink);
+    font-family: 'Leelawadee UI', 'Noto Sans Thai', 'Thonburi', 'Sukhumvit Set', system-ui, sans-serif;
+    font-size: 14px; line-height: 1.5;
+  }
+  .wrap { max-width: 1240px; margin: 0 auto; padding: 28px 20px 48px; }
+
+  header.masthead {
+    background: var(--header); color: var(--header-ink);
+    border-radius: 14px; padding: 22px 26px; margin-bottom: 22px;
+    border-bottom: 3px solid var(--lime);
+  }
+  .masthead h1 { margin: 0; font-size: 22px; font-weight: 700; letter-spacing: .01em; text-wrap: balance; }
+  .masthead p { margin: 6px 0 0; font-size: 13px; opacity: .82; max-width: 68ch; }
+  .masthead .brand { font-size: 11px; text-transform: uppercase; letter-spacing: .18em; opacity: .65; margin-bottom: 6px; }
+
+  /* legend */
+  .legend { display: flex; flex-wrap: wrap; gap: 8px 18px; margin: 0 0 18px; font-size: 12px; color: var(--ink-soft); }
+  .legend span { display: inline-flex; align-items: center; gap: 6px; }
+  .dot { width: 11px; height: 11px; border-radius: 3px; display: inline-block; }
+
+  /* board */
+  .board-scroll { overflow-x: auto; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+  .board { display: grid; grid-template-columns: 168px repeat(4, minmax(215px, 1fr)); min-width: 1080px; }
+
+  .phase-head {
+    position: sticky; top: 0;
+    background: var(--surface); border-bottom: 2px solid var(--line);
+    padding: 12px 14px 10px; font-weight: 700; font-size: 13.5px;
+  }
+  .phase-head small { display: block; font-weight: 500; font-size: 11px; color: var(--ink-faint); letter-spacing: .06em; text-transform: uppercase; margin-bottom: 2px; }
+  .corner { border-bottom: 2px solid var(--line); background: var(--surface); }
+
+  .lane-label {
+    border-top: 1px solid var(--line); padding: 14px;
+    display: flex; flex-direction: column; gap: 4px; justify-content: center;
+  }
+  .lane-label .role { font-weight: 700; font-size: 13.5px; display: flex; align-items: center; gap: 7px; }
+  .lane-label .who { font-size: 11.5px; color: var(--ink-faint); }
+  .lane-cell { border-top: 1px solid var(--line); border-left: 1px dashed var(--line); padding: 10px; display: flex; flex-direction: column; gap: 8px; }
+
+  .step {
+    border: 1px solid var(--line); border-left: 3px solid var(--role, var(--accent));
+    background: var(--role-bg, var(--surface));
+    border-radius: 8px; padding: 8px 10px 9px; font-size: 12.5px; line-height: 1.45;
+  }
+  .step b { display: block; font-size: 12.5px; margin-bottom: 2px; }
+  .step .n {
+    display: inline-flex; align-items: center; justify-content: center;
+    min-width: 18px; height: 18px; padding: 0 4px; margin-right: 6px;
+    border-radius: 999px; background: var(--role, var(--accent)); color: #fff;
+    font-size: 11px; font-weight: 700; vertical-align: -3px;
+  }
+  .step small { color: var(--ink-soft); display: block; margin-top: 2px; }
+  .step .alt { color: var(--ink-faint); font-size: 11px; display: block; margin-top: 3px; }
+  .mono { font-family: ui-monospace, 'SF Mono', Menlo, monospace; font-size: 11px; }
+
+  .r-prop { --role: var(--prop); --role-bg: var(--prop-bg); }
+  .r-esg  { --role: var(--esg);  --role-bg: var(--esg-bg); }
+  .r-vvb  { --role: var(--vvb);  --role-bg: var(--vvb-bg); }
+  .r-reg  { --role: var(--reg);  --role-bg: var(--reg-bg); }
+  .r-sys  { --role: var(--sys);  --role-bg: var(--sys-bg); }
+
+  /* trust chain strip */
+  .chain { margin-top: 22px; background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 16px 18px; }
+  .chain h2 { margin: 0 0 10px; font-size: 14px; }
+  .chain-flow { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font-size: 12px; }
+  .chain-flow .node {
+    border: 1px solid var(--chain); color: var(--chain);
+    border-radius: 999px; padding: 4px 12px; font-weight: 600; white-space: nowrap;
+  }
+  .chain-flow .arrow { color: var(--ink-faint); }
+  .chain p { margin: 10px 0 0; font-size: 12px; color: var(--ink-soft); max-width: 100ch; }
+
+  .notes { margin-top: 16px; display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 12px; }
+  .note { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; padding: 12px 14px; font-size: 12.5px; }
+  .note b { display: block; margin-bottom: 4px; font-size: 12.5px; }
+  .note { color: var(--ink-soft); }
+  .note b { color: var(--ink); }
+
+  footer { margin-top: 26px; font-size: 11px; color: var(--ink-faint); }
+
+  @media print {
+    body { background: #fff; }
+    .board-scroll { overflow: visible; border-color: #bbb; }
+    .wrap { max-width: none; padding: 0; }
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="masthead">
+    <div class="brand">GEM Carbon Credit · dMRV Platform</div>
+    <h1>Workflow การทำงานครบทุกบทบาท — จากข้อมูลจริง สู่คาร์บอนเครดิตบนบล็อกเชน</h1>
+    <p>สองด่านตรวจ (Gate 1 ขึ้นทะเบียน · Gate 2 รับรองผล) ทุกขั้นตอนผูกหลักฐาน ผ่าน role-gated API และบันทึกลง audit log แบบ hash-chain</p>
+  </header>
+
+  <div class="legend">
+    <span><i class="dot" style="background:var(--prop)"></i> Project Proponent — ผู้พัฒนาโครงการ</span>
+    <span><i class="dot" style="background:var(--esg)"></i> ESG Manager</span>
+    <span><i class="dot" style="background:var(--vvb)"></i> VVB — ผู้ตรวจสอบอิสระ</span>
+    <span><i class="dot" style="background:var(--reg)"></i> Standard Registry — นายทะเบียน</span>
+    <span><i class="dot" style="background:var(--sys)"></i> ระบบอัตโนมัติ / บล็อกเชน</span>
+  </div>
+
+  <div class="board-scroll">
+    <div class="board">
+      <div class="corner"></div>
+      <div class="phase-head"><small>เฟส 1</small>เตรียมโครงการ &amp; ข้อมูล</div>
+      <div class="phase-head"><small>เฟส 2 · Gate 1</small>ขึ้นทะเบียน (PDD Validation)</div>
+      <div class="phase-head"><small>เฟส 3 · Gate 2</small>รับรองผลลด (MRV Verification)</div>
+      <div class="phase-head"><small>เฟส 4</small>ออกเครดิต (Issuance)</div>
+
+      <!-- Proponent -->
+      <div class="lane-label"><span class="role"><i class="dot" style="background:var(--prop)"></i>Project Proponent</span><span class="who">เจ้าของโครงการ เช่น วิทยาลัยชุมชนตราด</span></div>
+      <div class="lane-cell">
+        <div class="step r-prop"><b><span class="n">1</span>สร้างโปรเจกต์ / ผูก IoT</b>สร้างโครงการ หรือผูกโรงไฟฟ้าจากทะเบียน IoT (หน้า IoT Mapping) — ที่อยู่ กำลังติดตั้ง วันเริ่มเดินระบบ<small>อัปโหลดหลักฐาน: มิเตอร์ · บิลไฟ · รายงาน commissioning · รูปหน้างาน</small></div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-prop"><b><span class="n">4</span>กรอก PDD แล้ว Submit</b>เลือก methodology (เช่น T-VER-S-01) → กรอกฟอร์ม — ค่า EF / ER คำนวณให้อัตโนมัติจากข้อมูลจริง → แนบหลักฐาน → ส่งเข้าคิว VVB<span class="alt">ถ้าโดน Request revision: แก้แล้วส่งใหม่ได้</span></div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-prop"><b><span class="n">7</span>Request Verification</b>เลือกช่วง monitoring (ระบบกันช่วงทับซ้อน) → ตัวเลข claim <u>คำนวณจากข้อมูลดิบ × EF — พิมพ์เองไม่ได้</u> → ติ๊กหลักฐานแนบ → Submit</div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-prop"><b><span class="n">12</span>ใช้เครดิต</b>เห็น VCU ในหน้า Guardian / Project Credits พร้อมลิงก์ HashScan สำหรับผู้ซื้อ-ผู้ตรวจ</div>
+      </div>
+
+      <!-- ESG -->
+      <div class="lane-label"><span class="role"><i class="dot" style="background:var(--esg)"></i>ESG Manager</span><span class="who">ทีมข้อมูลสิ่งแวดล้อมองค์กร</span></div>
+      <div class="lane-cell">
+        <div class="step r-esg"><b><span class="n">2</span>ดูแล Emission Factor</b>อัปเดตค่า EF ตามประกาศ อบก. (เก็บเป็น version + วันมีผล) และตรวจหน้า Calculations ว่าตัวเลขรายวัน/รายเดือนสมเหตุผล</div>
+      </div>
+      <div class="lane-cell"></div>
+      <div class="lane-cell">
+        <div class="step r-esg"><b><span class="n">7ข</span>ช่วยเตรียมแพ็กเกจ</b>สิทธิ์เท่าฝั่งผู้พัฒนา: อัปโหลดข้อมูล/หลักฐาน และยื่น verification แทนได้</div>
+      </div>
+      <div class="lane-cell"></div>
+
+      <!-- VVB -->
+      <div class="lane-label"><span class="role"><i class="dot" style="background:var(--vvb)"></i>VVB</span><span class="who">ผู้ตรวจสอบความใช้ได้/ทวนสอบ</span></div>
+      <div class="lane-cell"></div>
+      <div class="lane-cell">
+        <div class="step r-vvb"><b><span class="n">5</span>Validate PDD</b>Start validation → ตรวจความครบถ้วน (ระบบเช็ค field บังคับให้) + เอกสารฟอร์ม อบก. → <b style="display:inline">Approve → Register</b><span class="alt">หรือ Request revision / Reject พร้อมเหตุผล (บันทึกใน audit)</span></div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-vvb"><b><span class="n">8</span>Review แพ็กเกจ</b>Start review → <b style="display:inline">Data-check</b>: ระบบคำนวณซ้ำจากข้อมูลดิบเทียบ claim (ต่างเกิน 1% ขึ้นธงเตือน) → ตรวจหลักฐานครบหมวดบังคับ → Approve &amp; lock (ผนึกด้วย hash)</div>
+        <div class="step r-vvb"><b><span class="n">9</span>Anchor to Guardian</b>ออก MRV Credential เซ็น Ed25519 → ส่งขึ้น Hedera HCS จริง (มีลิงก์ HashScan ตรวจได้)</div>
+      </div>
+      <div class="lane-cell"></div>
+
+      <!-- Registry -->
+      <div class="lane-label"><span class="role"><i class="dot" style="background:var(--reg)"></i>Standard Registry</span><span class="who">นายทะเบียน (บทบาท admin)</span></div>
+      <div class="lane-cell"></div>
+      <div class="lane-cell"></div>
+      <div class="lane-cell"></div>
+      <div class="lane-cell">
+        <div class="step r-reg"><b><span class="n">10</span>Mint VCU</b>ตรวจ credential ที่ anchor แล้ว (ลายเซ็น + จำนวน tCO₂e) → mint HTS token แยกต่อโปรเจกต์ (1.00 token = 1 tCO₂e)<small>ตรวจสอบสาธารณะ: ชื่อโปรเจกต์ · supply · memo ผูก project id บน HashScan</small></div>
+      </div>
+
+      <!-- System -->
+      <div class="lane-label"><span class="role"><i class="dot" style="background:var(--sys)"></i>ระบบอัตโนมัติ</span><span class="who">IoT worker · Server · IPFS · Hedera</span></div>
+      <div class="lane-cell">
+        <div class="step r-sys"><b><span class="n">3</span>IoT Sync รายวัน</b>Worker ดึงยอดผลิตไฟฟ้าจากฐานข้อมูล IoT อัตโนมัติ (หัก % ตามแผน monitoring ก่อนบันทึก) — ทางเลือก: อัปโหลด CSV ที่ validate รายแถว<small>ทุกไฟล์หลักฐานถูก hash (SHA-256) ตั้งแต่ตอนอัปโหลด</small></div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-sys"><b><span class="n">6</span>Freeze · Pin · Anchor</b>ตอน Register: server ผนึก content_hash → pin เอกสาร PDD ต้นฉบับขึ้น IPFS → เบราว์เซอร์เซ็น Registration VC (กุญแจไม่ออกจากเครื่อง) → anchor ลง HCS topic ของโปรเจกต์</div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-sys"><b><span class="n">8ข</span>คำนวณซ้ำอิสระ</b>Data-check ฝั่ง VVB ใช้ข้อมูลดิบชุดเดียวกับผู้ยื่น — สองฝั่งเห็นเลขตรงกันเสมอ ไม่มีใครแก้กลางทางได้</div>
+      </div>
+      <div class="lane-cell">
+        <div class="step r-sys"><b><span class="n">11</span>บันทึกสาธารณะ</b>Token mint เป็นธุรกรรมจริงบน Hedera testnet + audit log ภายในต่อกันเป็น hash-chain ตรวจย้อนได้ทุกการกระทำ</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="chain">
+    <h2>เส้นทางความน่าเชื่อถือ (Trust Chain) — ตรวจย้อนได้โดยไม่ต้องเชื่อระบบ</h2>
+    <div class="chain-flow">
+      <span class="node">ข้อมูลดิบ IoT / CSV</span><span class="arrow">→</span>
+      <span class="node">SHA-256 content_hash</span><span class="arrow">→</span>
+      <span class="node">เอกสารเต็มบน IPFS (CID)</span><span class="arrow">→</span>
+      <span class="node">VC เซ็น Ed25519</span><span class="arrow">→</span>
+      <span class="node">Hedera HCS anchor</span><span class="arrow">→</span>
+      <span class="node">VCU token (HTS)</span>
+    </div>
+    <p>ผู้ตรวจภายนอกดึงเอกสารจาก CID มา hash ซ้ำ ต้องได้ตรงกับ content_hash ใน credential ที่ anchor บนเชน — แก้ข้อมูลจุดใดจุดหนึ่งย้อนหลัง ลายเซ็นและ hash จะฟ้องทันที</p>
+  </div>
+
+  <div class="notes">
+    <div class="note"><b>สถานะที่วิ่งผ่านระบบ</b>PDD: draft → submitted → under_validation → registered (หรือ revision_required / rejected) · Verification: draft → submitted → under_review → approved+locked → anchored</div>
+    <div class="note"><b>หลักการสำคัญ</b>ตัวเลขเคลมทุกตัว "derive จากข้อมูลดิบ" ไม่ใช่พิมพ์มือ · เอกสารที่อนุมัติแล้วแก้ไม่ได้ (freeze + hash) · ทุกบทบาทเห็นเฉพาะปุ่มที่ตัวเองมีสิทธิ์ทำจริงบน API</div>
+    <div class="note"><b>ผลลัพธ์ที่ผู้ซื้อเครดิตเห็น</b>Token ชื่อโปรเจกต์บน HashScan · จำนวน tCO₂e ตรงกับ credential · trust chain ครบตั้งแต่ PDD จนถึงการ mint</div>
+  </div>
+
+  <footer>GEM Carbon Credit — dMRV Platform · Workflow v1.0 · อ้างอิงพฤติกรรมจริงของระบบ ณ ส.ค. 2569 (Sprint 3 · Hedera testnet)</footer>
+</div>
+</body>
+</html>

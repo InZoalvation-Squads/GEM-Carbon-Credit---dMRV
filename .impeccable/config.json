@@ -1,0 +1,23 @@
+{
+  "detector": {
+    "ignoreRules": [],
+    "ignoreFiles": [],
+    "ignoreValues": [
+      {
+        "rule": "overused-font",
+        "value": "inter",
+        "createdAt": "2026-08-14T08:19:29.094Z",
+        "reason": "Claude: EvidentSF02.tsx reproduces the official third-party Evident SF-02 form; neutral sans stack matches the source document's typeface, distinctive branding would break fidelity"
+      },
+      {
+        "rule": "side-tab",
+        "value": "*",
+        "files": [
+          "docs/weekly-update-2026-09-07.html"
+        ],
+        "createdAt": "2026-09-07T10:47:04.872Z",
+        "reason": "Matches the project's existing weekly-deck house style: .card border-left is copied verbatim from docs/weekly-update-2026-08-31.html:32 (committed 0a5b102). .note is the same device in amber so the open-question card reads as a sibling. Project system outranks default preference."
+      }
+    ]
+  }
+}
