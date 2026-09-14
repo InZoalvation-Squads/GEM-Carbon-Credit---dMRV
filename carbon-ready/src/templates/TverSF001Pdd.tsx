@@ -112,6 +112,32 @@ function appendixEquipmentCategory(item: string): number {
   return APPENDIX_EQUIPMENT_ROWS.findIndex((c) => c.match.some((m) => lower.includes(m.toLowerCase())));
 }
 
+/** Lines stacked with <br/>, or '-' for an empty list. */
+function stackedLines(lines: string[]): ReactNode {
+  if (lines.length === 0) return '-';
+  return lines.map((t, i) => <Fragment key={i}>{i > 0 && <br />}{t}</Fragment>);
+}
+
+const cellStr = (v: unknown): string => (v === undefined || v === null || v === '' ? '' : String(v));
+
+/**
+ * ตารางที่ 2 cell: `brand / model / spec` per row (empty parts dropped), one
+ * line per item. `withItem` prefixes the free-text item name — used for the
+ * อื่นๆ column, where the category label does not say what the thing is.
+ */
+function equipmentNameLines(rows: Array<Record<string, unknown>>, withItem = false): ReactNode {
+  return stackedLines(rows.map((r) => {
+    const parts = [cellStr(r.brand), cellStr(r.model), cellStr(r.spec)].filter((p) => p !== '');
+    const name = parts.length > 0 ? parts.join(' / ') : '-';
+    return withItem && cellStr(r.item) !== '' ? `${cellStr(r.item)}: ${name}` : name;
+  }));
+}
+
+/** ตารางที่ 2 count cell: one line per item, '-' where a row carries no qty. */
+function equipmentQtyLines(rows: Array<Record<string, unknown>>): ReactNode {
+  return stackedLines(rows.map((r) => (cellStr(r.qty) === '' ? '-' : fmtInt(Number(r.qty)))));
+}
+
 /** `ยี่ห้อ <brand> รุ่น <model>` per matching row, or '-' when the site has none. */
 function appendixEquipmentValue(rows: Array<Record<string, unknown>>): ReactNode {
   if (rows.length === 0) return '-';
@@ -464,18 +490,23 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   // Rows whose `site` matches no site row are kept in a trailing ไม่ระบุพื้นที่
   // group rather than dropped — an unmatched row is a data-entry problem the
   // reviewer must see, not something the document may silently swallow.
-  const equipmentGroups: Array<{ label: string; rows: Array<Record<string, unknown>> }> = bundle
+  const equipmentGroups: Array<{ label: string; kwp: number | null; rows: Array<Record<string, unknown>> }> = bundle
     ? (() => {
         const matched = new Set<Record<string, unknown>>();
         const groups = sites.map((s) => {
           const rows = equipmentSpecs.filter((r) => String(r.site ?? '') === s.owner && s.owner !== '');
           rows.forEach((r) => matched.add(r));
-          return { label: s.owner || '-', rows };
+          return { label: s.owner || '-', kwp: s.kwp, rows };
         });
         const orphans = equipmentSpecs.filter((r) => !matched.has(r));
-        return orphans.length > 0 ? [...groups, { label: 'ไม่ระบุพื้นที่', rows: orphans }] : groups;
+        return orphans.length > 0 ? [...groups, { label: 'ไม่ระบุพื้นที่', kwp: null, rows: orphans }] : groups;
       })()
     : [];
+  // Items outside Solar Panel / Inverter / Energy Meter get an อื่นๆ column pair —
+  // only when at least one exists, so the ordinary table matches the reference's.
+  const equipmentByCategory = (rows: Array<Record<string, unknown>>, ci: number) =>
+    rows.filter((r) => appendixEquipmentCategory(String(r.item ?? '')) === ci);
+  const hasUncategorisedEquipment = equipmentGroups.some((g) => equipmentByCategory(g.rows, -1).length > 0);
   const address = typeof d.project_address === 'string' && d.project_address !== '' ? d.project_address : project.location;
   const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
@@ -726,29 +757,44 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               {bundle ? (
                 <>
                   <p className="mt-2 text-center font-bold">ตารางที่ {equipmentTableNo} รายการอุปกรณ์หลักสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
-                  <table data-testid="equipment-by-site" className="doc-table mt-1 w-full">
+                  {/* Reference p.9 layout: one row per site, a ยี่ห้อ / รุ่น cell plus a
+                      จำนวน cell per category, several items stacked on lines. */}
+                  <table data-testid="equipment-by-site" className="doc-table mt-1 w-full text-[11px]">
                     <thead>
                       <tr className="bg-[#f2f2f2] text-center font-bold">
-                        <td>ลำดับ</td><td>ชื่อโครงการ</td><td>รายการ</td><td>ยี่ห้อ</td><td>รุ่น</td><td>ขนาด/สเปค</td><td>จำนวน</td>
+                        <td rowSpan={2}>ลำดับ</td><td rowSpan={2}>ชื่อโครงการ</td><td rowSpan={2}>กำลังการผลิต (kWp)</td>
+                        <td colSpan={2}>Solar Panel</td><td colSpan={2}>Inverter</td><td colSpan={2}>Energy Meter</td>
+                        {hasUncategorisedEquipment && <td colSpan={2}>อื่นๆ</td>}
+                      </tr>
+                      <tr className="bg-[#f2f2f2] text-center font-bold">
+                        <td>ยี่ห้อ / รุ่น</td><td>จำนวน (แผง)</td>
+                        <td>ยี่ห้อ / รุ่น / ขนาด</td><td>จำนวน (เครื่อง)</td>
+                        <td>ยี่ห้อ / รุ่น</td><td>จำนวน (เครื่อง)</td>
+                        {hasUncategorisedEquipment && <><td>รายการ / ยี่ห้อ / รุ่น</td><td>จำนวน</td></>}
                       </tr>
                     </thead>
                     <tbody>
-                      {equipmentGroups.map((g, gi) => {
-                        // A site with no equipment rows still gets one row of '-' so the
+                      {equipmentGroups.map((g, gi) => (
+                        // A site with no equipment rows still gets its row of '-' so the
                         // reviewer sees the gap instead of the site disappearing.
-                        const rows = g.rows.length > 0 ? g.rows : [null];
-                        return rows.map((r, ri) => (
-                          <tr key={`${g.label}-${gi}-${ri}`}>
-                            {ri === 0 && <td rowSpan={rows.length} className="text-center">{gi + 1}</td>}
-                            {ri === 0 && <td rowSpan={rows.length}>{g.label}</td>}
-                            <td>{r === null ? '-' : String(r.item ?? '-')}</td>
-                            <td>{r === null || r.brand === undefined || r.brand === '' ? '-' : String(r.brand)}</td>
-                            <td>{r === null || r.model === undefined || r.model === '' ? '-' : String(r.model)}</td>
-                            <td>{r === null || r.spec === undefined || r.spec === '' ? '-' : String(r.spec)}</td>
-                            <td className="text-center">{r === null || r.qty === undefined || r.qty === '' ? '-' : fmtInt(Number(r.qty))}</td>
-                          </tr>
-                        ));
-                      })}
+                        <tr key={`${g.label}-${gi}`}>
+                          <td className="text-center">{gi + 1}</td>
+                          <td>{g.label}</td>
+                          <td className="text-right">{g.kwp === null ? '-' : fmt(g.kwp, 3)}</td>
+                          {APPENDIX_EQUIPMENT_ROWS.map((cat, ci) => (
+                            <Fragment key={cat.label}>
+                              <td>{equipmentNameLines(equipmentByCategory(g.rows, ci))}</td>
+                              <td className="text-center">{equipmentQtyLines(equipmentByCategory(g.rows, ci))}</td>
+                            </Fragment>
+                          ))}
+                          {hasUncategorisedEquipment && (
+                            <>
+                              <td>{equipmentNameLines(equipmentByCategory(g.rows, -1), true)}</td>
+                              <td className="text-center">{equipmentQtyLines(equipmentByCategory(g.rows, -1))}</td>
+                            </>
+                          )}
+                        </tr>
+                      ))}
                     </tbody>
                   </table>
                 </>

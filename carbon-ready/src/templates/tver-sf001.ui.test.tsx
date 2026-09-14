@@ -475,37 +475,64 @@ function seedBundleDetail(overrides: Record<string, unknown> = {}) {
 }
 
 describe('TverSF001Pdd — aggregated mode keeps per-site detail', () => {
-  it('ตารางที่ 2 groups equipment rows under their site', () => {
-    seedBundleDetail();
+  it('ตารางที่ 2 prints one row per site with kWp and Solar Panel / Inverter / Energy Meter column pairs', () => {
+    // Reference p.9: a wide table, one row per site, each category a
+    // ยี่ห้อ / รุ่น cell plus a จำนวน cell, several items stacked on lines.
+    seedBundleDetail({
+      equipment_specs: [
+        { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W', qty: 480 },
+        { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์', brand: 'Huawei', model: 'SUN2000-60KTL-M0', qty: 3 },
+        { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์', brand: 'Huawei', model: 'SUN2000-36KTL-M3', qty: 1 },
+        { site: 'บริษัท A จำกัด', item: 'เครื่องวัดไฟฟ้า', brand: 'EDMI', model: 'Mk6E', qty: 1 },
+      ],
+    });
     renderDoc();
     const table = screen.getByTestId('equipment-by-site');
-    expect(screen.getByText(/ตารางที่ 2 รายการอุปกรณ์หลัก/)).toBeInTheDocument();
-    // header + 2 rows for A + 1 for B + 1 orphan
-    expect(within(table).getAllByRole('row')).toHaveLength(5);
-    const groupCells = within(table).getAllByRole('cell').filter((c) => c.getAttribute('rowspan'));
-    // ลำดับ + ชื่อโครงการ per group, three groups (A, B, ไม่ระบุพื้นที่)
-    expect(groupCells.map((c) => c.textContent)).toEqual(['1', 'บริษัท A จำกัด', '2', 'บริษัท B จำกัด', '3', 'ไม่ระบุพื้นที่']);
-    // Site A's ชื่อโครงการ cell spans both of its equipment rows.
-    expect(groupCells[1].getAttribute('rowspan')).toBe('2');
-    expect(within(table).getByText('TSM-NEG21C.20')).toBeInTheDocument();
-    expect(within(table).getByText('JKM580N')).toBeInTheDocument();
+    const rows = within(table).getAllByRole('row');
+    expect(rows).toHaveLength(4); // two header rows + A + B
+    expect(within(rows[0]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['ลำดับ', 'ชื่อโครงการ', 'กำลังการผลิต (kWp)', 'Solar Panel', 'Inverter', 'Energy Meter']);
+    expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['ยี่ห้อ / รุ่น', 'จำนวน (แผง)', 'ยี่ห้อ / รุ่น / ขนาด', 'จำนวน (เครื่อง)', 'ยี่ห้อ / รุ่น', 'จำนวน (เครื่อง)']);
+    const a = within(rows[2]).getAllByRole('cell');
+    expect(a.map((c) => c.textContent)).toEqual([
+      '1', 'บริษัท A จำกัด', '100.000',
+      'Trina Solar / TSM-DE18-545W', '480',
+      'Huawei / SUN2000-60KTL-M0Huawei / SUN2000-36KTL-M3', '31',
+      'EDMI / Mk6E', '1',
+    ]);
+    // The two inverters sit on separate lines in both the name and the count cell.
+    expect(a[5].querySelectorAll('br')).toHaveLength(1);
+    expect(a[6].querySelectorAll('br')).toHaveLength(1);
+    // A site with no equipment rows still gets its row, every category '-'.
+    expect(within(rows[3]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['2', 'บริษัท B จำกัด', '150.000', '-', '-', '-', '-', '-', '-']);
   });
 
-  it('keeps an equipment row whose site matches nothing under ไม่ระบุพื้นที่', () => {
-    seedBundleDetail();
+  it('adds an อื่นๆ column pair only when an item matches no category, keeping the item name', () => {
+    seedBundleDetail(); // SITE_EQUIPMENT carries a site-less ตู้ควบคุมไฟฟ้า row
     renderDoc();
     const table = screen.getByTestId('equipment-by-site');
-    const orphanRow = within(table).getByText('ไม่ระบุพื้นที่').closest('tr')!;
-    expect(within(orphanRow).getByText('ตู้ควบคุมไฟฟ้า')).toBeInTheDocument();
-    expect(within(orphanRow).getByText('Schneider')).toBeInTheDocument();
+    const rows = within(table).getAllByRole('row');
+    expect(within(rows[0]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['ลำดับ', 'ชื่อโครงการ', 'กำลังการผลิต (kWp)', 'Solar Panel', 'Inverter', 'Energy Meter', 'อื่นๆ']);
+    // Rows whose site matches nothing land in a trailing ไม่ระบุพื้นที่ row, never dropped.
+    const orphan = rows[rows.length - 1];
+    const cells = within(orphan).getAllByRole('cell').map((c) => c.textContent);
+    expect(cells[0]).toBe('3');
+    expect(cells[1]).toBe('ไม่ระบุพื้นที่');
+    expect(cells[2]).toBe('-');
+    expect(cells[cells.length - 2]).toBe('ตู้ควบคุมไฟฟ้า: Schneider');
+    expect(cells[cells.length - 1]).toBe('1');
+    // Spec joins the ยี่ห้อ / รุ่น cell when present.
+    expect(within(rows[2]).getAllByRole('cell')[3].textContent).toBe('Trinasolar / TSM-NEG21C.20 / ขนาด 695 วัตต์');
   });
 
-  it('gives a site with no equipment rows a placeholder row rather than dropping it', () => {
+  it('omits the อื่นๆ columns when every item is categorised', () => {
     seedBundleDetail({ equipment_specs: [SITE_EQUIPMENT[0]] });
     renderDoc();
-    const table = screen.getByTestId('equipment-by-site');
-    const bRow = within(table).getByText('บริษัท B จำกัด').closest('tr')!;
-    expect(within(bRow).getAllByText('-').length).toBeGreaterThan(0);
+    const header = within(screen.getByTestId('equipment-by-site')).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('cell').map((c) => c.textContent)).not.toContain('อื่นๆ');
   });
 
   it('renumbers the installations table to ตารางที่ 3 and adds the site column', () => {
