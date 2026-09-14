@@ -54,13 +54,13 @@ describe('prisma seed', () => {
   it('stores the full schema-v2 methodology documents keyed by SPA ids', async () => {
     const solar = await prisma.methodology.findUnique({ where: { id: 'meth-tver-solar' } });
     expect(solar).not.toBeNull();
-    expect(solar!.code).toBe('T-VER-S-01');
+    expect(solar!.code).toBe('T-VER-S-METH-01-01');
     const doc = solar!.document as Record<string, unknown>;
     expect(doc.schema_version).toBe(2);
-    expect(doc.code).toBe('T-VER-S-01');
+    expect(doc.code).toBe('T-VER-S-METH-01-01');
     expect(Array.isArray(doc.pdd_sections)).toBe(true);
     // code+version unique constraint is live
-    const dupCheck = await prisma.methodology.count({ where: { code: 'T-VER-S-01' } });
+    const dupCheck = await prisma.methodology.count({ where: { code: 'T-VER-S-METH-01-01' } });
     expect(dupCheck).toBe(1);
   });
 

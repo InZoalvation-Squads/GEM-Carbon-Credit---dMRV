@@ -59,7 +59,7 @@ describe('methodology JSON schema v2', () => {
 
 describe('extended T-VER solar methodology (T-VER-S-F001-PDD)', () => {
   it('roundtrips through the JSON contract with the full official-form field set', () => {
-    const solar = seedMethodologies.find((m) => m.code === 'T-VER-S-01')!;
+    const solar = seedMethodologies.find((m) => m.code === 'T-VER-S-METH-01-01')!;
     const res = parseMethodologyJson(methodologyToJson(solar));
     expect(res.ok, JSON.stringify(!res.ok && res.errors)).toBe(true);
     if (res.ok) {
@@ -242,7 +242,7 @@ describe('official-form completeness fields (T-VER-S-F001-PDD)', () => {
   it('declares support_equipment as a per-site table with the ตารางที่ 3 columns', () => {
     const f = byKey('support_equipment');
     expect(f?.type).toBe('table');
-    expect(f?.columns?.map((c) => c.key)).toEqual(['site', 'smart_logger', 'pqm', 'router', 'water_pump']);
+    expect(f?.columns?.map((c) => c.key)).toEqual(['site', 'smart_logger', 'pqm', 'router', 'water_pump', 'weather_sensor']);
     expect(f?.columns?.every((c) => c.type === 'text')).toBe(true);
   });
 

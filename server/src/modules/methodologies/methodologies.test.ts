@@ -68,10 +68,10 @@ describe('methodologies module', () => {
       }
       const solar = list.find((m) => m.id === 'meth-tver-solar');
       expect(solar).toMatchObject({
-        code: 'T-VER-S-01',
+        code: 'T-VER-S-METH-01-01',
         standard: 'T-VER',
-        version: 'v3.0',
-        sectoral_scope: 'Energy industries (renewable/non-renewable sources)',
+        version: '03',
+        sectoral_scope: '01 – Energy Industries',
         status: 'active',
       });
       // The document internals must never leak into the list.
@@ -107,7 +107,7 @@ describe('methodologies module', () => {
       expect(res.headers['content-type']).toMatch(/^application\/json/);
       // SPA filename convention: leading "v" stripped from the version.
       expect(res.headers['content-disposition']).toBe(
-        'attachment; filename="T-VER-S-01-v3.0.json"',
+        'attachment; filename="T-VER-S-METH-01-01-v03.json"',
       );
       const row = await prisma.methodology.findUniqueOrThrow({
         where: { id: 'meth-tver-solar' },
@@ -147,7 +147,7 @@ describe('methodologies module', () => {
       expect(res.statusCode).toBe(201);
       const m = res.json().methodology as Record<string, unknown>;
       expect(m.id).toMatch(/^mth-/);
-      expect(m).toMatchObject({ code: 'T-VER-S-99', version: 'v3.0', standard: 'T-VER' });
+      expect(m).toMatchObject({ code: 'T-VER-S-99', version: '03', standard: 'T-VER' });
       expect(Object.keys(m).sort()).toEqual([...SUMMARY_KEYS].sort());
 
       // Stored document is the methodologyToJson shape: schema_version + doc, no id.
@@ -161,8 +161,8 @@ describe('methodologies module', () => {
         action: 'METHODOLOGY_IMPORTED',
         entity_type: 'methodology',
         entity_id: m.id,
-        payload: { code: 'T-VER-S-99', version: 'v3.0' },
-        new_value: { code: 'T-VER-S-99', version: 'v3.0' },
+        payload: { code: 'T-VER-S-99', version: '03' },
+        new_value: { code: 'T-VER-S-99', version: '03' },
       });
       await expectValidChainTail(prisma);
     });
@@ -188,7 +188,7 @@ describe('methodologies module', () => {
       expect(res.statusCode).toBe(409);
       expect(res.json().error).toEqual({
         code: 'CONFLICT',
-        message: 'Methodology T-VER-S-01 v3.0 is already in the library.',
+        message: 'Methodology T-VER-S-METH-01-01 03 is already in the library.',
       });
     });
 

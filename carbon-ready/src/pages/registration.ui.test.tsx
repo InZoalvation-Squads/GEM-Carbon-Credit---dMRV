@@ -55,7 +55,7 @@ describe('Registration entry — program chooser then methodology cards', () => 
     expect(screen.getByRole('button', { name: /TGO \(T-VER\)/ })).toBeInTheDocument();
     expect(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ })).toBeInTheDocument();
     // No methodology cards before a program is picked
-    expect(screen.queryByText('T-VER-S-01')).toBeNull();
+    expect(screen.queryByText('T-VER-S-METH-01-01')).toBeNull();
     expect(screen.queryByText('SF-02')).toBeNull();
   });
 
@@ -64,7 +64,7 @@ describe('Registration entry — program chooser then methodology cards', () => 
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     const cards = screen.getAllByRole('button', { name: /T-VER|VM00|AR-ACM|SF-02/ });
     expect(cards).toHaveLength(2);
-    expect(cards[0]).toHaveTextContent('T-VER-S-01');
+    expect(cards[0]).toHaveTextContent('T-VER-S-METH-01-01');
     expect(cards[1]).toHaveTextContent('T-VER-F-01');
     expect(screen.queryByText(VERRA_VM0042_METHODOLOGY.code)).toBeNull();
   });
@@ -73,7 +73,7 @@ describe('Registration entry — program chooser then methodology cards', () => 
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /REC \(I-REC\(E\)\)/ }));
     expect(screen.getByText('SF-02')).toBeInTheDocument();
-    expect(screen.queryByText('T-VER-S-01')).toBeNull();
+    expect(screen.queryByText('T-VER-S-METH-01-01')).toBeNull();
   });
 
   it('back button returns to the program chooser', () => {
@@ -86,8 +86,8 @@ describe('Registration entry — program chooser then methodology cards', () => 
   it('back after selecting a card fully resets — no stale modal or selection in the other program', () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
-    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
-    expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-METH-01-01/ }));
+    expect(screen.getByText('Start PDD — T-VER-S-METH-01-01')).toBeInTheDocument();
     // close the modal, go back, switch program
     fireEvent.click(screen.getByRole('button', { name: /Cancel/ }));
     fireEvent.click(screen.getByRole('button', { name: /เลือกโปรแกรมใหม่/ }));
@@ -101,8 +101,8 @@ describe('Registration entry — program chooser then methodology cards', () => 
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
     expect(screen.queryByText(/Start PDD —/)).toBeNull();
-    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
-    expect(screen.getByText('Start PDD — T-VER-S-01')).toBeInTheDocument();
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-METH-01-01/ }));
+    expect(screen.getByText('Start PDD — T-VER-S-METH-01-01')).toBeInTheDocument();
     // The aggregated draft (prj-0012) is an eligible solar candidate, so the
     // modal opens on the picker; only projects of THIS methodology show up.
     expect(screen.getByRole('button', { name: /Solar Rooftop แบบควบรวม/ })).toBeInTheDocument();
@@ -330,7 +330,7 @@ describe('New-PDD prefill & clone-from-previous', () => {
   it('seeds methodology-standard defaults into a fresh solar PDD', async () => {
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
-    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-METH-01-01/ }));
     // Eligible solar projects exist, so the modal opens on the picker.
     fireEvent.click(screen.getByRole('button', { name: /Create a new project/ }));
     fireEvent.change(screen.getByLabelText('Project Name'), { target: { value: 'โซลาร์ทดสอบดีฟอลต์' } });
@@ -360,7 +360,7 @@ describe('New-PDD prefill & clone-from-previous', () => {
 
     renderEntry();
     fireEvent.click(screen.getByRole('button', { name: /TGO \(T-VER\)/ }));
-    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-01/ }));
+    fireEvent.click(screen.getByRole('button', { name: /T-VER-S-METH-01-01/ }));
     // เลือกแหล่ง clone (select โผล่เพราะมี PDD solar ที่มีข้อมูลอยู่)
     fireEvent.change(screen.getByLabelText(/คัดลอกข้อมูลจากโครงการก่อนหน้า/), { target: { value: src.id } });
     // prj-0004 มี draft solar อยู่ → modal เปิดโหมด pick; สลับไปฟอร์มสร้างโปรเจกต์ใหม่ก่อน

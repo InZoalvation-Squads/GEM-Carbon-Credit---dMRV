@@ -1274,3 +1274,56 @@ describe('TverSF001Pdd — appendix tables from pages 25-32', () => {
     expect(within(screen.getAllByTestId('site-appendix-block')[1]).getByText('Water Pump').nextElementSibling?.textContent).toBe('-');
   });
 });
+
+// ============================================================
+// The six-site demo (PDD-2010) is the reference document's own data. Rendering
+// it must reproduce the reference's identifiers and tables, not just its sums.
+// ============================================================
+describe('TverSF001Pdd — PDD-2010 reproduces the reference document', () => {
+  function renderReference() {
+    return render(<MemoryRouter><TverSF001Pdd pddId="PDD-2010" /></MemoryRouter>);
+  }
+
+  it('names the official TGO methodology on the detail page and in §2.1', () => {
+    renderReference();
+    expect(screen.getByText('T-VER-S-METH-01-01 ระเบียบวิธีการลดก๊าซเรือนกระจกภาคสมัครใจสำหรับการผลิตไฟฟ้าจากพลังงานหมุนเวียน (Electricity Generation from Renewable Energy) ฉบับที่ 03 Scope: 01 – Energy Industries')).toBeInTheDocument();
+    expect(screen.getAllByText('รหัส: T-VER-S-METH-01-01')).toHaveLength(4);
+    expect(screen.getAllByText('เวอร์ชั่น: 03')).toHaveLength(4);
+  });
+
+  it('ตารางที่ 2 carries every site\'s panel, inverter and meter from page 9', () => {
+    renderReference();
+    const rows = within(screen.getByTestId('equipment-by-site')).getAllByRole('row');
+    const cells = (i: number) => within(rows[i]).getAllByRole('cell').map((c) => c.textContent);
+    expect(cells(2)).toEqual(['1', 'บริษัท A จำกัด', '261.600', 'Trina Solar / TSM-DE18-545W', '480',
+      'Huawei / SUN2000-60KTL-M0Huawei / SUN2000-36KTL-M3', '31', 'EDMI / Mk6E', '1']);
+    expect(cells(5)).toEqual(['4', 'บริษัท D จำกัด', '311.605', 'Jinko / JKM545M-72HL4Jinko / JKM460M-7RL3', '13662',
+      'Huawei / SUN2000-100KTL-M1', '3', 'EDMI / Mk6E', '1']);
+    expect(cells(7)).toEqual(['6', 'บริษัท F จำกัด', '600.590', 'Jinko / JKM545M-72HL4', '1,102',
+      'Sungrow / SG125CX-P2', '4', 'EDMI / Mk6Es', '1']);
+    expect(rows).toHaveLength(8); // two header rows + six sites, nothing uncategorised
+  });
+
+  it('per-site appendix lists the weather sensors of pages 25-30', () => {
+    renderReference();
+    const blocks = screen.getAllByTestId('site-appendix-block');
+    const weather = (i: number) => within(blocks[i]).getByText('Weather Sensor').nextElementSibling as HTMLElement;
+    expect(weather(0).textContent).toBe('ยี่ห้อ HUKSEFLEX รุ่น SR05-D1A3');
+    expect(weather(5).textContent).toBe('ยี่ห้อ HUKSEFLEX รุ่น SR05-D2A2ยี่ห้อ Rika รุ่น RK330-01ยี่ห้อ Rika รุ่น RK220-01ยี่ห้อ Rika รุ่น 100-02');
+    expect(within(blocks[5]).getByText('เครื่องวัดไฟฟ้า (Energy Meter)').nextElementSibling?.textContent).toBe('ยี่ห้อ EDMI รุ่น Mk6Es');
+  });
+
+  it('consumer appendix carries the fifteen page-32 rows with their quantities', () => {
+    renderReference();
+    const rows = within(screen.getByTestId('consumers-table')).getAllByRole('row');
+    expect(rows).toHaveLength(17); // header + 15 rows + รวม
+    expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
+      .toEqual(['Smart Logger: Huawei / SLogger3000A00GL', '5', '8.00', '8,760', '350.40']);
+    // Calpeda pump has no rated power in the reference: '-' rather than a guess.
+    expect(within(rows[12]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
+      .toEqual(['Water Pump: Calpeda / PTV-24A', '1', '-', '144', '-']);
+    // W × h ÷ 1000 × qty from the reference's inputs; its own kWh column rounds
+    // the pump hours differently and sums to 2,227.11.
+    expect(screen.getByTestId('ecpj-total').textContent).toBe('2,228.28');
+  });
+});

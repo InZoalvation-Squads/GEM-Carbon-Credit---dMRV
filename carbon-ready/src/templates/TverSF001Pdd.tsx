@@ -12,7 +12,7 @@ import type { EvidenceFile, PddComputedSource } from '../types';
 // ============================================================
 // T-VER-S-F001-PDD — official TGO single-project PDD layout.
 // Static Thai boilerplate (applicability, emission sources, monitoring
-// parameter cards) is identical for every T-VER-S-01 project and lives here;
+// parameter cards) is identical for every T-VER-S-METH-01-01 solar project and lives here;
 // dynamic values come from the PDD's section_data + the calc engine.
 // ============================================================
 
@@ -734,7 +734,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <tbody>
               <tr>
                 <td className="w-44 font-bold">ระเบียบวิธีการลดก๊าซเรือนกระจก และเครื่องมือคำนวณที่เลือกใช้</td>
-                <td>{methodology.code} {methodology.name} ({methodology.version})</td>
+                {/* Reference p.3: "<code> ระเบียบวิธี…สำหรับ<name> ฉบับที่ <version> Scope: <scope>". */}
+                <td>{methodology.code} ระเบียบวิธีการลดก๊าซเรือนกระจกภาคสมัครใจสำหรับ{methodology.name} ฉบับที่ {methodology.version} Scope: {methodology.sectoral_scope}</td>
               </tr>
               <tr>
                 <td className="font-bold">กิจกรรมของโครงการ</td>

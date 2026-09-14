@@ -425,7 +425,7 @@ export interface MethodologyCalculation {
 
 export interface Methodology {
   id: UUID;
-  code: string;                // 'T-VER-S-01'
+  code: string;                // registry code, e.g. 'T-VER-S-METH-01-01'
   name: string;
   standard: Standard;
   version: string;

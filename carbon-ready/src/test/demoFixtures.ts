@@ -137,34 +137,69 @@ const AGGREGATED_SECTION_DATA = {
   // Bundle-level fallback for any site row that omits its own rate. Every row
   // here carries one, so this is only the safety net.
   degradation_pct: 0.55,
+  // Reference §1.1 / p.3 กิจกรรมของโครงการ, the document's own (anonymised) text.
+  after_project: 'โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ที่ติดตั้งบนหลังคา (Solar Rooftop) ขนาดกำลังติดตั้งไม่น้อยกว่า 2,009.30 กิโลวัตต์สูงสุด (kWp) '
+    + 'ดำเนินการในรูปแบบผลิตไฟฟ้าเพื่อจำหน่ายให้แก่กลุ่มลูกค้าหรือผู้ใช้ไฟฟ้าภายใต้สัญญาซื้อขายไฟฟ้า (Solar Private-PPA) '
+    + 'โดยบริษัท ผู้พัฒนาโครงการ จำกัด เป็นผู้ลงทุนติดตั้งระบบผลิตไฟฟ้าและดำเนินการก่อสร้าง รวมถึงการดูแลบำรุงรักษาระบบตลอดอายุสัญญาซื้อขายไฟฟ้า '
+    + 'เพื่อจำหน่ายไฟฟ้าให้ผู้ประกอบการรายอื่นหรือผู้ใช้ไฟฟ้า จำนวน 6 แห่ง',
+  // Reference p.32 — every row with its จำนวน (ชุด). The document's own kWh
+  // column rounds the pump hours differently (it sums to 2,227.11); these are
+  // its printed inputs, and W × h ÷ 1000 × qty gives 2,228.28. Calpeda carries
+  // no rated power in the reference, so it stays blank rather than guessed.
   consumers: [
-    { equipment: 'Smart Logger — Huawei SLogger3000A', rated_w: 8, hours_per_year: 8760, note: '5 ชุด' },
-    { equipment: 'PQM — Janitza UMG511', rated_w: 10, hours_per_year: 8760, note: '3 ชุด' },
+    { equipment: 'Smart Logger: Huawei / SLogger3000A00GL', qty: 5, rated_w: 8,      hours_per_year: 8760 },
+    { equipment: 'Smart Logger: Sungrow / COM100E',         qty: 1, rated_w: 20,     hours_per_year: 8760 },
+    { equipment: 'PQM: JANITZA / UMG96RM',                  qty: 2, rated_w: 4,      hours_per_year: 8760 },
+    { equipment: 'PQM: JANITZA / UMG511',                   qty: 3, rated_w: 10,     hours_per_year: 8760 },
+    { equipment: 'PQM: JANITZA / UMG512 Pro',               qty: 1, rated_w: 7,      hours_per_year: 8760 },
+    { equipment: 'Internet Router: TP-Link / TL-MR6400',    qty: 1, rated_w: 12,     hours_per_year: 8760 },
+    { equipment: 'Internet Router: TP-Link / Archer MR200', qty: 2, rated_w: 12,     hours_per_year: 8760 },
+    { equipment: 'Internet Router: TP-Link / TL-MR100',     qty: 2, rated_w: 7.65,   hours_per_year: 8760 },
+    { equipment: 'Internet Router: TP-Link / DWR-M920',     qty: 1, rated_w: 12,     hours_per_year: 8760 },
+    { equipment: 'Water Pump: Super pump / UMCH-755S.15',   qty: 1, rated_w: 750,    hours_per_year: 160 },
+    { equipment: 'Water Pump: MITSUBISHI / CP-255R',        qty: 1, rated_w: 250,    hours_per_year: 153 },
+    { equipment: 'Water Pump: Calpeda / PTV-24A',           qty: 1, rated_w: '',     hours_per_year: 144 },
+    { equipment: 'Water Pump: Dayuan / A3-800Y',            qty: 1, rated_w: 800,    hours_per_year: 169 },
+    { equipment: 'Water Pump: MITSUBISHI / WP-305R',        qty: 1, rated_w: 300,    hours_per_year: 163 },
+    { equipment: 'Water Pump: MITSUBISHI / WCH-1505T',      qty: 1, rated_w: 1491.4, hours_per_year: 276 },
   ],
-  // Equipment attributed per site (ตารางที่ 2 + ภาคผนวก), from the reference
-  // document's pages 9 and 25-30 — panel, inverter and meter for each site.
+  // ตารางที่ 2 (reference p.9) — panel, inverter and meter for every site.
   equipment_specs: [
-    { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W',  spec: '545 W',  qty: 480 },
-    { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-60KTL-M0', spec: '60 kW', qty: 3 },
-    { site: 'บริษัท A จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',            spec: '',      qty: 1 },
-    { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 458 },
-    { site: 'บริษัท B จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-50KTL-M3', spec: '50 kW', qty: 4 },
-    { site: 'บริษัท B จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',            spec: '',      qty: 1 },
-    { site: 'บริษัท C จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Longi',       model: 'LR5-72HPH-545M',  spec: '545 W', qty: 431 },
-    { site: 'บริษัท C จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-100KTL-M2', spec: '100 kW', qty: 2 },
-    { site: 'บริษัท D จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 13 },
-    { site: 'บริษัท E จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Ureco',       model: 'FBK540M8W',       spec: '540 W', qty: 650 },
-    { site: 'บริษัท F จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',   spec: '545 W', qty: 1102 },
-    { site: 'บริษัท F จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Sungrow',     model: 'SG125CX-P2',      spec: '125 kW', qty: 4 },
+    { site: 'บริษัท A จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Trina Solar', model: 'TSM-DE18-545W',    qty: 480 },
+    { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-60KTL-M0',  qty: 3 },
+    { site: 'บริษัท A จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-36KTL-M3',  qty: 1 },
+    { site: 'บริษัท A จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',              qty: 1 },
+    { site: 'บริษัท B จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',     qty: 458 },
+    { site: 'บริษัท B จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-50KTL-M3',  qty: 4 },
+    { site: 'บริษัท B จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',              qty: 1 },
+    { site: 'บริษัท C จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Longi',       model: 'LR5-72HPH-545M',    qty: 431 },
+    { site: 'บริษัท C จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-100KTL-M2', qty: 2 },
+    { site: 'บริษัท C จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',              qty: 1 },
+    { site: 'บริษัท D จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',     qty: 13 },
+    { site: 'บริษัท D จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM460M-7RL3',      qty: 662 },
+    { site: 'บริษัท D จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-100KTL-M1', qty: 3 },
+    { site: 'บริษัท D จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',              qty: 1 },
+    { site: 'บริษัท E จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Ureco',       model: 'FBK540M8W',         qty: 650 },
+    { site: 'บริษัท E จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Huawei',      model: 'SUN2000-100KTL-M1', qty: 3 },
+    { site: 'บริษัท E จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6E',              qty: 1 },
+    { site: 'บริษัท F จำกัด', item: 'แผงเซลล์แสงอาทิตย์', brand: 'Jinko',       model: 'JKM545M-72HL4',     qty: 1102 },
+    { site: 'บริษัท F จำกัด', item: 'อินเวอร์เตอร์',       brand: 'Sungrow',     model: 'SG125CX-P2',        qty: 4 },
+    { site: 'บริษัท F จำกัด', item: 'เครื่องวัดไฟฟ้า',     brand: 'EDMI',        model: 'Mk6Es',             qty: 1 },
   ],
-  // อุปกรณ์สนับสนุน per site (ตารางที่ 3), reference document page 9.
+  // ตารางที่ 3 (reference p.9) plus the weather sensors of the per-site appendix (p.25-30).
   support_equipment: [
-    { site: 'บริษัท A จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR6400',   water_pump: 'Super pump / UMCH-755S.15' },
-    { site: 'บริษัท B จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / CP-255R' },
-    { site: 'บริษัท C จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / TL-MR100',    water_pump: 'Calpeda / PTV-24A' },
-    { site: 'บริษัท D จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / DWR-M920',    water_pump: 'Dayuan / A3-800Y' },
-    { site: 'บริษัท E จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR100',    water_pump: 'MITSUBISHI / WP-305R' },
-    { site: 'บริษัท F จำกัด', smart_logger: 'Sungrow / COM100E',     pqm: 'JANITZA / UMG512 Pro', router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / WCH-1505T' },
+    { site: 'บริษัท A จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR6400',    water_pump: 'Super pump / UMCH-755S.15',
+      weather_sensor: 'HUKSEFLEX / SR05-D1A3' },
+    { site: 'บริษัท B จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / CP-255R',
+      weather_sensor: 'HUKSEFLEX / SR05-D1A3\nRika / RK330-01\nRika / RK220-01\nRika / 100-02' },
+    { site: 'บริษัท C จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG96RM',    router: 'TP-Link / TL-MR100',     water_pump: 'Calpeda / PTV-24A',
+      weather_sensor: 'HUKSEFLEX / SR05-D1A3\nRika / RK330-01\nRika / RK220-01' },
+    { site: 'บริษัท D จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / DWR-M920',     water_pump: 'Dayuan / A3-800Y',
+      weather_sensor: 'Rika / RK200-03\nRika / RK330-01\nRika / RK220-01\nRika / 100-02' },
+    { site: 'บริษัท E จำกัด', smart_logger: 'Huawei / SLogger3000A', pqm: 'JANITZA / UMG511',     router: 'TP-Link / TL-MR100',     water_pump: 'MITSUBISHI / WP-305R',
+      weather_sensor: 'HUKSEFLEX / SR05-D1A3' },
+    { site: 'บริษัท F จำกัด', smart_logger: 'Sungrow / COM100E',     pqm: 'JANITZA / UMG512 Pro', router: 'TP-Link / Archer MR200', water_pump: 'MITSUBISHI / WCH-1505T',
+      weather_sensor: 'HUKSEFLEX / SR05-D2A2\nRika / RK330-01\nRika / RK220-01\nRika / 100-02' },
   ],
   project_type: 'พลังงานหมุนเวียนหรือพลังงานที่ใช้ทดแทนเชื้อเพลิงฟอสซิล',
   project_start_date: '2020-05-07',   // วันที่ได้รับอนุญาตขนานไฟฟ้าของ บริษัท B (แห่งแรก)

@@ -4,11 +4,13 @@ import type { Methodology } from '../types';
 // One methodology drives the whole PDD form + required evidence + monitoring params.
 export const TVER_SOLAR_METHODOLOGY: Methodology = {
   id: 'meth-tver-solar',
-  code: 'T-VER-S-01',
-  name: 'การผลิตพลังงานไฟฟ้าจากพลังงานแสงอาทิตย์ (Grid-connected Solar PV)',
+  // TGO's own identifiers — they print on the official form (p.3, §2.1, §3), so
+  // they must be the registry's, not an app-internal label.
+  code: 'T-VER-S-METH-01-01',
+  name: 'การผลิตไฟฟ้าจากพลังงานหมุนเวียน (Electricity Generation from Renewable Energy)',
   standard: 'T-VER',
-  version: 'v3.0',
-  sectoral_scope: 'Energy industries (renewable/non-renewable sources)',
+  version: '03',
+  sectoral_scope: '01 – Energy Industries',
   status: 'active',
   calculation: { formula: 'grid_displacement', input_param: 'EG_PJ', input_unit: 'kWh' },
   required_evidence: ['commissioning_report', 'site_photo', 'supporting_evidence'],

@@ -31,7 +31,7 @@ export const seedMethodologies: Methodology[] = ALL_METHODOLOGIES;
 // ============================================================
 // Real solar-rooftop sites imported from plant.csv (community-college fleet).
 // English names are kept verbatim; `province` drives the location label.
-// Every plant is registered under T-VER-S-01 (grid-connected solar PV) and
+// Every plant is registered under T-VER-S-METH-01-01 (grid-connected solar PV) and
 // carries modelled daily generation for the reporting period below.
 // ============================================================
 const CSV_CREATED_AT = '2025-11-07T10:56:34Z';
@@ -76,7 +76,7 @@ export const seedProjects: Project[] = [
   },
 ];
 
-// ---- Registration: one registered T-VER-S-01 PDD per plant ----
+// ---- Registration: one registered T-VER-S-METH-01-01 PDD per plant ----
 const VALIDATOR = 'Daniel Okoye';
 const SOLAR_SNAPSHOT = `${TVER_SOLAR_METHODOLOGY.code} ${TVER_SOLAR_METHODOLOGY.version}`;
 

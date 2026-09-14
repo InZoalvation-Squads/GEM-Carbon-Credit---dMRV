@@ -1,10 +1,10 @@
 {
   "schema_version": 2,
-  "code": "T-VER-S-01",
-  "name": "การผลิตพลังงานไฟฟ้าจากพลังงานแสงอาทิตย์ (Grid-connected Solar PV)",
+  "code": "T-VER-S-METH-01-01",
+  "name": "การผลิตไฟฟ้าจากพลังงานหมุนเวียน (Electricity Generation from Renewable Energy)",
   "standard": "T-VER",
-  "version": "v3.0",
-  "sectoral_scope": "Energy industries (renewable/non-renewable sources)",
+  "version": "03",
+  "sectoral_scope": "01 – Energy Industries",
   "status": "active",
   "calculation": {
     "formula": "grid_displacement",
@@ -487,6 +487,11 @@
               "key": "water_pump",
               "label": "Water Pump",
               "type": "text"
+            },
+            {
+              "key": "weather_sensor",
+              "label": "Weather Sensor",
+              "type": "text"
             }
           ]
         }
@@ -644,12 +649,17 @@
           "label": "อุปกรณ์ไฟฟ้าที่ใช้ในโครงการ (คำนวณ EC_PJ)",
           "type": "table",
           "required": false,
-          "help": "กรอกพิกัด (W) × ชั่วโมง/ปี หรือกรอก kWh/ปี ตรงในช่องสุดท้าย",
+          "help": "กรอกพิกัด (W) × ชั่วโมง/ปี หรือกรอก kWh/ปี ตรง — จำนวน (ชุด) คูณทั้งแถว เว้นว่าง = 1 ชุด",
           "columns": [
             {
               "key": "equipment",
               "label": "รายการอุปกรณ์",
               "type": "text"
+            },
+            {
+              "key": "qty",
+              "label": "จำนวน (ชุด)",
+              "type": "number"
             },
             {
               "key": "rated_w",
