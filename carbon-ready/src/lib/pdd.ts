@@ -121,16 +121,27 @@ export function creditingStartYear(ctx: ComputeContext): number {
   return Number.isNaN(gregorian) ? 2570 : gregorian + 543;
 }
 
-/** Σ project electricity consumers (kWh/yr): direct kwh_year, else rated_w × hours ÷ 1000. */
+/**
+ * kWh/yr of one consumers row: direct kwh_year, else rated_w × hours ÷ 1000,
+ * times the row's qty (จำนวน ชุด, default 1 — the official appendix lists
+ * "5 × 8 W × 8,760 h = 350.40"). Null when the row lacks the data.
+ */
+export function consumerKwh(r: Record<string, unknown>): number | null {
+  const qty = numOrNull(r.qty) ?? 1;
+  const direct = numOrNull(r.kwh_year);
+  if (direct !== null) return direct * qty;
+  const w = numOrNull(r.rated_w);
+  const h = numOrNull(r.hours_per_year);
+  if (w === null || h === null) return null;
+  return (w * h * qty) / 1000;
+}
+
+/** Σ project electricity consumers (kWh/yr) over the rows that carry enough data. */
 export function computeEcPj(rows: unknown): number {
   if (!Array.isArray(rows)) return 0;
   let total = 0;
   for (const r of rows as Array<Record<string, unknown>>) {
-    const direct = numOrNull(r.kwh_year);
-    if (direct !== null) { total += direct; continue; }
-    const w = numOrNull(r.rated_w);
-    const h = numOrNull(r.hours_per_year);
-    if (w !== null && h !== null) total += (w * h) / 1000;
+    total += consumerKwh(r) ?? 0;
   }
   return round2(total);
 }

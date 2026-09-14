@@ -4,7 +4,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { computeFinancialTable, computeYearlyTable, computeEcPj, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
+import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
 import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import type { EvidenceFile, PddComputedSource } from '../types';
@@ -46,39 +46,92 @@ const PROJECT_TYPES = [
 const MAINTENANCE_TOPICS: ReadonlyArray<{ topic: string; items: readonly string[] }> = [
   {
     topic: 'แผงเซลล์แสงอาทิตย์ (Solar Panel)',
-    items: ['ตรวจสอบสภาพทั่วไป', 'ตรวจสอบจุด Hot Spot หรือเซลล์ที่เสียหาย', 'ตรวจสอบโครงสร้าง', 'ล้างแผงเซลล์แสงอาทิตย์'],
+    items: [
+      'ตรวจสอบสภาพทั่วไปของแผงเซลล์แสงอาทิตย์',
+      'ตรวจสอบจุด Hot Spot ของแผงเซลล์แสงอาทิตย์ หรือ เซลล์ที่เสียหาย',
+      'ตรวจสอบโครงสร้างของแผงเซลล์แสงอาทิตย์',
+      'ล้างแผงเซลล์แสงอาทิตย์',
+    ],
   },
   {
     topic: 'โครงสร้างรองรับแผงเซลล์แสงอาทิตย์',
-    items: ['ตรวจสอบการจัดยึดกับแผง', 'ตรวจสอบสภาพหลังคา รอยรั่ว และจุดจับยึด', 'ตรวจสอบระบบ Grounding'],
+    items: ['ตรวจสอบการจัดยึดกับแผงเซลล์แสงอาทิตย์', 'ตรวจสอบสภาพหลังคา รอยรั่ว และจุดจับยึด', 'ตรวจสอบระบบ Grounding'],
   },
   {
     topic: 'DC Combiner Box',
-    items: ['ตรวจสอบสภาพโดยรวม', 'ตรวจสอบป้ายและ Equipment Tag', 'ตรวจสอบสายไฟและจุดต่อสาย', 'ตรวจสอบกระบอกฟิวส์ DC', 'ตรวจสอบความต่อเนื่องของ DC Fuse', 'ทำความสะอาดตู้'],
+    items: [
+      'ตรวจสอบสภาพโดยรวม',
+      'ตรวจสอบสภาพของป้าย และ Equipment Tag',
+      'ตรวจสอบสภาพสายไฟและจุดต่อสายต่างๆ',
+      'ตรวจสอบสภาพกระบอกฟิวส์ DC',
+      'ตรวจสอบความต่อเนื่องของ DC Fuse',
+      'ทำความสะอาดภายในและภายนอกตู้',
+    ],
   },
   {
     topic: 'อินเวอร์เตอร์ (Inverter)',
-    items: ['ตรวจสอบสภาพความสมบูรณ์', 'ตรวจสอบแผ่นป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบระบบระบายอากาศ', 'ตรวจสอบอุณหภูมิภายใน', 'ตรวจสอบไฟแสดงสถานะ', 'ตรวจวัดกระแสไฟฟ้า', 'ทำความสะอาด'],
+    items: [
+      'ตรวจสอบสภาพความสมบูรณ์',
+      'ตรวจสอบสภาพความสมบูรณ์ของแผ่นป้ายชื่อต่างๆ',
+      'ตรวจสอบสภาพทั่วไปของสายไฟและเทอร์มินอล',
+      'ตรวจสอบการทำงานของระบบระบายอากาศ',
+      'ตรวจสอบอุณหภูมิภายในอุปกรณ์',
+      'ตรวจสอบไฟแสดงสถานะ',
+      'ตรวจวัดกระแสไฟฟ้ากระแสตรง-กระแสสลับ',
+      'ทำความสะอาดอินเวอร์เตอร์ และระบบระบายอากาศ',
+      'ทำความสะอาดห้องอินเวอร์เตอร์',
+    ],
   },
   {
     topic: 'Solar Distribution Panel',
-    items: ['ตรวจสอบสภาพอุปกรณ์', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟ บัสบาร์ เทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทดสอบ Circuit Breaker', 'ตรวจสอบไฟแสดงสถานะ', 'ตรวจสอบอุณหภูมิ', 'ทำความสะอาด'],
+    items: [
+      'ตรวจสอบสภาพทั่วไปของอุปกรณ์',
+      'ตรวจสอบสภาพทั่วไปของป้ายชื่อของอุปกรณ์',
+      'ตรวจสอบสภาพทั่วไปของสายไฟ บัสบาร์ และเทอร์มินอลภายในตู้ไฟฟ้า',
+      'ตรวจสอบความแน่นของจุดเชื่อมต่อสายไฟฟ้าและอุปกรณ์ต่างๆ',
+      'ทดสอบการเปิด-ปิดการทำงานของ Circuit Breaker / Trip Testing',
+      'ตรวจสอบไฟแสดงสถานะของตู้ไฟฟ้า',
+      'ตรวจสอบอุณหภูมิขณะใช้งานของอุปกรณ์ต่างๆ',
+      'ทำความสะอาดภายในและภายนอกตู้',
+      'ทำความสะอาดห้องไฟฟ้า',
+    ],
   },
   {
     topic: 'เครื่องมือวัดคุณภาพไฟฟ้า (PQM)',
-    items: ['ตรวจสอบสภาพอุปกรณ์ภายใน', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทำความสะอาด', 'ตรวจสอบหน้าจอแสดงผล'],
+    items: [
+      'ตรวจสอบสภาพทั่วไปของอุปกรณ์ภายใน',
+      'ตรวจสอบสภาพทั่วไปของป้ายชื่อของอุปกรณ์',
+      'ตรวจสอบสภาพทั่วไปของสายไฟ บัสบาร์ และเทอร์มินอลภายในตู้ PQM',
+      'ตรวจสอบความแน่นของจุดเชื่อมต่อสายไฟฟ้าและอุปกรณ์ต่างๆ',
+      'ทำความสะอาดภายในและภายนอกตู้',
+      'ตรวจสอบหน้าจอแสดงผล',
+    ],
   },
   {
     topic: 'Datalogger และ Monitoring',
-    items: ['ตรวจสอบสภาพอุปกรณ์ภายใน', 'ตรวจสอบป้ายชื่อ', 'ตรวจสอบสายไฟและเทอร์มินอล', 'ตรวจสอบความแน่นจุดเชื่อมต่อ', 'ทำความสะอาด'],
+    items: [
+      'ตรวจสอบสภาพทั่วไปของอุปกรณ์ภายใน',
+      'ตรวจสอบสภาพทั่วไปของป้ายชื่อของอุปกรณ์',
+      'ตรวจสอบสภาพทั่วไปของสายไฟ บัสบาร์ และเทอร์มินอลภายในตู้',
+      'ตรวจสอบความแน่นของจุดเชื่อมต่อสายไฟฟ้าและอุปกรณ์ต่างๆ',
+      'ทำความสะอาดภายในและภายนอกตู้',
+    ],
   },
   {
     topic: 'ระบบน้ำทำความสะอาดแผงเซลล์แสงอาทิตย์',
-    items: ['ตรวจสอบก๊อกน้ำ', 'ตรวจสอบท่อน้ำ ข้อต่อ ถังเก็บน้ำ และลูกลอย', 'ตรวจสอบเครื่องสูบน้ำ'],
+    items: [
+      'ตรวจสอบสภาพทั่วไปและการเปิดปิดของก๊อกน้ำ',
+      'ตรวจสอบสภาพทั่วไปของท่อน้ำและข้อต่อต่างๆ ถังเก็บน้ำ และลูกลอย',
+      'ตรวจสอบสภาพทั่วไปของการใช้งานของเครื่องสูบน้ำ',
+    ],
   },
   {
     topic: 'สถานีวัดสภาพอากาศ',
-    items: ['ตรวจสอบความสมบูรณ์ของเครื่องวัดความเข้มแสง (Pyranometer)', 'ตรวจสอบความสะอาด', 'ตรวจสอบมุมรับแสง'],
+    items: [
+      'ตรวจสอบความสมบูรณ์ทั่วไปของเครื่องวัดความเข้มแสง (Pyranometer)',
+      'ตรวจสอบความสะอาดเครื่องวัดความเข้มแสง (Pyranometer)',
+      'ตรวจสอบมุมรับแสงเครื่องวัดความเข้มแสง (Pyranometer)',
+    ],
   },
 ];
 
@@ -136,6 +189,22 @@ function equipmentNameLines(rows: Array<Record<string, unknown>>, withItem = fal
 /** ตารางที่ 2 count cell: one line per item, '-' where a row carries no qty. */
 function equipmentQtyLines(rows: Array<Record<string, unknown>>): ReactNode {
   return stackedLines(rows.map((r) => (cellStr(r.qty) === '' ? '-' : fmtInt(Number(r.qty)))));
+}
+
+/**
+ * Appendix support-equipment cell. Operators type these as `Brand / Model`
+ * (the ตารางที่ 3 convention); the appendix prints `ยี่ห้อ Brand รุ่น Model`,
+ * one line per entry (entries split on newlines or ';'). Text without the
+ * separator is the operator's own and prints as typed.
+ */
+function supportEquipmentValue(v: unknown): ReactNode {
+  const s = cellStr(v);
+  if (s === '') return '-';
+  const lines = s.split(/\r?\n|;/).map((t) => t.trim()).filter((t) => t !== '');
+  return stackedLines(lines.map((line) => {
+    const parts = line.split(' / ').map((p) => p.trim());
+    return parts.length >= 2 ? `ยี่ห้อ ${parts[0]} รุ่น ${parts.slice(1).join(' / ')}` : line;
+  }));
 }
 
 /** `ยี่ห้อ <brand> รุ่น <model>` per matching row, or '-' when the site has none. */
@@ -542,14 +611,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
   const ecPj = computeEcPj(consumers);
-  const consumerKwh = (r: Record<string, unknown>): number | null => {
-    const direct = Number(r.kwh_year);
-    if (r.kwh_year !== undefined && r.kwh_year !== null && r.kwh_year !== '' && !Number.isNaN(direct)) return direct;
-    const w = Number(r.rated_w); const h = Number(r.hours_per_year);
-    if (r.rated_w === undefined || r.rated_w === '' || r.hours_per_year === undefined || r.hours_per_year === '') return null;
-    if (Number.isNaN(w) || Number.isNaN(h)) return null;
-    return (w * h) / 1000;
-  };
+  const consumersHaveNotes = consumers.some((r) => cellStr(r.note) !== '');
   const years = table?.years ?? Number(str('crediting_years')) ?? 7;
   const creditingPeriod = creditingPeriodLabel(str('crediting_years'), d.crediting_start);
   const siteImages = pddSiteImages(allEvidence, project.id);
@@ -1260,11 +1322,17 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <SectionBar>ส่วนที่ 4 แผนการติดตามผลการดำเนินโครงการ</SectionBar>
 
           <p className="font-bold underline">4.1 สรุปแนวทางการติดตามผล</p>
+          {/* Reference p.21 narrative. The meter-check / calibration intervals are
+              the operator's own commitments, so they come from qaqc_procedure
+              rather than being asserted here. */}
           <p className="indent-8">
-            พารามิเตอร์ที่ติดตาม: {str('monitored_parameter')} · วิธีตรวจวัด: {str('measurement_method')} ·
-            ความถี่: {str('monitoring_frequency')}
+            การติดตามผลการลดการปล่อยก๊าซเรือนกระจกที่เกิดขึ้นจากโครงการนี้ จะดำเนินการโดย {str('project_owner')} ในฐานะผู้พัฒนาโครงการ
+            โดยจะมีการบันทึกค่าพลังงานที่ผลิตได้รายวัน รายเดือน และรายปี ผ่านมิเตอร์ซื้อขายไฟฟ้า (Energy Meter)
+            และได้กำหนดแนวทางการติดตามผลและหน้าที่รับผิดชอบ รายละเอียดขั้นตอนการจัดเก็บข้อมูล บันทึก การคำนวณ และการรายงานดังภาพที่ 7 และ 8
+            {str('qaqc_procedure') !== '-' ? ` ทั้งนี้ มาตรการควบคุมคุณภาพข้อมูล: ${str('qaqc_procedure')}` : ''}
+            {' '}และบำรุงรักษาระบบและอุปกรณ์ต่างๆ ตามแผนบำรุงรักษาประจำปี เพื่อตรวจสอบสภาพทางกายภาพของแผงเซลล์แสงอาทิตย์ และสภาพระบบโดยรวม
+            {bundle ? ` ดังตารางที่ ${maintenanceTableNo}` : ''}
           </p>
-          <p className="mt-1 indent-8">QA/QC: {str('qaqc_procedure')}</p>
           <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} bundle={bundle} />
           {/* Fixed at 7 / 8 by the official form. Deriving them from the number of
               uploaded site photos made the captions drift with the evidence set. */}
@@ -1275,7 +1343,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <>
               <p className="mt-3 font-bold">ตารางที่ {maintenanceTableNo} แผนการบำรุงรักษาประจำปีของแต่ละพื้นที่ในโครงการ</p>
               <table data-testid="maintenance-table" className="doc-table w-full">
-                <thead><tr><th>ลำดับ</th><th>เจ้าของโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
+                <thead><tr><th>ลำดับ</th><th>ชื่อโครงการ</th><th>ความถี่ (ครั้ง/ปี)</th></tr></thead>
                 <tbody>
                   {sites.map((s, i) => (
                     <tr key={`${s.owner}-${i}`}>
@@ -1286,6 +1354,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                   ))}
                 </tbody>
               </table>
+              <p>หมายเหตุ: อ้างอิงตามแผนการบำรุงรักษาของ {str('project_owner')}</p>
             </>
           )}
 
@@ -1312,8 +1381,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="w-40 bg-[#f2f2f2] font-bold">พารามิเตอร์</td><td>EF<sub>EC,PJ,y</sub></td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>tCO₂/MWh</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">ความหมาย</td><td>ค่าการปล่อยก๊าซเรือนกระจกสำหรับการใช้ไฟฟ้า ในปี y</td></tr>
-              <tr><td className="bg-[#fbeeee] font-bold">แหล่งข้อมูล</td><td>รายงานค่า Emission Factor สำหรับโครงการลดก๊าซเรือนกระจกที่ประกาศโดย อบก.</td></tr>
-              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>ใช้ค่าที่ อบก. ประกาศตามปีของช่วงระยะเวลาที่ขอรับรองคาร์บอนเครดิต หากปีนั้นยังไม่ประกาศ ให้ใช้ค่าล่าสุดแทน</td></tr>
+              <tr><td className="bg-[#fbeeee] font-bold">แหล่งข้อมูล</td><td>ข้อมูลจากรายงานค่าการปล่อยก๊าซเรือนกระจกจากการผลิต/การใช้ไฟฟ้า (Emission Factor) สำหรับโครงการและกิจกรรมลดก๊าซเรือนกระจกที่ประกาศโดย อบก.</td></tr>
+              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>ใช้ค่า EF<sub>EC,PJ,y</sub> ที่ อบก. ประกาศตามปี พ.ศ. ของช่วงระยะเวลาที่ขอรับรองคาร์บอนเครดิต ทั้งนี้ กรณีที่ปี พ.ศ. ของช่วงระยะเวลาที่ขอรับรองคาร์บอนเครดิตนั้นยังไม่มีค่า EF<sub>EC,PJ,y</sub> ที่ อบก. ประกาศ ให้ใช้ค่า EF<sub>EC,PJ,y</sub> ล่าสุดที่ อบก. ประกาศแทนในปีนั้น</td></tr>
             </tbody>
           </table>
           <table className="doc-table keep-together mt-3 w-full">
@@ -1322,7 +1391,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>kWh/year</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">ความหมาย</td><td>ปริมาณไฟฟ้าที่ผลิตได้เพื่อใช้เองจากการดำเนินโครงการพลังงานหมุนเวียน ในปี y</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">แหล่งข้อมูล</td><td>รายงานการตรวจวัด</td></tr>
-              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>{str('measurement_method')} — ความถี่ {str('monitoring_frequency')}</td></tr>
+              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>ตรวจวัดโดย kWh Meter และตรวจวัดต่อเนื่องตลอดช่วงของการติดตามผล โดยรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน</td></tr>
             </tbody>
           </table>
           <table className="doc-table keep-together mt-3 w-full">
@@ -1331,7 +1400,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>kWh/year</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">ความหมาย</td><td>ปริมาณการใช้ไฟฟ้าจากระบบสายส่งในการดำเนินโครงการ ในปี y</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">แหล่งข้อมูล</td><td>รายงานการตรวจวัด</td></tr>
-              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>คำนวณจากค่าพิกัดกำลังไฟฟ้าจากผู้ผลิตอุปกรณ์ และบันทึกชั่วโมงการทำงานของอุปกรณ์ รายงานรายเดือน</td></tr>
+              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>คำนวณจากค่าพิกัดกำลังไฟฟ้าจากผู้ผลิตอุปกรณ์ และบันทึกชั่วโมงการทำงานของอุปกรณ์ โดยตรวจวัดชั่วโมงการทำงานต่อเนื่องตลอดช่วงของการติดตามผล และรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน</td></tr>
             </tbody>
           </table>
         </Page>
@@ -1339,11 +1408,15 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         {/* ============ ภาคผนวก ============ */}
         {consumers.length > 0 && (
           <Page formLabel={formLabel}>
-            <SectionBar>ภาคผนวก — รายการอุปกรณ์ไฟฟ้าและประมาณการไฟฟ้าที่ใช้ในโครงการ</SectionBar>
-            <table className="doc-table w-full">
+            <SectionBar>ภาคผนวก</SectionBar>
+            {/* Reference p.32. หมายเหตุ is this app's own column, so it appears only
+                when a row actually carries a note. */}
+            <p className="mt-2 text-center font-bold">ตารางแสดงปริมาณการใช้ไฟฟ้าสำหรับอุปกรณ์ประกอบการติดตั้ง</p>
+            <table data-testid="consumers-table" className="doc-table mt-1 w-full">
               <thead>
                 <tr className="bg-[#f2f2f2] text-center font-bold">
-                  <td>รายการอุปกรณ์</td><td>พิกัดอุปกรณ์ (W)</td><td>ชั่วโมงการทำงานต่อปี</td><td>Total (kWh/Year)</td><td>หมายเหตุ</td>
+                  <td>อุปกรณ์</td><td>จำนวน (ชุด)</td><td>กำลังไฟ (W)</td><td>ชั่วโมงทำงานต่อปี</td><td>พลังงานไฟฟ้ารวมต่อปี (kWh)</td>
+                  {consumersHaveNotes && <td>หมายเหตุ</td>}
                 </tr>
               </thead>
               <tbody>
@@ -1352,17 +1425,18 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                   return (
                     <tr key={i}>
                       <td>{String(r.equipment ?? '-')}</td>
-                      <td className="text-center">{r.rated_w === undefined || r.rated_w === '' ? '-' : fmtInt(Number(r.rated_w))}</td>
-                      <td className="text-center">{r.hours_per_year === undefined || r.hours_per_year === '' ? '-' : fmt(Number(r.hours_per_year))}</td>
+                      <td className="text-center">{cellStr(r.qty) === '' ? '1' : fmtInt(Number(r.qty))}</td>
+                      <td className="text-center">{cellStr(r.rated_w) === '' ? '-' : fmt(Number(r.rated_w))}</td>
+                      <td className="text-center">{cellStr(r.hours_per_year) === '' ? '-' : fmtInt(Number(r.hours_per_year))}</td>
                       <td className="text-right">{kwh === null ? '-' : fmt(kwh)}</td>
-                      <td>{String(r.note ?? '')}</td>
+                      {consumersHaveNotes && <td>{cellStr(r.note)}</td>}
                     </tr>
                   );
                 })}
                 <tr className="font-bold">
-                  <td colSpan={3} className="text-center">รวม</td>
+                  <td colSpan={4} className="text-center">รวม</td>
                   <td className="text-right" data-testid="ecpj-total">{fmt(ecPj)}</td>
-                  <td />
+                  {consumersHaveNotes && <td />}
                 </tr>
               </tbody>
             </table>
@@ -1381,10 +1455,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 const support = s.owner === ''
                   ? undefined
                   : supportEquipment.find((r) => String(r.site ?? '') === s.owner);
-                const supportCell = (k: string) => {
-                  const v = support?.[k];
-                  return v === undefined || v === null || v === '' ? '-' : String(v);
-                };
+                const supportCell = (k: string) => supportEquipmentValue(support?.[k]);
                 const uncategorised = siteRows.filter((r) => appendixEquipmentCategory(String(r.item ?? '')) === -1);
                 return (
                   <div key={`${s.owner}-${i}`} data-testid="site-appendix-block" className="keep-together mb-4">
@@ -1402,6 +1473,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                         <tr><td>PQM</td><td>{supportCell('pqm')}</td></tr>
                         <tr><td>Internet Router</td><td>{supportCell('router')}</td></tr>
                         <tr><td>Water Pump</td><td>{supportCell('water_pump')}</td></tr>
+                        <tr><td>Weather Sensor</td><td>{supportCell('weather_sensor')}</td></tr>
                         {uncategorised.length > 0 && (
                           <tr><td>อื่นๆ</td><td>{appendixEquipmentValue(uncategorised)}</td></tr>
                         )}
@@ -1455,24 +1527,39 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               // and the totals table above it print the same years on the same
               // page, so a different default would contradict it in the submitted
               // document. Read from `d`, not str() — str() yields '-' when absent.
-              const m = siteGenerationMatrix(sites, startYear, years, bundleDegradationPct);
+              // Reference p.31 starts the table at the earliest synchronisation year,
+              // so a site that ran before crediting shows its pre-period output and the
+              // columns carry ปีที่ N only from the crediting start. Same matrix call
+              // shifted back: the crediting-year cells are identical to the totals table.
+              const syncYears = sites.map((s) => s.first_sync_year).filter((y): y is number => y !== null);
+              const firstYear = Math.min(startYear, ...syncYears);
+              const preYears = startYear - firstYear;
+              const m = siteGenerationMatrix(sites, firstYear, preYears + years, bundleDegradationPct);
               return (
                 <>
                   <p className="mt-3 font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี (หน่วย: kWh)</p>
-                  <table data-testid="sites-forecast" className="doc-table w-full">
+                  <table data-testid="sites-forecast" className="doc-table w-full text-[11px]">
                     <thead>
-                      <tr><th>รายชื่อโครงการ</th>{m.years.map((y) => <th key={y}>{y}</th>)}</tr>
+                      <tr>
+                        <th rowSpan={2}>รายชื่อโครงการ</th><th rowSpan={2}>First Synchronization</th>
+                        {m.years.map((y) => <th key={y}>{y}</th>)}
+                      </tr>
+                      <tr>
+                        {m.years.map((y, j) => <th key={y}>{j < preYears ? '-' : `ปีที่ ${j - preYears + 1}`}</th>)}
+                      </tr>
                     </thead>
                     <tbody>
                       {m.rows.map((r, i) => (
                         <tr key={`${r.site.owner}-${i}`}>
                           <td>{r.site.owner || '-'}</td>
+                          <td className="text-center">{r.site.first_sync_year ?? '-'}</td>
                           {r.generation.map((g, j) => <td key={j} className="text-right">{g === 0 ? '' : fmtInt(g)}</td>)}
                         </tr>
                       ))}
                       <tr className="font-bold">
                         <td className="text-center">รวม</td>
-                        {m.totals.map((t, j) => <td key={j} className="text-right">{fmtInt(t)}</td>)}
+                        <td />
+                        {m.totals.map((t, j) => <td key={j} className="text-right">{j < preYears ? '' : fmtInt(t)}</td>)}
                       </tr>
                     </tbody>
                   </table>

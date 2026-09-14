@@ -371,9 +371,26 @@ describe('TverSF001Pdd — aggregated (แบบควบรวม) mode', () =>
     renderDoc();
     const table = screen.getByTestId('sites-forecast');
     expect(table).toBeInTheDocument();
-    // Site B synchronises in 2570 — the crediting period starts 2570 (2027 CE),
-    // so both sites are live from year 1 and no cell should be blank here.
-    expect(within(table).getAllByRole('row')).toHaveLength(4); // header + 2 sites + total
+    // Two header rows (years / ปีที่) + 2 sites + total.
+    expect(within(table).getAllByRole('row')).toHaveLength(5);
+  });
+
+  it('per-site forecast opens with First Synchronization and the years before crediting, as on page 31', () => {
+    // A synchronised 2569, one year before the 2570 crediting start; B in 2570.
+    seedBundleData();
+    renderDoc();
+    const rows = within(screen.getByTestId('sites-forecast')).getAllByRole('row');
+    expect(within(rows[0]).getAllByRole('columnheader').map((c) => c.textContent))
+      .toEqual(['รายชื่อโครงการ', 'First Synchronization', '2569', '2570', '2571', '2572', '2573', '2574', '2575', '2576']);
+    expect(within(rows[1]).getAllByRole('columnheader').map((c) => c.textContent))
+      .toEqual(['-', 'ปีที่ 1', 'ปีที่ 2', 'ปีที่ 3', 'ปีที่ 4', 'ปีที่ 5', 'ปีที่ 6', 'ปีที่ 7']);
+    const a = within(rows[2]).getAllByRole('cell').map((c) => c.textContent);
+    expect(a.slice(0, 4)).toEqual(['บริษัท A จำกัด', '2569', '200,000', '199,000']);
+    const b = within(rows[3]).getAllByRole('cell').map((c) => c.textContent);
+    expect(b.slice(0, 4)).toEqual(['บริษัท B จำกัด', '2570', '', '300,000']);
+    // รวม is summed for crediting years only; the pre-crediting column stays blank.
+    const total = within(rows[4]).getAllByRole('cell').map((c) => c.textContent);
+    expect(total.slice(0, 4)).toEqual(['รวม', '', '', '499,000']);
   });
 
   it('renders per-site maintenance frequency', () => {
@@ -431,7 +448,7 @@ describe('TverSF001Pdd — aggregated mode with incomplete site rows', () => {
     seedPartialBundle({ degradation_pct: '', sites: [{ owner: 'A', kwp: 100, year1_kwh: 1000000 }] });
     renderDoc();
     const rows = within(screen.getByTestId('sites-forecast')).getAllByRole('row');
-    const cells = within(rows[1]).getAllByRole('cell').slice(1).map((c) => c.textContent);
+    const cells = within(rows[2]).getAllByRole('cell').slice(2).map((c) => c.textContent);
     expect(cells).toEqual(['1,000,000', '1,000,000', '1,000,000']);
   });
 
@@ -439,7 +456,7 @@ describe('TverSF001Pdd — aggregated mode with incomplete site rows', () => {
     seedPartialBundle({ degradation_pct: 0, sites: [{ owner: 'A', kwp: 100, year1_kwh: 500000 }] });
     renderDoc();
     const rows = within(screen.getByTestId('sites-forecast')).getAllByRole('row');
-    const cells = within(rows[1]).getAllByRole('cell').slice(1).map((c) => c.textContent);
+    const cells = within(rows[2]).getAllByRole('cell').slice(2).map((c) => c.textContent);
     expect(cells).toEqual(['500,000', '500,000', '500,000']);
   });
 });
@@ -569,13 +586,14 @@ describe('TverSF001Pdd — aggregated mode keeps per-site detail', () => {
     expect(screen.getAllByText('สมุทรสาคร')).toHaveLength(1);
   });
 
-  it('ตารางที่ 4 labels its name column เจ้าของโครงการ, matching the site owner it prints', () => {
+  it('maintenance table is headed ชื่อโครงการ and carries the reference note line', () => {
     seedBundleDetail();
     renderDoc();
     const table = screen.getByTestId('maintenance-table');
     const header = within(table).getAllByRole('row')[0];
     expect(within(header).getAllByRole('columnheader').map((c) => c.textContent))
-      .toEqual(['ลำดับ', 'เจ้าของโครงการ', 'ความถี่ (ครั้ง/ปี)']);
+      .toEqual(['ลำดับ', 'ชื่อโครงการ', 'ความถี่ (ครั้ง/ปี)']);
+    expect(table.nextElementSibling?.textContent).toBe('หมายเหตุ: อ้างอิงตามแผนการบำรุงรักษาของ บริษัท ผู้พัฒนา จำกัด');
   });
 
   it('leaves single-project output untouched', () => {
@@ -781,7 +799,7 @@ describe('TverSF001Pdd — per-site appendix blocks', () => {
     const blocks = screen.getAllByTestId('site-appendix-block');
     expect(blocks).toHaveLength(2);
     for (const label of ['แผงเซลล์แสงอาทิตย์ (Solar Panel)', 'อินเวอร์เตอร์ (Inverter)',
-      'เครื่องวัดไฟฟ้า (Energy Meter)', 'Smart Logger', 'PQM', 'Internet Router', 'Water Pump']) {
+      'เครื่องวัดไฟฟ้า (Energy Meter)', 'Smart Logger', 'PQM', 'Internet Router', 'Water Pump', 'Weather Sensor']) {
       expect(blockRows(blocks[0])[label], label).toBe('-');
     }
   });
@@ -932,7 +950,7 @@ describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
     expect(screen.getByText('รายละเอียดแผนการบำรุงรักษาประจำปี')).toBeInTheDocument();
     // Sub-items hang off their topic, e.g. the Pyranometer check under สถานีวัดสภาพอากาศ.
     const weather = screen.getByText('สถานีวัดสภาพอากาศ', { selector: 'li' });
-    expect(within(weather).getByText('ตรวจสอบความสมบูรณ์ของเครื่องวัดความเข้มแสง (Pyranometer)')).toBeInTheDocument();
+    expect(within(weather).getByText('ตรวจสอบความสมบูรณ์ทั่วไปของเครื่องวัดความเข้มแสง (Pyranometer)')).toBeInTheDocument();
     expect(within(weather).getAllByRole('listitem')).toHaveLength(3);
   });
 
@@ -1170,5 +1188,89 @@ describe('TverSF001Pdd — ส่วนที่ 3 headings, method blocks and t
     renderDoc();
     const rows = within(screen.getByTestId('yearly-table')).getAllByRole('row');
     expect(within(rows[1]).getAllByRole('cell')[0].textContent).toBe('1 (1/4/2569 – 31/3/2570)');
+  });
+});
+
+describe('TverSF001Pdd — ส่วนที่ 4 wording from the reference', () => {
+  it('maintenance detail reproduces the reference items verbatim, nine for the inverter and nine for the panel board', () => {
+    seedBundleDetail();
+    renderDoc();
+    const list = screen.getByTestId('maintenance-detail');
+    const topic = (name: string) => within(list).getByText(name, { selector: 'li' });
+    expect(within(topic('แผงเซลล์แสงอาทิตย์ (Solar Panel)')).getByText('ตรวจสอบสภาพทั่วไปของแผงเซลล์แสงอาทิตย์')).toBeInTheDocument();
+    expect(within(topic('อินเวอร์เตอร์ (Inverter)')).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(topic('อินเวอร์เตอร์ (Inverter)')).getByText('ทำความสะอาดห้องอินเวอร์เตอร์')).toBeInTheDocument();
+    expect(within(topic('Solar Distribution Panel')).getAllByRole('listitem')).toHaveLength(9);
+    expect(within(topic('Solar Distribution Panel')).getByText('ทำความสะอาดห้องไฟฟ้า')).toBeInTheDocument();
+  });
+
+  it('§4.1 opens with the monitoring narrative naming the developer and the maintenance table', () => {
+    seedBundleDetail({ installations: [], support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    const para = screen.getByText(/^การติดตามผลการลดการปล่อยก๊าซเรือนกระจกที่เกิดขึ้นจากโครงการนี้/);
+    expect(para.textContent).toContain('บริษัท ผู้พัฒนา จำกัด ในฐานะผู้พัฒนาโครงการ');
+    expect(para.textContent).toContain('ดังภาพที่ 7 และ 8');
+    expect(para.textContent).toContain('ดังตารางที่ 4');
+    expect(screen.queryByText(/พารามิเตอร์ที่ติดตาม:/)).toBeNull();
+  });
+
+  it('§4.3 parameter cards carry the reference source and monitoring wording', () => {
+    seedBundleDetail();
+    renderDoc();
+    expect(screen.getByText('ข้อมูลจากรายงานค่าการปล่อยก๊าซเรือนกระจกจากการผลิต/การใช้ไฟฟ้า (Emission Factor) สำหรับโครงการและกิจกรรมลดก๊าซเรือนกระจกที่ประกาศโดย อบก.')).toBeInTheDocument();
+    // EF carries <sub> markup, so match on the cell's full text.
+    expect(screen.getByText((_, el) => el?.tagName === 'TD'
+      && (el.textContent ?? '').startsWith('ใช้ค่า EFEC,PJ,y ที่ อบก. ประกาศตามปี พ.ศ. ของช่วงระยะเวลาที่ขอรับรองคาร์บอนเครดิต'))).toBeInTheDocument();
+    expect(screen.getByText('ตรวจวัดโดย kWh Meter และตรวจวัดต่อเนื่องตลอดช่วงของการติดตามผล โดยรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน')).toBeInTheDocument();
+    expect(screen.getByText('คำนวณจากค่าพิกัดกำลังไฟฟ้าจากผู้ผลิตอุปกรณ์ และบันทึกชั่วโมงการทำงานของอุปกรณ์ โดยตรวจวัดชั่วโมงการทำงานต่อเนื่องตลอดช่วงของการติดตามผล และรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน')).toBeInTheDocument();
+  });
+});
+
+describe('TverSF001Pdd — appendix tables from pages 25-32', () => {
+  it('consumer table takes the reference title and columns, multiplying by จำนวน (ชุด)', () => {
+    seedBundleDetail({
+      consumers: [
+        { equipment: 'Huawei / SLogger3000A00GL', qty: 5, rated_w: 8, hours_per_year: 8760 },
+        { equipment: 'MITSUBISHI / CP-255R', qty: 1, rated_w: 250, hours_per_year: 153 },
+      ],
+    });
+    renderDoc();
+    expect(screen.getByText('ตารางแสดงปริมาณการใช้ไฟฟ้าสำหรับอุปกรณ์ประกอบการติดตั้ง')).toBeInTheDocument();
+    const table = screen.getByTestId('consumers-table');
+    const rows = within(table).getAllByRole('row');
+    expect(within(rows[0]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['อุปกรณ์', 'จำนวน (ชุด)', 'กำลังไฟ (W)', 'ชั่วโมงทำงานต่อปี', 'พลังงานไฟฟ้ารวมต่อปี (kWh)']);
+    expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['Huawei / SLogger3000A00GL', '5', '8.00', '8,760', '350.40']);
+    expect(within(rows[2]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['MITSUBISHI / CP-255R', '1', '250.00', '153', '38.25']);
+    expect(screen.getByTestId('ecpj-total').textContent).toBe('388.65');
+  });
+
+  it('consumer table shows the หมายเหตุ column only when a row carries a note', () => {
+    seedMcruData(); // MCRU rows all carry notes
+    renderDoc();
+    const header = within(screen.getByTestId('consumers-table')).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('cell').map((c) => c.textContent)).toContain('หมายเหตุ');
+    expect(screen.getByText('ล้างแผง 1 ครั้ง/ปี')).toBeInTheDocument();
+  });
+
+  it('per-site appendix adds Weather Sensor and prints "brand / model" values as ยี่ห้อ … รุ่น …, one per line', () => {
+    seedBundleDetail({
+      support_equipment: [{
+        site: 'บริษัท A จำกัด', smart_logger: 'Huawei / SLogger3000A00GL', pqm: 'Janitza / UMG511',
+        router: 'TP-Link / TL-MR6400', water_pump: 'Super pump / UMCH-755S.15',
+        weather_sensor: 'HUKSEFLEX / SR05-D1A3\nRika / RK330-01',
+      }],
+    });
+    renderDoc();
+    const block = screen.getAllByTestId('site-appendix-block')[0];
+    const cell = (label: string) => within(block).getByText(label).nextElementSibling as HTMLElement;
+    expect(cell('Smart Logger').textContent).toBe('ยี่ห้อ Huawei รุ่น SLogger3000A00GL');
+    expect(cell('Water Pump').textContent).toBe('ยี่ห้อ Super pump รุ่น UMCH-755S.15');
+    expect(cell('Weather Sensor').textContent).toBe('ยี่ห้อ HUKSEFLEX รุ่น SR05-D1A3ยี่ห้อ Rika รุ่น RK330-01');
+    expect(cell('Weather Sensor').querySelectorAll('br')).toHaveLength(1);
+    // A value without the " / " separator is the operator's text and prints as typed.
+    expect(within(screen.getAllByTestId('site-appendix-block')[1]).getByText('Water Pump').nextElementSibling?.textContent).toBe('-');
   });
 });

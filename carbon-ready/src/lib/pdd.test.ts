@@ -208,6 +208,12 @@ describe('computeEcPj', () => {
   it('ignores rows without enough data', () => {
     expect(computeEcPj([{ equipment: 'TV' }, { rated_w: 100 }])).toBe(0);
   });
+  it('multiplies a row by its qty (จำนวน ชุด), defaulting to one', () => {
+    // Reference appendix p.32: 5 Smart Loggers × 8 W × 8,760 h = 350.40 kWh
+    expect(computeEcPj([{ rated_w: 8, hours_per_year: 8760, qty: 5 }])).toBe(350.4);
+    expect(computeEcPj([{ kwh_year: 100, qty: 2 }])).toBe(200);
+    expect(computeEcPj([{ rated_w: 8, hours_per_year: 8760, qty: '' }])).toBe(70.08);
+  });
 });
 
 describe('computeYearlyTable — reproduces the MCRU reference PDD', () => {
