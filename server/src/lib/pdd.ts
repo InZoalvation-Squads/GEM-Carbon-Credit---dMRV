@@ -4,6 +4,7 @@
 // and the grid-factor lookup is a UI concern). Everything below is verbatim.
 import type { Methodology, PddFieldSchema } from './methodology-types.js';
 import { canonical, shortHash } from './hash.js';
+import { parseSites } from './pdd-sites.js';
 
 /** A field is visible when it has no showIf, or its driver field equals the expected value. */
 export function isFieldVisible(field: PddFieldSchema, data: Record<string, unknown>): boolean {
@@ -29,6 +30,18 @@ export function validatePdd(m: Methodology, data: Record<string, unknown>): PddV
       if (empty) missing.push({ section: section.key, field: field.key, label: field.label });
     }
   }
+  // Aggregated PDDs stand on their site table: a row missing capacity or
+  // year-1 generation would silently drag the summed totals down rather than
+  // showing up as an error. Keyed off the rows themselves, not project_form —
+  // that selector is optional and may be absent on older PDDs.
+  parseSites(data.sites).forEach((s, i) => {
+    if (s.kwp === null || s.year1_kwh === null) {
+      missing.push({
+        section: 'cover', field: 'sites',
+        label: `พื้นที่ติดตั้งแถวที่ ${i + 1} — ต้องกรอกกำลังการผลิตและไฟฟ้าปีที่ 1`,
+      });
+    }
+  });
   return { ok: missing.length === 0, missing };
 }
 

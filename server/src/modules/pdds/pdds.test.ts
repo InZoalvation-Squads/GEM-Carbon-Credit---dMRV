@@ -19,7 +19,7 @@ const SOLAR = 'meth-tver-solar';
 const WIND = 'meth-tver-wind';
 
 // Same shape as the SPA seed's SOLAR_SECTION_DATA — passes validatePdd for
-// T-VER-S-01 v3.0 and publishes both sensitive fields (investment_metric via
+// T-VER-S-METH-01-01 03 and publishes both sensitive fields (investment_metric via
 // its showIf on barrier_type = Investment, and barrier_explanation).
 const SOLAR_SECTION_DATA = {
   // Official-form cover / preparer / declarations (T-VER-S-F001-PDD)
@@ -259,14 +259,14 @@ describe('pdds module', () => {
       const submitted = await post(`/api/v1/pdds/${pddId}/submit`, owner.token);
       expect(submitted.statusCode).toBe(200);
       expect(submitted.json().pdd).toMatchObject({
-        state: 'submitted', methodology_snapshot: 'T-VER-S-01 v3.0',
+        state: 'submitted', methodology_snapshot: 'T-VER-S-METH-01-01 03',
       });
       const submittedAt = submitted.json().pdd.submitted_at as string;
       expect(submittedAt).toBeTruthy();
       expect(await lifecycleOf(projectId)).toBe('under_validation');
       expect(await latestAudit(prisma)).toMatchObject({
         action: 'PDD_SUBMITTED', entity_type: 'pdd', entity_id: pddId,
-        payload: { methodology: 'T-VER-S-01 v3.0' },
+        payload: { methodology: 'T-VER-S-METH-01-01 03' },
         previous_value: { state: 'draft' }, new_value: { state: 'submitted' },
       });
 
@@ -310,7 +310,7 @@ describe('pdds module', () => {
         disclosure: { disclosed: Record<string, unknown>; redacted: Array<{ key: string; value_hash: string }> };
       };
       const expectedHash = pddContentHash({
-        methodology_snapshot: 'T-VER-S-01 v3.0',
+        methodology_snapshot: 'T-VER-S-METH-01-01 03',
         section_data: SOLAR_SECTION_DATA,
         evidence_ids: [],
       });
@@ -377,7 +377,7 @@ describe('pdds module', () => {
         user_id: verifier.id,
         action: 'PROJECT_REGISTERED', entity_type: 'pdd', entity_id: pddId,
         payload: {
-          methodology: 'T-VER-S-01 v3.0',
+          methodology: 'T-VER-S-METH-01-01 03',
           ipfs_cid: toIpfsCid(expectedHash),
           topic_id: projectTopicId(projectId),
         },

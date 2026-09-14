@@ -73,7 +73,18 @@ document still differed in numbering, arithmetic and wording.
    pump hours differently (2,227.11 vs 2,228.28 from its printed inputs); the fixture keeps
    the printed inputs.
 
+## Server copies re-synced (pre-existing drift)
+
+Running the full server suite surfaced two `copy-drift.test.ts` failures that predate this
+pass: the 09-07 aggregated work added `bundle_capacity` / `site_count` to
+`PddComputedSource` and the site-row check to `validatePdd` in the SPA, but the server's
+copies (`server/src/lib/methodology-types.ts`, `pdd.ts`) were never re-copied. Both are
+now verbatim again; `pdd-sites.ts` (parseSites / isBundle only) is ported alongside with
+its own drift guard. Until then the server accepted an aggregated PDD whose site rows
+lacked kWp or year-1 kWh.
+
 ## Verification
 
-SPA: 535 tests, `tsc -b` clean. Server: `seed.test.ts` and `methodologies.test.ts` pass on
-the isolated test schema; the full server suite was run after the change (see commit).
+SPA: 535 tests, `tsc -b` clean. Server: full suite green on the isolated test schema after
+the re-sync (233 tests), including the methodology identity change in `seed.test.ts`,
+`methodologies.test.ts`, `pdds.test.ts` and `credentials.test.ts`.

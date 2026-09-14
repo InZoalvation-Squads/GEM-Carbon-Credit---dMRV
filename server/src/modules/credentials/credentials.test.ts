@@ -54,7 +54,7 @@ function signVc(unsigned: Omit<VerifiableCredential, 'proof'>, signer: TestIssue
 }
 
 // Same shape as the SPA seed's SOLAR_SECTION_DATA — passes validatePdd for
-// T-VER-S-01 v3.0 (copied from pdds.test.ts).
+// T-VER-S-METH-01-01 03 (copied from pdds.test.ts).
 const SOLAR = 'meth-tver-solar';
 const SOLAR_SECTION_DATA = {
   project_title_th: 'โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา',
@@ -250,7 +250,7 @@ describe('credentials module', () => {
       subject: {
         pdd_id: p.id,
         project_id: p.project_id,
-        methodology: 'T-VER-S-01 v3.0',
+        methodology: 'T-VER-S-METH-01-01 03',
         content_hash: p.content_hash,
       },
       package_hash: p.content_hash,
@@ -507,7 +507,7 @@ describe('credentials module', () => {
       expect((await post(`/api/v1/pdds/${p.id}/credential`, verifier.token, wrongProject as unknown as Record<string, unknown>)).statusCode).toBe(422);
       // Tampered after signing.
       const tampered = pddVc(p);
-      (tampered.subject as Record<string, unknown>).methodology = 'T-VER-S-01 v99.0';
+      (tampered.subject as Record<string, unknown>).methodology = 'T-VER-S-METH-01-01 99';
       expect((await post(`/api/v1/pdds/${p.id}/credential`, verifier.token, tampered as unknown as Record<string, unknown>)).statusCode).toBe(422);
       // Happy, then double anchor.
       const vc = pddVc(p);

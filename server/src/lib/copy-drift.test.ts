@@ -94,6 +94,10 @@ describe('copied libs stay in sync with their carbon-ready sources', () => {
     expectChunksInSource(join(SERVER_LIB, 'methodology-types.ts'), join(SPA_SRC, 'types', 'index.ts'));
   });
 
+  it('pdd-sites.ts functions match (partial: parseSites/isBundle only)', () => {
+    expectChunksInSource(join(SERVER_LIB, 'pdd-sites.ts'), join(SPA_SRC, 'lib', 'pdd-sites.ts'));
+  });
+
   it('pdd.ts functions match (partial: resolveComputed/gridFactor dropped)', () => {
     expectChunksInSource(join(SERVER_LIB, 'pdd.ts'), join(SPA_SRC, 'lib', 'pdd.ts'));
   });
