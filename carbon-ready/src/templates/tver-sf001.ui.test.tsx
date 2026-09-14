@@ -820,9 +820,10 @@ describe('TverSF001Pdd — §3.4 summary and the §3.1/§3.2 parameter rows', ()
     // header + 4 parameter rows
     expect(within(table).getAllByRole('row')).toHaveLength(5);
     const v = paramValues(table, 2);
-    // avg.er is truncated by the calc layer; §3.4 must echo the yearly table's
-    // headline figure, not a separately-rounded one.
-    expect(v['ERy']).toBe('443.00');
+    // §3.4 states ER_y = BE_y − PE_y − LE_y at 2 dp, so the row must satisfy
+    // its own equation (the reference prints 1,025.59 − 1.08 = 1,024.51). The
+    // floored-then-averaged headline figure belongs to the cover and §3.5 only.
+    expect(v['ERy']).toBe('443.21');
     expect(v['BEy']).toBe('445.93');
     expect(v['PEy']).toBe('2.72');
     expect(v['LEy']).toBe('0.00');
@@ -974,5 +975,54 @@ describe('TverSF001Pdd — ตารางที่ 1 total row cell count', () 
     expect(cells[2].textContent).toBe('500,000');
     // Column count matches the header: 3 spanned + 2 value cells = 5.
     expect(within(rows[0]).getAllByRole('columnheader')).toHaveLength(5);
+  });
+});
+
+// ============================================================
+// Fidelity against the 59-page reference แบบควบรวม document (2026-09-14 audit).
+// Each block below reproduces one thing the reference prints that the
+// template did not.
+// ============================================================
+describe('TverSF001Pdd — table numbering follows the reference sequence', () => {
+  it('numbers support equipment ตารางที่ 3 and maintenance ตารางที่ 4 when there is no installations table', () => {
+    // The reference document has no per-building installations table: its
+    // sequence is 1 sites, 2 equipment, 3 support equipment, 4 maintenance.
+    seedBundleDetail({ installations: [], support_equipment: SUPPORT_EQUIPMENT });
+    renderDoc();
+    expect(screen.getByText(/ตารางที่ 3 รายการอุปกรณ์สนับสนุน/)).toBeInTheDocument();
+    expect(screen.getByText(/ตารางที่ 4 แผนการบำรุงรักษา/)).toBeInTheDocument();
+    expect(screen.queryByText(/ตารางที่ 5 /)).toBeNull();
+  });
+
+  it('numbers maintenance ตารางที่ 3 when neither installations nor support equipment exist', () => {
+    seedBundleDetail({ installations: [] });
+    renderDoc();
+    expect(screen.getByText(/ตารางที่ 3 แผนการบำรุงรักษา/)).toBeInTheDocument();
+    expect(screen.queryByText(/ตารางที่ 4 /)).toBeNull();
+  });
+});
+
+describe('TverSF001Pdd — appendix files เครื่องวัดไฟฟ้า under Energy Meter', () => {
+  it('matches the Thai item name the equipment table itself uses', () => {
+    seedBundleDetail({
+      equipment_specs: [{ site: 'บริษัท A จำกัด', item: 'เครื่องวัดไฟฟ้า', brand: 'EDMI', model: 'Mk6E', qty: 1 }],
+    });
+    renderDoc();
+    const block = screen.getAllByTestId('site-appendix-block')[0];
+    const meterRow = within(block).getByText('เครื่องวัดไฟฟ้า (Energy Meter)').closest('tr')!;
+    expect(within(meterRow).getAllByRole('cell')[1].textContent).toBe('ยี่ห้อ EDMI รุ่น Mk6E');
+    expect(within(block).queryByText('อื่นๆ')).toBeNull();
+  });
+});
+
+describe('TverSF001Pdd — boundary diagram in aggregated mode', () => {
+  it('labels the consumer box ผู้ใช้ไฟฟ้า without naming the developer, and the grid PEA / MEA', () => {
+    // The bundled sites' owners are the electricity consumers, not the developer.
+    seedBundleDetail();
+    renderDoc();
+    const diagram = screen.getAllByTestId('boundary-diagram')[0];
+    expect(diagram.textContent).toContain('ผู้ใช้ไฟฟ้า');
+    expect(diagram.textContent).not.toContain('บริษัท ผู้พัฒนา จำกัด');
+    expect(diagram.textContent).toContain('ระบบสายส่ง PEA / MEA');
   });
 });

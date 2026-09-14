@@ -103,7 +103,7 @@ function cumulativeDegradationPct(ratePct: number, n: number): number {
 const APPENDIX_EQUIPMENT_ROWS: ReadonlyArray<{ label: string; match: readonly string[] }> = [
   { label: 'แผงเซลล์แสงอาทิตย์ (Solar Panel)', match: ['แผง', 'Panel'] },
   { label: 'อินเวอร์เตอร์ (Inverter)', match: ['อินเวอร์', 'Inverter'] },
-  { label: 'เครื่องวัดไฟฟ้า (Energy Meter)', match: ['มิเตอร์', 'Meter'] },
+  { label: 'เครื่องวัดไฟฟ้า (Energy Meter)', match: ['เครื่องวัด', 'มิเตอร์', 'Meter'] },
 ];
 
 /** Index of the APPENDIX_EQUIPMENT_ROWS bucket an item falls in, or -1 for อื่นๆ. */
@@ -230,7 +230,7 @@ function TocPage({ formLabel }: { formLabel: string }) {
  * รูปที่ 1 / ผังจุดตรวจวัด — the project-boundary block diagram: solar system
  * and meters inside a dashed boundary, consumer and PEA grid outside.
  */
-function BoundaryDiagram({ capacityKwp, owner }: { capacityKwp: string; owner: string }) {
+function BoundaryDiagram({ capacityKwp, owner, bundle = false }: { capacityKwp: string; owner: string; bundle?: boolean }) {
   const box = 'border border-black bg-white px-2 py-1.5 text-center';
   return (
     <div data-testid="boundary-diagram" className="keep-together mx-auto my-2 flex w-[95%] items-stretch gap-2 text-[11px]">
@@ -250,8 +250,10 @@ function BoundaryDiagram({ capacityKwp, owner }: { capacityKwp: string; owner: s
         </div>
       </div>
       <div className="flex w-32 flex-col justify-between py-2">
-        <div className={box}>ผู้ใช้ไฟฟ้า<br />({owner})</div>
-        <div className="text-center">↑<br />ระบบสายส่ง PEA</div>
+        {/* แบบควบรวม: the consumers are the bundled sites' owners, not the
+            developer, so the box carries the generic label as the reference does. */}
+        <div className={box}>ผู้ใช้ไฟฟ้า{!bundle && <><br />({owner})</>}</div>
+        <div className="text-center">↑<br />ระบบสายส่ง {bundle ? 'PEA / MEA' : 'PEA'}</div>
       </div>
     </div>
   );
@@ -419,11 +421,18 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const installations = (Array.isArray(d.installations) ? d.installations : []) as Array<Record<string, unknown>>;
   const equipmentSpecs = (Array.isArray(d.equipment_specs) ? d.equipment_specs : []) as Array<Record<string, unknown>>;
   const supportEquipment = (Array.isArray(d.support_equipment) ? d.support_equipment : []) as Array<Record<string, unknown>>;
-  // Table numbering is a single running sequence in แบบควบรวม: 1 sites, 2 equipment
-  // by site, 3 installations, then the support-equipment table only when it has
-  // rows — so maintenance is 5 with it and 4 without. Single mode never renders
-  // the first two, so its maintenance table does not exist at all.
-  const maintenanceTableNo = bundle ? (supportEquipment.length > 0 ? 5 : 4) : 4;
+  // Table numbering is one running sequence over the tables that actually
+  // render. แบบควบรวม: 1 sites, 2 equipment by site, then installations and
+  // support equipment only when they have rows, then maintenance — the reference
+  // document has no installations table, so its support table is 3 and its
+  // maintenance table 4. แบบเดี่ยว: 1 installations, 2 support equipment.
+  let tableSeq = 0;
+  const nextTableNo = () => ++tableSeq;
+  const sitesTableNo = bundle ? nextTableNo() : 0;
+  const equipmentTableNo = bundle && equipmentSpecs.length > 0 ? nextTableNo() : 0;
+  const installationsTableNo = installations.length > 0 ? nextTableNo() : 0;
+  const supportTableNo = supportEquipment.length > 0 ? nextTableNo() : 0;
+  const maintenanceTableNo = bundle ? nextTableNo() : 0;
   // Existing PDDs predate project_type; this methodology is solar-only, so an
   // absent value means the renewable-energy category rather than "none ticked".
   const projectType = str('project_type') !== '-' ? str('project_type') : PROJECT_TYPES[0];
@@ -649,7 +658,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </p>
           {bundle && (
             <>
-              <p className="mt-3 font-bold">ตารางที่ 1 รายละเอียดโครงการเบื้องต้น กำลังผลิตติดตั้งและปริมาณไฟฟ้าที่คาดว่าจะผลิตได้</p>
+              <p className="mt-3 font-bold">ตารางที่ {sitesTableNo} รายละเอียดโครงการเบื้องต้น กำลังผลิตติดตั้งและปริมาณไฟฟ้าที่คาดว่าจะผลิตได้</p>
               <table data-testid="sites-table" className="doc-table w-full">
                 <thead>
                   <tr>
@@ -678,14 +687,14 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
-          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} />
+          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} bundle={bundle} />
           <p className="text-center font-bold">รูปที่ 1 ขอบเขตของโครงการ</p>
           {equipmentSpecs.length > 0 && (
             <>
               <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
               {bundle ? (
                 <>
-                  <p className="mt-2 text-center font-bold">ตารางที่ 2 รายการอุปกรณ์หลักสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
+                  <p className="mt-2 text-center font-bold">ตารางที่ {equipmentTableNo} รายการอุปกรณ์หลักสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
                   <table data-testid="equipment-by-site" className="doc-table mt-1 w-full">
                     <thead>
                       <tr className="bg-[#f2f2f2] text-center font-bold">
@@ -731,7 +740,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <>
               {/* ตารางที่ 3 in bundle mode — ตารางที่ 1 is the site capacity table
                   and ตารางที่ 2 the per-site equipment table above. */}
-              <p className="mt-2 text-center font-bold">{bundle ? 'ตารางที่ 3' : 'ตารางที่ 1'} รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ</p>
+              <p className="mt-2 text-center font-bold">ตารางที่ {installationsTableNo} รายละเอียดอุปกรณ์หลักที่ติดตั้งในโครงการ</p>
               <table className="doc-table mt-1 w-full">
                 <thead>
                   <tr className="bg-[#f2f2f2] text-center font-bold">
@@ -766,7 +775,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               {/* อุปกรณ์สนับสนุน — the official form lists these per site directly
                   after the main-equipment table. */}
               <p className="mt-2 text-center font-bold">
-                {bundle ? 'ตารางที่ 4' : 'ตารางที่ 2'} รายการอุปกรณ์สนับสนุนสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ
+                ตารางที่ {supportTableNo} รายการอุปกรณ์สนับสนุนสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ
               </p>
               <table data-testid="support-equipment" className="doc-table mt-1 w-full">
                 <thead>
@@ -1008,7 +1017,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             <tbody>
               <tr>
                 <td className="text-center">ER<sub>y</sub></td><td>การลดการปล่อยก๊าซเรือนกระจกในปี y</td>
-                <td className="text-right">{table ? fmt(table.avg.er) : '-'}</td><td className="text-center">tCO₂e/year</td>
+                {/* The row states ER_y = BE_y − PE_y − LE_y, so it must satisfy its own
+                    equation at 2 dp (reference: 1,025.59 − 1.08 = 1,024.51). The
+                    floored/averaged headline lives on the cover and in §3.5. */}
+                <td className="text-right">{table ? fmt(table.avg.be - table.avg.pe) : '-'}</td><td className="text-center">tCO₂e/year</td>
               </tr>
               <tr>
                 <td className="text-center">BE<sub>y</sub></td><td>การปล่อยก๊าซเรือนกระจกจากกรณีฐานในปี y</td>
@@ -1080,7 +1092,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             ความถี่: {str('monitoring_frequency')}
           </p>
           <p className="mt-1 indent-8">QA/QC: {str('qaqc_procedure')}</p>
-          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} />
+          <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} bundle={bundle} />
           {/* Fixed at 7 / 8 by the official form. Deriving them from the number of
               uploaded site photos made the captions drift with the evidence set. */}
           <p className="text-center font-bold">ภาพที่ 7 รูปแสดงผังจุดตรวจวัด พร้อมข้อมูล/ตัวแปรที่จัดเก็บ</p>
