@@ -134,6 +134,27 @@ function thaiDate(iso: unknown): string {
   return dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+/** `1 มกราคม พ.ศ. 2570` — the official form writes the era out in date ranges (year-only th-TH already reads "พ.ศ. 2570"). */
+function thaiDateBE(dt: Date): string {
+  return `${dt.toLocaleDateString('th-TH', { day: 'numeric', month: 'long' })} ${dt.toLocaleDateString('th-TH', { year: 'numeric' })}`;
+}
+
+/**
+ * `7 ปี (1 มกราคม พ.ศ. 2570 ถึง 31 ธันวาคม พ.ศ. 2576)` — the crediting period
+ * as the official form states it: start date to the day before the same date
+ * `years` later. Falls back to the bare year count without a valid start.
+ */
+function creditingPeriodLabel(years: string, startIso: unknown): string {
+  if (typeof startIso !== 'string' || !startIso) return `${years} ปี`;
+  const start = new Date(`${startIso}T00:00:00`);
+  const n = Number(years);
+  if (Number.isNaN(start.getTime()) || !Number.isFinite(n) || n <= 0) return `${years} ปี`;
+  const end = new Date(start);
+  end.setFullYear(end.getFullYear() + n);
+  end.setDate(end.getDate() - 1);
+  return `${years} ปี (${thaiDateBE(start)} ถึง ${thaiDateBE(end)})`;
+}
+
 function Check({ on, children }: { on: boolean; children: ReactNode }) {
   return (
     <div className="flex items-start gap-1.5">
@@ -374,7 +395,10 @@ function CoverPage({ projectId, developer, coverId, formLabel }: { projectId: st
           className="cover-photo mx-auto mt-12 w-[92%] object-cover"
         />
       )}
-      <div className="mt-16 text-center text-[26px]">{developer}</div>
+      <div className="mt-16 text-center text-[26px]">
+        <p className="text-[20px]">ผู้พัฒนาโครงการ</p>
+        <p>{developer}</p>
+      </div>
     </section>
   );
 }
@@ -465,7 +489,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
     return (w * h) / 1000;
   };
   const years = table?.years ?? Number(str('crediting_years')) ?? 7;
-  const creditingLabel = `${str('crediting_years')} ปี (เริ่ม ${thaiDate(d.crediting_start)})`;
+  const creditingPeriod = creditingPeriodLabel(str('crediting_years'), d.crediting_start);
   const siteImages = pddSiteImages(allEvidence, project.id);
   // Explicitly chosen cover leaves the section-1 figures (the official doc
   // never repeats it); a fallback first-image cover stays in the figures so
@@ -501,31 +525,37 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="font-bold">ผู้พัฒนาโครงการร่วม</td><td>{str('co_developer')}</td></tr>
               {/* แบบควบรวม: owner / address / coordinates are per-site (official form p.2-3),
                   so these three rows read from sites[] instead of the parent scalars. */}
-              <tr>
-                <td className="font-bold">เจ้าของโครงการ</td>
-                <td>
-                  {bundle ? (
-                    <table data-testid="owners-by-site" className="doc-table w-full">
-                      <tbody>
-                        {sites.map((s, i) => (
-                          <tr key={`${s.owner}-${i}`}>
-                            <td>{s.owner || '-'}</td>
-                            <td className="whitespace-pre-wrap">{s.address || '-'}</td>
+              {bundle ? (
+                <>
+                  {/* Reference p.2: the เจ้าของโครงการ and ที่ตั้งโครงการ label cells
+                      share one value cell — a sub-table headed with both names, one
+                      row per site. Owner and address print once each. */}
+                  <tr>
+                    <td className="font-bold">เจ้าของโครงการ</td>
+                    <td rowSpan={2}>
+                      <table data-testid="owners-by-site" className="doc-table w-full">
+                        <tbody>
+                          <tr className="bg-[#f2f2f2] text-center font-bold">
+                            <td>เจ้าของโครงการ</td><td>ที่ตั้งโครงการ</td>
                           </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  ) : ownerName}
-                </td>
-              </tr>
-              <tr>
-                <td className="font-bold">ที่ตั้งโครงการ</td>
-                <td className="whitespace-pre-wrap">
-                  {bundle
-                    ? sites.map((s, i) => <div key={`${s.owner}-${i}`}>{i + 1}. {s.address || '-'}</div>)
-                    : address}
-                </td>
-              </tr>
+                          {sites.map((s, i) => (
+                            <tr key={`${s.owner}-${i}`}>
+                              <td>{s.owner || '-'}</td>
+                              <td className="whitespace-pre-wrap">{s.address || '-'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </td>
+                  </tr>
+                  <tr><td className="font-bold">ที่ตั้งโครงการ</td></tr>
+                </>
+              ) : (
+                <>
+                  <tr><td className="font-bold">เจ้าของโครงการ</td><td>{ownerName}</td></tr>
+                  <tr><td className="font-bold">ที่ตั้งโครงการ</td><td className="whitespace-pre-wrap">{address}</td></tr>
+                </>
+              )}
               <tr>
                 <td className="font-bold">พิกัดที่ตั้งโครงการ</td>
                 <td>
@@ -597,8 +627,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr>
                 <td className="font-bold">ระยะเวลาคิดคาร์บอนเครดิตของโครงการ</td>
                 <td>
-                  <Check on={has('crediting_years', '7')}>7 ปี {has('crediting_years', '7') ? `(เริ่ม ${thaiDate(d.crediting_start)})` : ''}</Check>
-                  <Check on={has('crediting_years', '10')}>10 ปี {has('crediting_years', '10') ? `(เริ่ม ${thaiDate(d.crediting_start)})` : ''}</Check>
+                  <Check on={has('crediting_years', '7')}>{has('crediting_years', '7') ? creditingPeriod : '7 ปี'}</Check>
+                  <Check on={has('crediting_years', '10')}>{has('crediting_years', '10') ? creditingPeriod : '10 ปี'}</Check>
                 </td>
               </tr>
             </tbody>
@@ -663,7 +693,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 <thead>
                   <tr>
                     <th>ลำดับ</th><th>เจ้าของโครงการ</th><th>ผู้พัฒนาโครงการ</th>
-                    <th>กำลังการผลิตติดตั้ง (kWp)</th><th>ปริมาณไฟฟ้าปีที่ 1 (kWh/year)</th>
+                    <th>กำลังการผลิตติดตั้ง (kWp)</th><th>ปริมาณไฟฟ้าปีที่ 1 ที่คาดว่าจะผลิตได้ (kWh/year)</th>
                   </tr>
                 </thead>
                 <tbody>
@@ -680,7 +710,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                     {/* ลำดับ + เจ้าของโครงการ + ผู้พัฒนาโครงการ — the rowSpan above ends
                         on the last site row, so the total row carries all three itself. */}
                     <td colSpan={3} className="text-center">รวม</td>
-                    <td className="text-right">{totalSiteKwp === null ? '-' : fmt(totalSiteKwp, 3)}</td>
+                    {/* Site rows carry 3 dp; the reference prints the รวม at 2 (2,009.30). */}
+                    <td className="text-right">{totalSiteKwp === null ? '-' : fmt(totalSiteKwp)}</td>
                     <td className="text-right">{totalYear1 === null ? '-' : fmtInt(totalYear1)}</td>
                   </tr>
                 </tbody>
@@ -841,8 +872,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 fall back to the crediting date so PDDs predating the field are
                 unchanged. */}
             <p>วันเริ่มดำเนินโครงการ: {thaiDate(d.project_start_date !== undefined && d.project_start_date !== '' ? d.project_start_date : d.crediting_start)}</p>
-            <Check on={has('crediting_years', '7')}>7 ปี</Check>
-            <Check on={has('crediting_years', '10')}>10 ปี</Check>
+            <Check on={has('crediting_years', '7')}>{has('crediting_years', '7') ? creditingPeriod : '7 ปี'}</Check>
+            <Check on={has('crediting_years', '10')}>{has('crediting_years', '10') ? creditingPeriod : '10 ปี'}</Check>
           </div>
 
           <p className="mt-3 font-bold underline">1.6 โครงการประเภทการลด ดูดซับ และการกักเก็บก๊าซเรือนกระจกจากภาคป่าไม้และการเกษตร</p>
@@ -1039,7 +1070,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             </tbody>
           </table>
 
-          <p className="mt-3 font-bold underline">3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้ — {creditingLabel}</p>
+          <p className="mt-3 font-bold underline">3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้ — {creditingPeriod}</p>
           {table ? (
             <table className="doc-table mt-1 w-full" data-testid="yearly-table">
               <thead>

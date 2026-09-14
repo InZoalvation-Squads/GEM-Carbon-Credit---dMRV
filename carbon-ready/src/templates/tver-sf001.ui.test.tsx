@@ -362,7 +362,7 @@ describe('TverSF001Pdd — aggregated (แบบควบรวม) mode', () =>
     // header + 2 site rows + total row
     expect(within(table).getAllByRole('row')).toHaveLength(4);
     expect(within(table).getByText('บริษัท A จำกัด')).toBeInTheDocument();
-    expect(within(table).getByText('250.000')).toBeInTheDocument();   // 100 + 150 kWp
+    expect(within(table).getByText('250.00')).toBeInTheDocument();    // 100 + 150 kWp — รวม prints 2 dp (2,009.30)
     expect(within(table).getByText('500,000')).toBeInTheDocument();   // 200000 + 300000 kWh
   });
 
@@ -534,9 +534,12 @@ describe('TverSF001Pdd — aggregated mode keeps per-site detail', () => {
     expect(coords.textContent).toContain('13.57, 100.35');
     expect(coords.textContent).toContain('13.45, 101.06');
     expect(coords.textContent).toContain('1. บริษัท A จำกัด');
-    // ที่ตั้งโครงการ numbers each site's address.
-    expect(screen.getByText('1. สมุทรสาคร')).toBeInTheDocument();
-    expect(screen.getByText('2. ชลบุรี')).toBeInTheDocument();
+    // The reference prints owner and address once, in one sub-table headed
+    // เจ้าของโครงการ | ที่ตั้งโครงการ that both label cells point at.
+    const header = within(owners).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('cell').map((c) => c.textContent)).toEqual(['เจ้าของโครงการ', 'ที่ตั้งโครงการ']);
+    expect(screen.queryByText('1. สมุทรสาคร')).toBeNull();
+    expect(screen.getAllByText('สมุทรสาคร')).toHaveLength(1);
   });
 
   it('ตารางที่ 4 labels its name column เจ้าของโครงการ, matching the site owner it prints', () => {
@@ -971,7 +974,7 @@ describe('TverSF001Pdd — ตารางที่ 1 total row cell count', () 
     expect(cells).toHaveLength(3); // รวม(colspan 3) + kWp + kWh
     expect(cells[0].getAttribute('colspan')).toBe('3');
     expect(cells[0].textContent).toBe('รวม');
-    expect(cells[1].textContent).toBe('250.000');
+    expect(cells[1].textContent).toBe('250.00');
     expect(cells[2].textContent).toBe('500,000');
     // Column count matches the header: 3 spanned + 2 value cells = 5.
     expect(within(rows[0]).getAllByRole('columnheader')).toHaveLength(5);
@@ -1024,5 +1027,31 @@ describe('TverSF001Pdd — boundary diagram in aggregated mode', () => {
     expect(diagram.textContent).toContain('ผู้ใช้ไฟฟ้า');
     expect(diagram.textContent).not.toContain('บริษัท ผู้พัฒนา จำกัด');
     expect(diagram.textContent).toContain('ระบบสายส่ง PEA / MEA');
+  });
+});
+
+describe('TverSF001Pdd — cover and detail-page wording from the reference', () => {
+  it('ตารางที่ 1 header spells out ปริมาณไฟฟ้าปีที่ 1 ที่คาดว่าจะผลิตได้', () => {
+    seedBundleData();
+    renderDoc();
+    const header = within(screen.getByTestId('sites-table')).getAllByRole('row')[0];
+    expect(within(header).getAllByRole('columnheader').map((c) => c.textContent))
+      .toEqual(['ลำดับ', 'เจ้าของโครงการ', 'ผู้พัฒนาโครงการ', 'กำลังการผลิตติดตั้ง (kWp)', 'ปริมาณไฟฟ้าปีที่ 1 ที่คาดว่าจะผลิตได้ (kWh/year)']);
+  });
+
+  it('prints the crediting period as a พ.ศ. date range on the detail page and in §1.5', () => {
+    // 7 years from 2027-01-01 → 1 มกราคม พ.ศ. 2570 ถึง 31 ธันวาคม พ.ศ. 2576
+    seedBundleData();
+    renderDoc();
+    const range = screen.getAllByText(/7 ปี \(1 มกราคม พ\.ศ\. 2570 ถึง 31 ธันวาคม พ\.ศ\. 2576\)/);
+    expect(range.length).toBeGreaterThanOrEqual(2);
+  });
+
+  it('cover page carries the ผู้พัฒนาโครงการ label above the developer name', () => {
+    seedBundleData();
+    const { container } = renderDoc();
+    const cover = container.querySelector('.cover-page')!;
+    expect(cover.textContent).toContain('ผู้พัฒนาโครงการ');
+    expect(cover.textContent).toContain('บริษัท ผู้พัฒนา จำกัด');
   });
 });
