@@ -218,6 +218,37 @@ function HeaderBox({ formLabel }: { formLabel: string }) {
   );
 }
 
+/**
+ * รหัส / เวอร์ชั่น / ชื่อระเบียบวิธีฯ header block — the official form repeats it
+ * above §2.2 and each §3 calculation, followed by the equation lines.
+ */
+function MethodBlock({ code, version, name, testId, children }: {
+  code: string; version: string; name: string; testId: string; children?: ReactNode;
+}) {
+  return (
+    <div data-testid={testId} className="mt-1 border border-[#333] px-2 py-1">
+      <p>รหัส: {code}</p>
+      <p>เวอร์ชั่น: {version}</p>
+      <p>ชื่อระเบียบวิธีฯ: {name}</p>
+      {children}
+    </div>
+  );
+}
+
+/** `(1/1/2570 – 31/12/2570)` — crediting year n's calendar span, Buddhist era, as §3.5 prints it. */
+function creditingYearRange(startIso: unknown, n: number): string {
+  if (typeof startIso !== 'string' || !startIso) return '';
+  const start = new Date(`${startIso}T00:00:00`);
+  if (Number.isNaN(start.getTime())) return '';
+  const from = new Date(start);
+  from.setFullYear(from.getFullYear() + n - 1);
+  const to = new Date(start);
+  to.setFullYear(to.getFullYear() + n);
+  to.setDate(to.getDate() - 1);
+  const dmy = (dt: Date) => `${dt.getDate()}/${dt.getMonth() + 1}/${dt.getFullYear() + 543}`;
+  return `(${dmy(from)} – ${dmy(to)})`;
+}
+
 function SectionBar({ children }: { children: ReactNode }) {
   return <div className="mb-2 mt-4 border border-[#333] bg-[#d9d9d9] px-2 py-1 font-bold">{children}</div>;
 }
@@ -946,48 +977,83 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </table>
 
           <p className="mt-3 font-bold underline">2.2 เงื่อนไขของกิจกรรมโครงการ</p>
-          <table className="doc-table mt-1 w-full">
+          <MethodBlock code={methodology.code} version={methodology.version} name={methodology.name} testId="applicability-method" />
+          {/* Reference p.13-14: Applicability (one row) and four numbered Project
+              Conditions under their own sub-heading rows. The wording is the
+              methodology's own and identical for every solar-PV project. */}
+          <table data-testid="applicability-table" className="doc-table w-full">
             <thead>
               <tr className="bg-[#f2f2f2] text-center font-bold"><td className="w-1/2">เงื่อนไขของกิจกรรมโครงการ</td><td>เหตุผลของโครงการ</td></tr>
             </thead>
             <tbody>
+              <tr><td colSpan={2} className="bg-[#f7f7f7] font-bold">ลักษณะของกิจกรรมโครงการที่เข้าข่าย (Applicability)</td></tr>
               <tr>
-                <td>เป็นโครงการที่มีกิจกรรมการผลิตไฟฟ้าจากพลังงานหมุนเวียนหรือทดแทนการผลิตไฟฟ้าจากเชื้อเพลิงฟอสซิล เพื่อใช้เองหรือจำหน่ายเข้าระบบสายส่ง (Greenfield / Retrofit / Replacement)</td>
-                <td><span className="underline">เข้าข่าย</span> เนื่องจากเป็นโครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ซึ่งเป็นพลังงานหมุนเวียน เพื่อทดแทนการใช้ไฟฟ้าจากเชื้อเพลิงฟอสซิลจากระบบสายส่ง</td>
+                <td>
+                  เป็นโครงการที่มีกิจกรรมการผลิตไฟฟ้าจากพลังงานหมุนเวียนหรือทดแทนการผลิตไฟฟ้าจากเชื้อเพลิงฟอสซิล เพื่อใช้เองหรือจำหน่ายเข้าระบบสายส่ง ในรูปแบบหนึ่งจากทั้งหมด ได้แก่
+                  <ul className="list-disc pl-6">
+                    <li>การติดตั้งใหม่ (Greenfield)</li>
+                    <li>การปรับปรุงระบบที่มีอยู่เดิม โดยยังคงโครงสร้างหลักไว้ (Retrofit)</li>
+                    <li>การเปลี่ยน/สร้างระบบใหม่เพื่อทดแทนที่ของเดิม (Replacement)</li>
+                  </ul>
+                </td>
+                <td><span className="underline">เข้าข่าย</span> เนื่องจากเป็นโครงการที่มีกิจกรรมการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ซึ่งเป็นพลังงานหมุนเวียน เพื่อทดแทนการใช้ไฟฟ้าจากเชื้อเพลิงฟอสซิลจากระบบสายส่ง (การไฟฟ้าส่วนภูมิภาค/การไฟฟ้านครหลวง)</td>
+              </tr>
+              <tr><td colSpan={2} className="bg-[#f7f7f7] font-bold">เงื่อนไขของกิจกรรมโครงการ (Project Conditions)</td></tr>
+              <tr>
+                <td>1. เป็นการผลิตไฟฟ้าเพื่อทดแทนการผลิตไฟฟ้าจากเชื้อเพลิงฟอสซิล</td>
+                <td><span className="underline">เข้าเงื่อนไข</span> เนื่องจากเป็นโครงการที่มีกิจกรรมการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ซึ่งเป็นพลังงานหมุนเวียน เพื่อทดแทนการใช้ไฟฟ้าจากเชื้อเพลิงฟอสซิลจากระบบสายส่ง</td>
               </tr>
               <tr>
-                <td>กรณีการผลิตไฟฟ้าจากเชื้อเพลิงชีวมวลหรือขยะมูลฝอยที่มีกำลังการผลิตติดตั้งรวมเกิน 15 MW และระยะทางขนส่งเชื้อเพลิงนอกรัศมี 200 กิโลเมตร ต้องประเมินการปล่อยนอกขอบเขตโครงการ</td>
-                <td><span className="underline">ไม่เกี่ยวข้อง</span> เนื่องจากไม่มีการใช้เชื้อเพลิงชีวมวลหรือขยะมูลฝอยในการผลิตไฟฟ้า</td>
+                <td>2. สำหรับกรณีการผลิตไฟฟ้าจากเชื้อเพลิงชีวมวลหรือขยะมูลฝอยที่มีกำลังการผลิตติดตั้งรวม (Total Installed Capacity) แต่ละประเภทเทคโนโลยีพลังงานหมุนเวียนเกิน 15 MW และระยะทางการขนส่งเชื้อเพลิงพลังงานหมุนเวียนอยู่นอกรัศมี 200 กิโลเมตร ต้องประเมินการปล่อยก๊าซเรือนกระจกภายนอกขอบเขตโครงการ</td>
+                <td><span className="underline">ไม่เกี่ยวข้อง</span> เนื่องจากไม่มีการใช้เชื้อเพลิงชีวมวลหรือขยะมูลฝอยในการผลิตไฟฟ้า จึงไม่มีการขนส่งเชื้อเพลิงใดๆ ที่จะต้องประเมินการปล่อยก๊าซเรือนกระจกภายนอกขอบเขตโครงการ</td>
               </tr>
               <tr>
-                <td>กรณีการผลิตไฟฟ้าจากพลังงานหมุนเวียนระดับชุมชน ต้องมีกำลังการผลิตติดตั้งรวมไม่เกิน 100 kW และผลิตเพื่อใช้เองในชุมชน</td>
-                <td><span className="underline">ไม่เกี่ยวข้อง</span> เนื่องจากไม่เป็นการผลิตไฟฟ้าเพื่อใช้เองในชุมชน</td>
+                <td>3. สำหรับกรณีที่เป็นการผลิตไฟฟ้าจากพลังงานหมุนเวียนระดับชุมชน ต้องมีกำลังการผลิตติดตั้งรวมไม่เกิน 100 kW และเป็นการผลิตไฟฟ้าเพื่อใช้เองในชุมชน</td>
+                <td><span className="underline">ไม่เกี่ยวข้อง</span> เนื่องจากไม่เป็นการผลิตไฟฟ้าเพื่อใช้เองในชุมชน{totalKwp > 100 ? ' และมีกำลังการผลิตติดตั้งรวมเกิน 100 kW' : ''}</td>
               </tr>
               <tr>
-                <td>กรณีการนำก๊าซชีวภาพนอกขอบเขตโครงการมาใช้ประโยชน์ ต้องประเมินการปล่อยก๊าซเรือนกระจกจากก๊าซชีวภาพที่รั่วไหลและการเผาทำลาย</td>
+                <td>4. สำหรับกรณีการนำก๊าซชีวภาพนอกขอบเขตโครงการมาใช้ประโยชน์จะต้องประเมินการปล่อยก๊าซเรือนกระจกภายนอกขอบเขตโครงการที่เกิดขึ้นจากก๊าซชีวภาพที่รั่วไหลและการเผาทำลายก๊าซชีวภาพ</td>
                 <td><span className="underline">ไม่เกี่ยวข้อง</span> เนื่องจากไม่มีการนำก๊าซชีวภาพนอกขอบเขตโครงการมาใช้ประโยชน์</td>
               </tr>
             </tbody>
           </table>
 
           <p className="mt-3 font-bold underline">2.3 ข้อมูลที่เกี่ยวข้องต่อการคำนวณปริมาณการปล่อยก๊าซเรือนกระจก</p>
-          <table className="doc-table mt-1 w-full">
+          <p className="mt-1">แหล่งปล่อยก๊าซเรือนกระจกที่นำมาใช้ในการคำนวณ</p>
+          {/* Reference p.15: two sources per group, each answered — the
+              methodology's own list, so it is fixed text like §2.2. */}
+          <table data-testid="emission-source-table" className="doc-table mt-1 w-full">
             <thead>
-              <tr className="bg-[#f2f2f2] text-center font-bold"><td>แหล่งปล่อยก๊าซเรือนกระจก</td><td>ชนิดก๊าซ</td><td>รายละเอียดของกิจกรรมโครงการ</td></tr>
+              <tr className="bg-[#f2f2f2] text-center font-bold"><td>แหล่งปล่อยก๊าซเรือนกระจก</td><td>ชนิดของก๊าซเรือนกระจก</td><td>รายละเอียดของกิจกรรมโครงการ</td></tr>
             </thead>
             <tbody>
               <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การปล่อยก๊าซเรือนกระจกจากกรณีฐาน</td></tr>
               <tr>
                 <td>การผลิตไฟฟ้าของระบบสายส่ง</td><td className="text-center">CO₂</td>
-                <td>การเผาไหม้เชื้อเพลิงฟอสซิลเพื่อผลิตไฟฟ้าของระบบสายส่ง</td>
+                <td>การเผาไหม้เชื้อเพลิงฟอสซิลเพื่อผลิตไฟฟ้าของระบบสายส่งจากการไฟฟ้าส่วนภูมิภาค/การไฟฟ้านครหลวง</td>
+              </tr>
+              <tr>
+                <td>การผลิตไฟฟ้าเพื่อใช้เอง หรือ ส่ง หรือจำหน่ายให้ผู้ประกอบการรายอื่น</td><td className="text-center">CO₂</td>
+                <td>ไม่เกี่ยวข้อง เนื่องจากกิจกรรมของโครงการกรณีฐานเป็นการใช้ไฟฟ้าจากระบบสายส่งจากการไฟฟ้าส่วนภูมิภาค/การไฟฟ้านครหลวง</td>
               </tr>
               <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การปล่อยก๊าซเรือนกระจกจากการดำเนินโครงการ</td></tr>
               <tr>
+                <td>การใช้เชื้อเพลิงฟอสซิล</td><td className="text-center">CO₂</td>
+                <td>ไม่เกี่ยวข้อง เนื่องจากกิจกรรมของโครงการไม่มีการเผาไหม้เชื้อเพลิงฟอสซิล</td>
+              </tr>
+              <tr>
                 <td>การใช้ไฟฟ้า</td><td className="text-center">CO₂</td>
-                <td>ไฟฟ้าจากระบบสายส่งที่ใช้กับอุปกรณ์ของโครงการในช่วงเวลากลางคืนและช่วงที่ระบบผลิตได้ไม่เพียงพอ</td>
+                <td>การเผาไหม้เชื้อเพลิงฟอสซิลเพื่อผลิตไฟฟ้าของระบบสายส่งจากการไฟฟ้าส่วนภูมิภาค/การไฟฟ้านครหลวง ด้วยระบบออนกริด (On-Grid) ในช่วงเวลากลางคืน และช่วงเวลาที่ระบบ Solar Rooftop ไม่สามารถผลิตได้เพียงพอต่อการใช้งานของหน่วยงาน</td>
               </tr>
               <tr><td colSpan={3} className="bg-[#f7f7f7] font-bold">การปล่อยก๊าซเรือนกระจกนอกขอบเขตโครงการ</td></tr>
-              <tr><td>การขนส่งเชื้อเพลิง / ระบบก๊าซชีวภาพ</td><td className="text-center">CO₂, CH₄</td><td>ไม่เกี่ยวข้อง</td></tr>
+              <tr>
+                <td>การใช้เชื้อเพลิงฟอสซิลจากการขนส่ง</td><td className="text-center">CO₂</td>
+                <td>ไม่เกี่ยวข้อง เนื่องจากโครงการไม่มีการใช้เชื้อเพลิงชีวมวลหรือขยะมูลฝอยในการผลิตไฟฟ้า จึงไม่มีการขนส่งเชื้อเพลิงใด ๆ ที่จะต้องประเมินการปล่อยก๊าซเรือนกระจกภายนอกขอบเขตโครงการ</td>
+              </tr>
+              <tr>
+                <td>ระบบบำบัดน้ำเสียแบบไร้อากาศ/ระบบกักเก็บและระบบ Biogas flare</td><td className="text-center">CH₄</td>
+                <td>ไม่เกี่ยวข้อง เนื่องจากโครงการไม่มีการใช้ก๊าซชีวภาพในการผลิตไฟฟ้า จึงไม่มีก๊าซชีวภาพที่รั่วไหลออกจากระบบบำบัดน้ำเสียแบบไร้อากาศ รวมไปถึงระบบกักเก็บ และก๊าซชีวภาพที่เผาทำลายไม่หมด</td>
+              </tr>
             </tbody>
           </table>
 
@@ -1013,9 +1079,17 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         <Page formLabel={formLabel}>
           <SectionBar>ส่วนที่ 3 การคำนวณการลดก๊าซเรือนกระจก</SectionBar>
 
-          <p className="font-bold underline">3.1 การคำนวณปริมาณก๊าซเรือนกระจกกรณีฐาน (Baseline Emission)</p>
-          <p className="mt-1 pl-8">สมการที่ใช้: BE<sub>y</sub> = (EG<sub>Consumer,PJ,y</sub> × 10⁻³) × EF<sub>EC,PJ,y</sub></p>
-          <table className="doc-table mt-1 w-full">
+          <p className="font-bold underline">3.1 การคำนวณปริมาณก๊าซเรือนกระจกกรณีฐาน (Baseline Sequestration/Emission)</p>
+          <p className="mt-1 indent-8">
+            การปล่อยก๊าซเรือนกระจกจากกรณีฐาน พิจารณาเฉพาะการปล่อยก๊าซคาร์บอนไดออกไซด์ (CO₂) จากการผลิตไฟฟ้าด้วยเชื้อเพลิงฟอสซิล
+            โดยคิดเทียบเท่าจากปริมาณไฟฟ้าที่ผลิตได้จากพลังงานหมุนเวียนที่นำไปทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
+          </p>
+          <MethodBlock code={methodology.code} version={methodology.version} name={methodology.name} testId="be-method">
+            <p>สมการที่ใช้: BE<sub>y</sub> = BE<sub>EG,y</sub></p>
+            <p>กรณีที่ 2 ผลิตไฟฟ้าเพื่อใช้เอง/ส่งหรือจำหน่ายให้แก่ผู้ประกอบการรายอื่น (ลดการซื้อไฟฟ้าจากระบบสายส่ง)</p>
+            <p className="pl-8">BE<sub>EG,y</sub> = (EG<sub>Consumer,PJ,y</sub> × 10⁻³) × EF<sub>EC,PJ,y</sub></p>
+          </MethodBlock>
+          <table data-testid="be-params" className="doc-table w-full">
             <thead>
               <tr className="bg-[#f2f2f2] text-center font-bold"><td>พารามิเตอร์</td><td>ความหมาย</td><td>อ้างอิง</td><td>ค่าที่ใช้</td><td>หน่วย</td></tr>
             </thead>
@@ -1033,7 +1107,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 <td className="text-right">{table ? fmt(table.avg.be) : '-'}</td><td className="text-center">tCO₂/year</td>
               </tr>
               <tr>
-                <td className="text-center">EG<sub>Consumer,PJ,y</sub></td><td>ปริมาณไฟฟ้าที่ผลิตได้เพื่อใช้เองจากการดำเนินโครงการพลังงานหมุนเวียน ในปี y (เฉลี่ย)</td>
+                <td className="text-center">EG<sub>Consumer,PJ,y</sub></td><td>ปริมาณไฟฟ้าที่ผลิตได้เพื่อใช้เอง/ส่งหรือจำหน่ายให้แก่ผู้ใช้ไฟฟ้าจากการดำเนินโครงการพลังงานหมุนเวียน ในปี y</td>
                 <td className="text-center">คาดการณ์</td>
                 <td className="text-right">{table ? fmt(table.rows.reduce((a, r) => a + r.generation_kwh, 0) / years) : '-'}</td><td className="text-center">kWh/year</td>
               </tr>
@@ -1045,9 +1119,13 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             </tbody>
           </table>
 
-          <p className="mt-3 font-bold underline">3.2 การคำนวณปริมาณก๊าซเรือนกระจกจากการดำเนินโครงการ (Project Emission)</p>
-          <p className="mt-1 pl-8">สมการที่ใช้: PE<sub>y</sub> = PE<sub>FF,y</sub> + PE<sub>EL,y</sub> โดย PE<sub>EL,y</sub> = (EC<sub>PJ,y</sub> × 10⁻³) × EF<sub>EC,PJ,y</sub></p>
-          <table className="doc-table mt-1 w-full">
+          <p className="mt-3 font-bold underline">3.2 การคำนวณปริมาณก๊าซเรือนกระจกจากการดำเนินโครงการ (Project Sequestration/Emission)</p>
+          <MethodBlock code={methodology.code} version={methodology.version} name={methodology.name} testId="pe-method">
+            <p>สมการที่ใช้: PE<sub>y</sub> = PE<sub>FF,y</sub> + PE<sub>EL,y</sub></p>
+            <p>กรณีที่ 2 การปล่อยก๊าซเรือนกระจกจากการใช้ไฟฟ้าจากระบบสายส่งหรือการใช้ไฟฟ้าที่ผลิตจากเชื้อเพลิงฟอสซิล</p>
+            <p className="pl-8">PE<sub>EL,y</sub> = (EC<sub>PJ,y</sub> × 10⁻³) × EF<sub>EC,PJ,y</sub></p>
+          </MethodBlock>
+          <table data-testid="pe-params" className="doc-table w-full">
             <thead>
               <tr className="bg-[#f2f2f2] text-center font-bold"><td>พารามิเตอร์</td><td>ความหมาย</td><td>อ้างอิง</td><td>ค่าที่ใช้</td><td>หน่วย</td></tr>
             </thead>
@@ -1086,8 +1164,11 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="mt-3 font-bold underline">3.3 การคำนวณปริมาณก๊าซเรือนกระจกนอกขอบเขตโครงการ (Leakage Emission)</p>
           <p className="indent-8">ไม่เกี่ยวข้อง เนื่องจากเป็นโครงการผลิตไฟฟ้าจากพลังงานหมุนเวียน (พลังงานแสงอาทิตย์) ไม่มีการใช้เชื้อเพลิงชีวมวลหรือขยะมูลฝอย</p>
 
-          <p className="mt-3 font-bold underline">3.4 สรุปปริมาณการลดก๊าซเรือนกระจก (ER<sub>y</sub> = BE<sub>y</sub> − PE<sub>y</sub> − LE<sub>y</sub>)</p>
-          <table data-testid="er-summary-table" className="doc-table mt-1 w-full">
+          <p className="mt-3 font-bold underline">3.4 สรุปปริมาณการลดก๊าซเรือนกระจก</p>
+          <MethodBlock code={methodology.code} version={methodology.version} name={methodology.name} testId="er-method">
+            <p>สมการที่ใช้: ER<sub>y</sub> = BE<sub>y</sub> – PE<sub>y</sub> – LE<sub>y</sub></p>
+          </MethodBlock>
+          <table data-testid="er-summary-table" className="doc-table w-full">
             <thead>
               <tr className="bg-[#f2f2f2] text-center font-bold"><td>พารามิเตอร์</td><td>ความหมาย</td><td>ค่าที่ได้</td><td>หน่วย</td></tr>
             </thead>
@@ -1116,7 +1197,14 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             </tbody>
           </table>
 
-          <p className="mt-3 font-bold underline">3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้ — {creditingPeriod}</p>
+          <p className="mt-3 font-bold underline">3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้</p>
+          <div className="mt-1 pl-4">
+            <p>ระยะเวลาการคิดเครดิตของโครงการ</p>
+            <div className="pl-4">
+              <Check on={has('crediting_years', '7')}>{has('crediting_years', '7') ? creditingPeriod : '7 ปี'}</Check>
+              <Check on={has('crediting_years', '10')}>{has('crediting_years', '10') ? creditingPeriod : '10 ปี'}</Check>
+            </div>
+          </div>
           {table ? (
             <table className="doc-table mt-1 w-full" data-testid="yearly-table">
               <thead>
@@ -1131,7 +1219,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tbody>
                 {table.rows.map((r) => (
                   <tr key={r.year}>
-                    <td className="text-center">{r.year}</td>
+                    {/* Reference p.20 dates every year: "1 (1/1/2565 – 31/12/2565)". */}
+                    <td className="text-center">{`${r.year} ${creditingYearRange(d.crediting_start, r.year)}`.trim()}</td>
                     <td className="text-right">{fmt(r.be)}</td>
                     <td className="text-right">{fmt(r.pe)}</td>
                     <td className="text-center">{r.le}</td>
@@ -1144,6 +1233,13 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                   <td className="text-right">{fmt(table.totals.pe)}</td>
                   <td className="text-center">{table.totals.le}</td>
                   <td className="text-right">{fmtInt(table.totals.er)}</td>
+                </tr>
+                <tr>
+                  <td className="text-center">จำนวนปี</td>
+                  <td className="text-center">{table.years}</td>
+                  <td className="text-center">{table.years}</td>
+                  <td className="text-center">{table.years}</td>
+                  <td className="text-center">{table.years}</td>
                 </tr>
                 <tr className="font-bold">
                   <td className="text-center">เฉลี่ยปีละ (tCO₂eq/y)</td>

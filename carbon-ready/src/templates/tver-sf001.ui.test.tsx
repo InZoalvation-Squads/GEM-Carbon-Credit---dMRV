@@ -834,13 +834,9 @@ describe('TverSF001Pdd — §3.4 summary and the §3.1/§3.2 parameter rows', ()
     return out;
   }
 
-  /** The <table> immediately after the "สมการที่ใช้:" line whose text starts with `eq`. */
-  function equationTable(eq: string): HTMLElement {
-    const p = screen.getAllByText((_, el) => el?.tagName === 'P'
-      && (el.textContent ?? '').startsWith(`สมการที่ใช้: ${eq}`))
-      .filter((el) => el.tagName === 'P');
-    expect(p, eq).toHaveLength(1);
-    return p[0].nextElementSibling as HTMLElement;
+  /** The §3.1 / §3.2 parameter table. */
+  function equationTable(eq: 'BEy' | 'PEy'): HTMLElement {
+    return screen.getByTestId(eq === 'BEy' ? 'be-params' : 'pe-params');
   }
 
   it('§3.4 lists ER/BE/PE/LE with the computed averages', () => {
@@ -1080,5 +1076,99 @@ describe('TverSF001Pdd — cover and detail-page wording from the reference', ()
     const cover = container.querySelector('.cover-page')!;
     expect(cover.textContent).toContain('ผู้พัฒนาโครงการ');
     expect(cover.textContent).toContain('บริษัท ผู้พัฒนา จำกัด');
+  });
+});
+
+describe('TverSF001Pdd — §2.2 and §2.3 carry the reference rows', () => {
+  it('§2.2 splits Applicability from four numbered Project Conditions under a methodology header block', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('applicability-table');
+    const firstCells = within(table).getAllByRole('row').map((r) => within(r).getAllByRole('cell')[0].textContent ?? '');
+    expect(firstCells).toEqual([
+      'เงื่อนไขของกิจกรรมโครงการ',
+      'ลักษณะของกิจกรรมโครงการที่เข้าข่าย (Applicability)',
+      expect.stringMatching(/^เป็นโครงการที่มีกิจกรรมการผลิตไฟฟ้าจากพลังงานหมุนเวียน/),
+      'เงื่อนไขของกิจกรรมโครงการ (Project Conditions)',
+      expect.stringMatching(/^1\. เป็นการผลิตไฟฟ้าเพื่อทดแทนการผลิตไฟฟ้าจากเชื้อเพลิงฟอสซิล/),
+      expect.stringMatching(/^2\. สำหรับกรณีการผลิตไฟฟ้าจากเชื้อเพลิงชีวมวล/),
+      expect.stringMatching(/^3\. สำหรับกรณีที่เป็นการผลิตไฟฟ้าจากพลังงานหมุนเวียนระดับชุมชน/),
+      expect.stringMatching(/^4\. สำหรับกรณีการนำก๊าซชีวภาพนอกขอบเขตโครงการ/),
+    ]);
+    expect(within(table).getAllByRole('row')[4].textContent).toContain('เข้าเงื่อนไข');
+    // รหัส / เวอร์ชั่น / ชื่อระเบียบวิธีฯ header block precedes §2.2, §3.1, §3.2 and §3.4.
+    expect(screen.getAllByText(/^รหัส: /)).toHaveLength(4);
+    expect(screen.getAllByText(/^เวอร์ชั่น: /)).toHaveLength(4);
+    expect(screen.getAllByText(/^ชื่อระเบียบวิธีฯ: /)).toHaveLength(4);
+  });
+
+  it('§2.3 lists the six emission sources of the reference with their gases', () => {
+    seedBundleData();
+    renderDoc();
+    const table = screen.getByTestId('emission-source-table');
+    const rows = within(table).getAllByRole('row');
+    expect(within(rows[0]).getAllByRole('cell').map((c) => c.textContent))
+      .toEqual(['แหล่งปล่อยก๊าซเรือนกระจก', 'ชนิดของก๊าซเรือนกระจก', 'รายละเอียดของกิจกรรมโครงการ']);
+    const sources = rows.slice(1)
+      .map((r) => within(r).getAllByRole('cell'))
+      .filter((cells) => cells.length === 3)
+      .map((cells) => [cells[0].textContent, cells[1].textContent]);
+    expect(sources).toEqual([
+      ['การผลิตไฟฟ้าของระบบสายส่ง', 'CO₂'],
+      ['การผลิตไฟฟ้าเพื่อใช้เอง หรือ ส่ง หรือจำหน่ายให้ผู้ประกอบการรายอื่น', 'CO₂'],
+      ['การใช้เชื้อเพลิงฟอสซิล', 'CO₂'],
+      ['การใช้ไฟฟ้า', 'CO₂'],
+      ['การใช้เชื้อเพลิงฟอสซิลจากการขนส่ง', 'CO₂'],
+      ['ระบบบำบัดน้ำเสียแบบไร้อากาศ/ระบบกักเก็บและระบบ Biogas flare', 'CH₄'],
+    ]);
+  });
+});
+
+describe('TverSF001Pdd — ส่วนที่ 3 headings, method blocks and the §3.5 layout', () => {
+  it('uses the reference section titles', () => {
+    seedBundleData();
+    renderDoc();
+    expect(screen.getByText('3.1 การคำนวณปริมาณก๊าซเรือนกระจกกรณีฐาน (Baseline Sequestration/Emission)')).toBeInTheDocument();
+    expect(screen.getByText('3.2 การคำนวณปริมาณก๊าซเรือนกระจกจากการดำเนินโครงการ (Project Sequestration/Emission)')).toBeInTheDocument();
+    expect(screen.getByText('3.4 สรุปปริมาณการลดก๊าซเรือนกระจก')).toBeInTheDocument();
+    expect(screen.getByText('3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้')).toBeInTheDocument();
+  });
+
+  it('§3.1 states BEy = BEEG,y, then กรณีที่ 2 and its equation, before the parameter table', () => {
+    seedBundleData();
+    renderDoc();
+    const block = screen.getByTestId('be-method');
+    expect(block.textContent).toContain('สมการที่ใช้: BEy = BEEG,y');
+    expect(block.textContent).toContain('กรณีที่ 2 ผลิตไฟฟ้าเพื่อใช้เอง/ส่งหรือจำหน่ายให้แก่ผู้ประกอบการรายอื่น (ลดการซื้อไฟฟ้าจากระบบสายส่ง)');
+    expect(block.textContent).toContain('BEEG,y = (EGConsumer,PJ,y × 10⁻³) × EFEC,PJ,y');
+    const pe = screen.getByTestId('pe-method');
+    expect(pe.textContent).toContain('สมการที่ใช้: PEy = PEFF,y + PEEL,y');
+    expect(pe.textContent).toContain('กรณีที่ 2 การปล่อยก๊าซเรือนกระจกจากการใช้ไฟฟ้าจากระบบสายส่งหรือการใช้ไฟฟ้าที่ผลิตจากเชื้อเพลิงฟอสซิล');
+    expect(screen.getByTestId('er-method').textContent).toContain('สมการที่ใช้: ERy = BEy – PEy – LEy');
+  });
+
+  it('§3.5 puts the crediting-period checkboxes under the heading and dates every year row', () => {
+    seedBundleData(); // 7 years from 2027-01-01
+    renderDoc();
+    const table = screen.getByTestId('yearly-table');
+    const rows = within(table).getAllByRole('row');
+    const first = (i: number) => within(rows[i]).getAllByRole('cell')[0].textContent;
+    expect(first(1)).toBe('1 (1/1/2570 – 31/12/2570)');
+    expect(first(7)).toBe('7 (1/1/2576 – 31/12/2576)');
+    // รวม, จำนวนปี, เฉลี่ยปีละ close the table as on page 20.
+    expect(first(8)).toBe('รวม (tCO₂eq)');
+    expect(within(rows[9]).getAllByRole('cell').map((c) => c.textContent)).toEqual(['จำนวนปี', '7', '7', '7', '7']);
+    expect(first(10)).toBe('เฉลี่ยปีละ (tCO₂eq/y)');
+    // The period line sits between the heading and the table.
+    const heading = screen.getByText('3.5 สรุปปริมาณก๊าซเรือนกระจกที่คาดว่าจะลด/กักเก็บได้');
+    expect(heading.nextElementSibling?.textContent).toContain('ระยะเวลาการคิดเครดิตของโครงการ');
+    expect(heading.nextElementSibling?.textContent).toContain('☑7 ปี (1 มกราคม พ.ศ. 2570 ถึง 31 ธันวาคม พ.ศ. 2576)');
+  });
+
+  it('§3.5 year ranges follow a mid-year crediting start', () => {
+    seedMcruData({ crediting_start: '2026-04-01', crediting_years: '7' });
+    renderDoc();
+    const rows = within(screen.getByTestId('yearly-table')).getAllByRole('row');
+    expect(within(rows[1]).getAllByRole('cell')[0].textContent).toBe('1 (1/4/2569 – 31/3/2570)');
   });
 });
