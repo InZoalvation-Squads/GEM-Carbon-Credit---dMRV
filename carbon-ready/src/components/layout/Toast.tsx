@@ -37,7 +37,7 @@ export const toast = {
 };
 
 const config: Record<ToastTone, { icon: typeof Info; ring: string; iconColor: string; rail: string }> = {
-  success: { icon: CheckCircle2, ring: 'ring-brand-600/15', iconColor: 'text-brand-600', rail: 'bg-brand-500' },
+  success: { icon: CheckCircle2, ring: 'ring-brand-600/15', iconColor: 'text-brand-700', rail: 'bg-brand-500' },
   error:   { icon: AlertCircle,  ring: 'ring-red-600/15',   iconColor: 'text-red-600',   rail: 'bg-red-500' },
   info:    { icon: Info,         ring: 'ring-sky-600/15',   iconColor: 'text-sky-600',   rail: 'bg-sky-500' },
 };

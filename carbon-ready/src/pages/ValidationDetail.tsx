@@ -89,7 +89,7 @@ export function ValidationDetail() {
           <Card className="p-5">
             <h2 className="mb-2 text-sm font-semibold text-ink">Completeness</h2>
             {check.ok ? (
-              <p className="text-sm text-brand-600">All required fields complete.</p>
+              <p className="text-sm text-brand-700">All required fields complete.</p>
             ) : (
               <ul className="divide-y divide-rule text-sm text-state-rejected">
                 {check.missing.map((m) => <li className="py-2" key={m.field}>{m.label}</li>)}

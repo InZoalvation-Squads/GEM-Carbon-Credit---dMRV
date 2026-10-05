@@ -59,7 +59,7 @@ export function ReviewDetail() {
   }
 
   if (!v) {
-    return <div className="text-sm text-ink-meta">Package not found. <Link to="/verifications" className="text-brand-600 underline">Back to queue</Link></div>;
+    return <div className="text-sm text-ink-meta">Package not found. <Link to="/verifications" className="text-brand-700 underline">Back to queue</Link></div>;
   }
 
   const pkgEvidence = evidence.filter((e) => v.evidence_ids.includes(e.id));
@@ -118,7 +118,7 @@ export function ReviewDetail() {
         <ChainList className="mb-5">
           <BlockRow blockId={v.id} state={v.credential_id ? 'anchored' : v.state} figure={formatTco2e(v.reduction_kgco2e)} source={v.factors_snapshot}>
           <div className="mt-3 flex items-center gap-3 border-t border-rule pt-3">
-            <Lock size={16} className="text-brand-600" />
+            <Lock size={16} className="text-brand-700" />
             <div className="text-sm text-brand-700">
               {v.state === 'approved' ? (
                 v.credential_id == null ? (
@@ -132,7 +132,7 @@ export function ReviewDetail() {
                 ) : (
                   <div>
                     <div className="flex items-center gap-2 font-medium text-brand-700"><Link2 size={16} aria-hidden /> Anchored on Hedera Guardian{credential?.anchor ? '' : ' (simulated)'}</div>
-                    <div className="anchor-provenance mt-1 grid gap-0.5 text-xs text-brand-600 font-mono">
+                    <div className="anchor-provenance mt-1 grid gap-0.5 text-xs text-brand-700 font-mono">
                       <span className="inline-flex items-center gap-1">credential: <HashChip value={v.credential_id} /></span>
                       <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {credential?.anchor?.consensus_timestamp ?? credential?.hcs.consensus_timestamp ?? (v.anchored_at ? fmtDateTime(v.anchored_at) : '')}</span>
                       {credential && <a className="underline" href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer">View on HashScan{displayHcs(credential).real ? '' : ' (mock)'} ↗</a>}
@@ -196,7 +196,7 @@ export function ReviewDetail() {
                   </div>
                   {deltaPct !== null && (
                     <div data-testid="claim-check" className={'flex items-center gap-2 rounded-sheet px-3 py-2 text-sm ' + (claimMatches ? 'bg-brand-50 text-brand-700' : 'bg-state-revision/5 text-state-revision')}>
-                      <CheckCircle2 size={16} className={claimMatches ? 'text-brand-600' : 'text-state-revision'} />
+                      <CheckCircle2 size={16} className={claimMatches ? 'text-brand-700' : 'text-state-revision'} />
                       {claimMatches
                         ? `ตัวเลขที่เคลม (${formatTco2e(v.reduction_kgco2e)}) ตรงกับที่คำนวณจากข้อมูลดิบ (ต่าง ${deltaPct.toFixed(2)}%)`
                         : `ตัวเลขที่เคลมต่างจากที่คำนวณได้ ${deltaPct.toFixed(1)}% — ตรวจสอบก่อนอนุมัติ`}
@@ -213,8 +213,8 @@ export function ReviewDetail() {
               {coverage.map(({ category, present }) => (
                 <div key={category}
                   className={'flex items-center gap-2 px-5 py-3 text-sm ' +
-                    (present ? 'text-brand-600' : 'text-state-revision')}>
-                  <CheckCircle2 size={16} className={present ? 'text-brand-600' : 'text-state-revision'} />
+                    (present ? 'text-brand-700' : 'text-state-revision')}>
+                  <CheckCircle2 size={16} className={present ? 'text-brand-700' : 'text-state-revision'} />
                   {CATEGORY_LABEL[category]}
                 </div>
               ))}
@@ -233,7 +233,7 @@ export function ReviewDetail() {
                       <div className="mt-0.5"><CategoryChip category={e.category} /></div>
                     </div>
                     <span className="font-mono text-xs text-ink-meta">v{e.version_number}</span>
-                    <CheckCircle2 size={16} className="text-brand-600" />
+                    <CheckCircle2 size={16} className="text-brand-700" />
                   </li>
                 ))}
                 {pkgEvidence.length === 0 && <li className="px-5 py-8 text-center text-sm text-ink-meta">No evidence linked.</li>}
@@ -295,7 +295,7 @@ export function ReviewDetail() {
           )}
 
           <Card>
-            <CardHeader title="Activity timeline" action={<Link to="/audit-log" className="text-xs font-medium text-brand-600 hover:underline">Full audit ›</Link>} />
+            <CardHeader title="Activity timeline" action={<Link to="/audit-log" className="text-xs font-medium text-brand-700 hover:underline">Full audit ›</Link>} />
             <CardBody>
               <ol className="space-y-3 border-l border-rule pl-4">
                 {audit.map((a: AuditLog) => (
@@ -323,9 +323,9 @@ export function ReviewDetail() {
           <div className="space-y-4">
             <p className="text-sm text-ink-secondary">This will lock the package. After approval:</p>
             <ul className="space-y-1.5 text-sm text-ink-secondary">
-              <li className="flex gap-2"><Lock size={16} className="text-brand-600 shrink-0" /> Evidence versions become read-only.</li>
-              <li className="flex gap-2"><ShieldCheck size={16} className="text-brand-600 shrink-0" /> Carbon claim of {formatTco2e(v.reduction_kgco2e)} is finalized.</li>
-              <li className="flex gap-2"><FileCheck2 size={16} className="text-brand-600 shrink-0" /> A hash-sealed audit record is written, ready for Hedera Guardian (Sprint 3).</li>
+              <li className="flex gap-2"><Lock size={16} className="text-brand-700 shrink-0" /> Evidence versions become read-only.</li>
+              <li className="flex gap-2"><ShieldCheck size={16} className="text-brand-700 shrink-0" /> Carbon claim of {formatTco2e(v.reduction_kgco2e)} is finalized.</li>
+              <li className="flex gap-2"><FileCheck2 size={16} className="text-brand-700 shrink-0" /> A hash-sealed audit record is written, ready for Hedera Guardian (Sprint 3).</li>
             </ul>
             <Textarea label="Approval notes (optional)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
             <label className="flex items-center gap-2 text-sm text-ink-secondary">

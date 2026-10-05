@@ -66,7 +66,7 @@ export function Register() {
 
         <p className="mt-4 text-center text-sm text-ink-500">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-brand-600 hover:underline">Sign in</Link>
+          <Link to="/login" className="font-medium text-brand-700 hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

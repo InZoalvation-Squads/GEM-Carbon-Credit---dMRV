@@ -21,7 +21,7 @@ export function HashChip({ value, className }: { value: string; className?: stri
     >
       <span className="truncate">{short}</span>
       {copied
-        ? <Check size={11} aria-hidden className="shrink-0 text-brand-600" />
+        ? <Check size={11} aria-hidden className="shrink-0 text-brand-700" />
         : <Copy size={11} aria-hidden className="shrink-0 text-ink-400" />}
     </button>
   );

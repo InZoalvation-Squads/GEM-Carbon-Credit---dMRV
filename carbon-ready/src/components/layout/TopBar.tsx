@@ -165,7 +165,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
                       </span>
                       <span className="block truncate text-[11px] text-ink-500">{desc}</span>
                     </span>
-                    {active && <Check size={16} className="shrink-0 text-brand-600" />}
+                    {active && <Check size={16} className="shrink-0 text-brand-700" />}
                   </button>
                 );
               })}

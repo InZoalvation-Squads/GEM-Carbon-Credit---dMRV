@@ -46,7 +46,7 @@ export function CategoryChip({ category }: { category: EvidenceCategory }) {
 export function FileKindIcon({ kind, className }: { kind: FileKind; className?: string }) {
   const cls = clsx('shrink-0', className);
   if (kind === 'pdf') return <FileText size={16} aria-hidden className={clsx(cls, 'text-red-500')} />;
-  if (kind === 'xlsx') return <FileSpreadsheet size={16} aria-hidden className={clsx(cls, 'text-brand-600')} />;
+  if (kind === 'xlsx') return <FileSpreadsheet size={16} aria-hidden className={clsx(cls, 'text-brand-700')} />;
   return <ImageIcon size={16} aria-hidden className={clsx(cls, 'text-sky-500')} />;
 }
 export function PddStatusBadge({ state }: { state: PddState }) { return <StatusBadge state={state} />; }

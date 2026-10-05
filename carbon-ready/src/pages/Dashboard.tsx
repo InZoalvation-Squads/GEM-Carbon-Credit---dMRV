@@ -102,18 +102,18 @@ export function Dashboard() {
           figure={<span>{project.name} · <span className="whitespace-nowrap">{calculation ? `${formatNumber(calculation.reduction_kgco2e / 1000, 2)} tCO₂e` : formatKwh(record!.generation_kwh)}</span></span>}
           source={calculation ? `${factor ? `EF ${factor.country}/${factor.source} v${factor.version}` : calculation.emission_factor_id} · ${fmtDateTime(calculation.calculated_at)}` : <>{sourceLabel(record!.source)} · {fmtDate(record!.record_date)}</>}
           magnitude={calculation ? { value: calculation.reduction_kgco2e, visibleValues: latest.flatMap((r) => r.calculation ? [r.calculation.reduction_kgco2e] : []) } : undefined}>
-          {verification?.hash_value && <Link to={`/verifications/${verification.id}`} className="mt-2 inline-block text-sm text-brand-600 underline">{verification.id} · {verification.credential_id ? 'Anchored' : 'Approved'}</Link>}
-        </BlockRow>)}</ChainList> : <Card><EmptyState title="No records uploaded yet." action={<Link to="/upload" className="text-brand-600 underline">Upload monitoring data</Link>} /></Card>}
+          {verification?.hash_value && <Link to={`/verifications/${verification.id}`} className="mt-2 inline-block text-sm text-brand-700 underline">{verification.id} · {verification.credential_id ? 'Anchored' : 'Approved'}</Link>}
+        </BlockRow>)}</ChainList> : <Card><EmptyState title="No records uploaded yet." action={<Link to="/upload" className="text-brand-700 underline">Upload monitoring data</Link>} /></Card>}
       </section>
       <section className="col-span-12 min-w-0 lg:col-span-4">
         {credentials.length > 0 && <section className="mb-6">
           <h2 className="mb-3 text-lg font-semibold">Guardian</h2>
           <ChainList density="compact">{credentials.slice(0, 3).map((credential) => <BlockRow density="compact" key={credential.id} blockId={credential.id}
-            figure={<Link to="/guardian" className="text-brand-600 hover:underline">{String(credential.subject.project_name ?? projects.find((p) => p.id === credential.subject.project_id)?.name ?? credential.subject.project_id ?? credential.id)}</Link>}
+            figure={<Link to="/guardian" className="text-brand-700 hover:underline">{String(credential.subject.project_name ?? projects.find((p) => p.id === credential.subject.project_id)?.name ?? credential.subject.project_id ?? credential.id)}</Link>}
             state="anchored" hash={credential.package_hash} source={fmtDateTime(credential.issued_at)}>
             <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs text-ink-meta">
               <span>{displayHcs(credential).topic_id} · #{displayHcs(credential).sequence_number}</span>
-              <a href={displayHcs(credential).explorer_url} className="inline-flex min-h-8 items-center gap-1 font-sans text-sm text-brand-600 underline" target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
+              <a href={displayHcs(credential).explorer_url} className="inline-flex min-h-8 items-center gap-1 font-sans text-sm text-brand-700 underline" target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
             </div>
           </BlockRow>)}</ChainList>
         </section>}
@@ -121,7 +121,7 @@ export function Dashboard() {
         {audit.length ? <ChainList density="compact">{audit.map((a) => <BlockRow density="compact" key={a.id} blockId={a.id}
           figure={ACTION_LABEL[a.action] ?? a.action} source={<span className="font-mono text-xs">{fmtDateTime(a.created_at)}</span>}
           state={a.hcs_sequence_number != null ? 'anchored' : 'active'} hash={a.row_hash ?? undefined} />)}</ChainList> : <Card><EmptyState icon={<Activity size={22} />} illustration="/illustrations/empty-activity.webp" title="No activity yet" hint="Actions across the platform will appear here."
-          action={<Link to="/upload" className="text-brand-600 underline">Upload monitoring data</Link>} /></Card>}
+          action={<Link to="/upload" className="text-brand-700 underline">Upload monitoring data</Link>} /></Card>}
       </section>
     </div>
     <Card><CardHeader title="Monthly Carbon Reduction" /><CardBody><MonthlyReductionChart data={summary.monthly_reduction} /></CardBody></Card>

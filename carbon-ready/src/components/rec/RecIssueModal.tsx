@@ -186,12 +186,12 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
         </div>
 
         <div className="rounded-sheet border border-brand-100 bg-brand-50/60 px-4 py-3">
-          <div className="flex items-center gap-2 text-xs font-semibold text-brand-600">
+          <div className="flex items-center gap-2 text-xs font-semibold text-brand-700">
             <Zap size={13} /> คำนวณจากข้อมูลการผลิตจริง (ผู้ยื่นแก้ตัวเลขเองไม่ได้)
           </div>
           {mwh > 0 ? (
             <div className="mt-1.5 text-sm text-ink">
-              <span data-testid="mwh-preview" className="text-base font-semibold text-brand-600">{mwh.toLocaleString()} MWh</span>
+              <span data-testid="mwh-preview" className="text-base font-semibold text-brand-700">{mwh.toLocaleString()} MWh</span>
             </div>
           ) : (
             <div className="mt-1.5 text-sm text-state-revision">ไม่มีข้อมูล monitoring ในช่วงที่เลือก</div>

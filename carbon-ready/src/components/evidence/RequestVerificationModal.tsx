@@ -124,13 +124,13 @@ export function RequestVerificationModal({ onClose }: { onClose: () => void }) {
 
         {/* computed claim — the number is derived, never typed */}
         <div className="rounded-sheet border border-brand-100 bg-brand-50/60 px-4 py-3" data-testid="computed-claim">
-          <div className="flex items-center gap-2 text-xs font-semibold text-brand-600">
+          <div className="flex items-center gap-2 text-xs font-semibold text-brand-700">
             <Calculator size={13} /> คำนวณจากข้อมูลดิบ (ผู้ยื่นแก้ตัวเลขเองไม่ได้)
           </div>
           {calc && calc.rows > 0 && calc.reductionKg !== null ? (
             <div className="mt-1.5 text-sm text-ink">
               {calc.rows.toLocaleString()} รายการ · {calc.totalKwh.toLocaleString()} kWh × EF {calc.ef!.factor_kgco2e_per_kwh}
-              {' → '}<span className="text-base font-semibold text-brand-600">{formatTco2e(calc.reductionKg)}</span>
+              {' → '}<span className="text-base font-semibold text-brand-700">{formatTco2e(calc.reductionKg)}</span>
             </div>
           ) : (
             <div className="mt-1.5 text-sm text-state-revision">

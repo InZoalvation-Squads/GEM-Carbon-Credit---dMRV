@@ -66,7 +66,7 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
           {pdd.ipfs_cid && (
             <p className="font-mono text-xs text-ink-meta">
               ipfs:{' '}
-              <button onClick={() => setShowIpfs(true)} title={pdd.ipfs_cid} className="min-h-8 text-brand-600 hover:underline">
+              <button onClick={() => setShowIpfs(true)} title={pdd.ipfs_cid} className="min-h-8 text-brand-700 hover:underline">
                 {pdd.ipfs_cid.length > 24 ? `${pdd.ipfs_cid.slice(0, 14)}…${pdd.ipfs_cid.slice(-6)}` : pdd.ipfs_cid}
               </button>{' '}
               <span className="text-ink-meta">· คลิกเพื่อดู JSON + ตรวจ hash</span>
@@ -75,7 +75,7 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
           {credential && (
             <p className="flex flex-wrap items-center gap-1 font-mono text-xs text-ink-meta">
               vc: <HashChip value={credential.id} /> ·{' '}
-              <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="min-h-8 text-brand-600 hover:underline">
+              <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="min-h-8 text-brand-700 hover:underline">
                 HCS message #{displayHcs(credential).sequence_number}{displayHcs(credential).real ? <><Link2 size={14} aria-hidden /> on-chain</> : ' (simulated)'}
               </a>
             </p>

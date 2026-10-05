@@ -87,7 +87,7 @@ const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
       return <li key={p.id} className="flex min-h-[90px] items-center gap-2 px-4 py-2">
         <div className="min-w-0 flex-1 space-y-0.5">
           <div className="flex items-start justify-between gap-2">
-            <Link to={`/projects/${p.id}`} aria-label={`View ${p.name}`} className="min-w-0 whitespace-normal text-sm font-medium hover:text-brand-600">{p.name}</Link>
+            <Link to={`/projects/${p.id}`} aria-label={`View ${p.name}`} className="min-w-0 whitespace-normal text-sm font-medium hover:text-brand-800">{p.name}</Link>
             <StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} className="shrink-0 whitespace-nowrap" />
           </div>
           <p className="text-sm text-ink-secondary">{p.location} · <span className="whitespace-nowrap">{formatNumber(p.capacity_kwp, 2)} kWp</span></p>
@@ -111,7 +111,7 @@ const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
         const lu = uploads.get(p.id);
         return (
           <TR key={p.id}>
-            <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-brand-600">{p.name}</Link></TD>
+            <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-brand-800">{p.name}</Link></TD>
             <TD>{p.location}</TD>
             <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
             <TD><StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} /></TD>

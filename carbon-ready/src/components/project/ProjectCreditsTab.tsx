@@ -36,7 +36,7 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
       <Card className="border-brand-100 bg-brand-50/60">
         <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 py-4">
           <div>
-            <div className="text-xs font-semibold text-brand-600">เครดิตสะสมของโปรเจกต์</div>
+            <div className="text-xs font-semibold text-brand-700">เครดิตสะสมของโปรเจกต์</div>
             <div className="mt-0.5 text-2xl font-semibold text-ink">{formatNumber(total, 2)} <span className="text-base font-medium text-ink-meta">tCO₂e</span></div>
           </div>
           <div className="text-xs leading-relaxed text-ink-meta">
@@ -70,12 +70,12 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
                     {batch?.serial_start !== undefined && (
                       <span>serials {batch.serial_start!.toLocaleString()}–{batch.serial_end!.toLocaleString()}</span>
                     )}
-                    <a className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                    <a className="inline-flex items-center gap-1 text-brand-700 hover:underline"
                       href={`https://hashscan.io/testnet/token/${t.token_id}`} target="_blank" rel="noreferrer">
                       HTS {t.token_id} <ExternalLink size={11} />
                     </a>
                     {erc?.address && (
-                      <a className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                      <a className="inline-flex items-center gap-1 text-brand-700 hover:underline"
                         href={`https://hashscan.io/testnet/contract/${erc.address}`} target="_blank" rel="noreferrer">
                         ERC-1155 id {erc.id} <ExternalLink size={11} />
                       </a>

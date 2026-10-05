@@ -94,7 +94,7 @@ export function Registration() {
         <button
           type="button"
           onClick={() => { setProgram(null); setMethId(''); setPickerOpen(false); }}
-          className="mb-3 min-h-8 text-sm font-medium text-brand-600 hover:underline"
+          className="mb-3 min-h-8 text-sm font-medium text-brand-700 hover:underline"
         >
           ← เลือกโปรแกรมใหม่
         </button>
@@ -242,7 +242,7 @@ function StartPddModal({ methodology, candidates, onClose }: {
               onClick={() => setMode('create')}
               className="flex w-full items-center gap-3 rounded-sheet border-2 border-dashed border-brand-100 bg-brand-50/40 px-4 py-3 text-left transition-colors hover:border-brand-600 hover:bg-brand-50"
             >
-              <span className="shrink-0 text-brand-600"><Plus size={16} /></span>
+              <span className="shrink-0 text-brand-700"><Plus size={16} /></span>
               <span>
                 <span className="block text-sm font-semibold text-ink">Create a new project</span>
                 <span className="block text-xs text-ink-meta">ตั้งโปรเจกต์ใหม่แล้วเริ่มกรอก{methodology.standard === 'REC' ? 'ฟอร์มขึ้นทะเบียน REC' : ' PDD'} ต่อทันที</span>
@@ -449,7 +449,7 @@ function PddEditor({ pddId }: { pddId: string }) {
         <Card className="space-y-4 p-6 md:p-8">
           <h2 className="text-lg font-semibold text-ink">Review & submit</h2>
           {check.ok ? (
-            <p className="text-sm text-brand-600">All required fields are complete. You can submit for validation.</p>
+            <p className="text-sm text-brand-700">All required fields are complete. You can submit for validation.</p>
           ) : (
             <div className="text-sm text-state-rejected">
               <p className="font-medium">Missing required fields:</p>
@@ -476,7 +476,7 @@ const AUTOSAVE_MS = 1500;
 function AutoSaveStatus({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
   if (state === 'idle') return null;
   const text = state === 'saving' ? 'กำลังบันทึก…' : state === 'saved' ? '✓ บันทึกอัตโนมัติแล้ว' : '⚠ บันทึกไม่สำเร็จ';
-  const tone = state === 'error' ? 'text-state-rejected' : state === 'saving' ? 'text-ink-meta' : 'text-brand-600';
+  const tone = state === 'error' ? 'text-state-rejected' : state === 'saving' ? 'text-ink-meta' : 'text-brand-700';
   return <span aria-live="polite" className={`text-xs ${tone}`}>{text}</span>;
 }
 
@@ -540,7 +540,7 @@ function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
         <Textarea label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)} />
         {onDraft && !readonly && (
           <button type="button" onClick={applyDraft}
-            className="mt-1 min-h-8 text-xs font-medium text-brand-600 hover:underline">
+            className="mt-1 min-h-8 text-xs font-medium text-brand-700 hover:underline">
             <Sparkles size={14} aria-hidden className="mr-1 inline" /> ร่างข้อความให้จากข้อมูลโครงการ
           </button>
         )}

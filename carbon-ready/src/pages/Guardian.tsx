@@ -56,17 +56,17 @@ export function Guardian() {
           <span className="flex items-center gap-2 font-medium text-brand-700">
             <ShieldCheck size={16} /> {serverMode() ? <><Link2 size={16} /> Hedera live</> : 'Guardian (mock)'}
           </span>
-          <span className="text-brand-600">Network: <strong>{config.network}</strong></span>
+          <span className="text-brand-700">Network: <strong>{config.network}</strong></span>
           {serverMode() ? (
             <>
               {/* Tokens are minted per project — the treasury account page lists them all. */}
-              <a className="font-mono text-xs text-brand-600 underline" href="https://hashscan.io/testnet/account/0.0.9651712" target="_blank" rel="noreferrer">Treasury 0.0.9651712</a>
-              <a className="font-mono text-xs text-brand-600 underline" href="https://hashscan.io/testnet/contract/0xEF87e486b77D6ed63BE632a731b73aE1225F1130" target="_blank" rel="noreferrer">ERC-1155 0xEF87…1130</a>
+              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/account/0.0.9651712" target="_blank" rel="noreferrer">Treasury 0.0.9651712</a>
+              <a className="font-mono text-xs text-brand-700 underline" href="https://hashscan.io/testnet/contract/0xEF87e486b77D6ed63BE632a731b73aE1225F1130" target="_blank" rel="noreferrer">ERC-1155 0xEF87…1130</a>
             </>
           ) : (
             <>
-              <span className="text-brand-600 font-mono text-xs">Topic {config.topic_id}</span>
-              <span className="text-brand-600 font-mono text-xs truncate">{issuerIdentity(organization.id).did}</span>
+              <span className="text-brand-700 font-mono text-xs">Topic {config.topic_id}</span>
+              <span className="text-brand-700 font-mono text-xs truncate">{issuerIdentity(organization.id).did}</span>
             </>
           )}
         </CardBody>
@@ -150,7 +150,7 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
                 magnitude={Number.isFinite(Number(c.subject.reduction_tco2e)) ? { value: Number(c.subject.reduction_tco2e), visibleValues: credentials.map((row) => Number(row.subject.reduction_tco2e)) } : undefined}>
                 <div className="mt-2 font-mono text-sm">{Number.isFinite(Number(c.subject.reduction_tco2e)) ? `${formatNumber(Number(c.subject.reduction_tco2e), 2)} tCO₂e` : '—'}</div>
                 <div className="mt-1 font-mono text-xs text-ink-meta">{fmtDateTime(c.issued_at)}</div>
-                <a className="mt-2 inline-flex min-h-8 items-center gap-1 text-sm text-brand-600 underline" href={displayHcs(c).explorer_url} target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
+                <a className="mt-2 inline-flex min-h-8 items-center gap-1 text-sm text-brand-700 underline" href={displayHcs(c).explorer_url} target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
                 <div className="mt-2 flex flex-wrap items-center gap-3">
                   {verdicts[c.id] === 'valid' ? (
                     <Badge tone="green" dot>Signature valid (Ed25519)</Badge>
@@ -160,7 +160,7 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
                     <Badge tone="gray">Unsigned (seed data)</Badge>
                   )}
                   {token ? (
-                    <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-600"><Check size={13} /> Minted #{token.serial_number}</span>
+                    <span className="inline-flex items-center gap-1 text-xs font-medium text-brand-700"><Check size={13} /> Minted #{token.serial_number}</span>
                   ) : c.schema_id !== 'mrv-approval-v1' ? (
                     // Only MRV approval credentials carry a tCO₂e claim to mint;
                     // PDD registration credentials are records, not issuance events.
@@ -204,7 +204,7 @@ function TokenHistoryTab({ tokens }: { tokens: GuardianToken[] }) {
               <TD className="text-right font-medium">{formatNumber(t.amount_tco2e, 2)} tCO₂e</TD>
               <TD className="whitespace-nowrap text-xs text-ink-meta">{fmtDateTime(t.minted_at)}</TD>
               {/* Server-minted rows store the project TOPIC as explorer_url — link the token page itself. */}
-              <TD className="text-right"><a className="inline-flex items-center gap-1 text-brand-600 hover:underline text-xs" href={`https://hashscan.io/testnet/token/${t.token_id}`} target="_blank" rel="noreferrer">HashScan <ExternalLink size={12} /></a></TD>
+              <TD className="text-right"><a className="inline-flex items-center gap-1 text-brand-700 hover:underline text-xs" href={`https://hashscan.io/testnet/token/${t.token_id}`} target="_blank" rel="noreferrer">HashScan <ExternalLink size={12} /></a></TD>
             </TR>
           ))}
         </tbody>

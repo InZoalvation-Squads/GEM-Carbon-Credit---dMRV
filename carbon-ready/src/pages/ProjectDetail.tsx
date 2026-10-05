@@ -38,7 +38,7 @@ export function ProjectDetail() {
   // A role switch while the REC ROI tab is open must not leave a verifier on it.
   const activeTab: Tab = tab === 'rec-roi' && role === 'verifier' ? 'overview' : tab;
 
-  if (!project) return <div className="text-sm text-ink-meta">Project not found. <Link to="/projects" className="text-brand-600 underline">Back to list</Link></div>;
+  if (!project) return <div className="text-sm text-ink-meta">Project not found. <Link to="/projects" className="text-brand-700 underline">Back to list</Link></div>;
 
   const totalKwh = records.reduce((s, r) => s + r.generation_kwh, 0);
 

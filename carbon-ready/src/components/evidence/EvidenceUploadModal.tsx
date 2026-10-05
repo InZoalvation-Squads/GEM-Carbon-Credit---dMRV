@@ -151,7 +151,7 @@ export function EvidenceUploadModal({
 
         {staged.length === 0 && (
           <button onClick={() => add(SAMPLE.map((name) => ({ name, size: Math.floor(400_000 + Math.random() * 3_500_000) })))}
-            className="min-h-8 text-xs font-medium text-brand-600 hover:underline">
+            className="min-h-8 text-xs font-medium text-brand-700 hover:underline">
             + Add sample files (demo)
           </button>
         )}

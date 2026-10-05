@@ -56,7 +56,7 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-ink-meta">
           <span className="truncate">CID: {cid}</span>
           <a href={ipfsGatewayUrl(cid)} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+            className="inline-flex items-center gap-1 text-brand-700 hover:underline">
             เปิดไฟล์ดิบ <ExternalLink size={11} />
           </a>
         </div>

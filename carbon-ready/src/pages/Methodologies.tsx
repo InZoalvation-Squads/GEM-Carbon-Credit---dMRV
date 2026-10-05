@@ -75,7 +75,7 @@ export function Methodologies() {
           <tbody>
             {methodologies.map((m) => (
               <TR key={m.id} hover>
-                <TD className="font-mono text-sm"><button className="min-h-8 text-brand-600 hover:underline" onClick={() => setSelected(m)}>{m.code}</button></TD>
+                <TD className="font-mono text-sm"><button className="min-h-8 text-brand-700 hover:underline" onClick={() => setSelected(m)}>{m.code}</button></TD>
                 <TD className="font-medium">{m.name}</TD>
                 <TD>{m.standard}</TD>
                 <TD>{m.version}</TD>

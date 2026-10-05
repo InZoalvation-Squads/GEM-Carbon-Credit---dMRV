@@ -87,7 +87,7 @@ export function RecGuide() {
                 onClick={() => togglePhase(phase.key)}
                 className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left"
               >
-                {phasePassed && <span className="shrink-0 font-semibold text-brand-600">✓</span>}
+                {phasePassed && <span className="shrink-0 font-semibold text-brand-700">✓</span>}
                 <span className="flex-1 text-sm font-medium text-ink">{phase.title}</span>
                 {isCurrent && (
                   <span className="shrink-0 rounded-full bg-brand-600 px-2 py-0.5 text-xs font-semibold text-white">
@@ -96,7 +96,7 @@ export function RecGuide() {
                 )}
                 {phase.items.length > 0 && (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    done === phase.items.length ? 'bg-brand-50 text-brand-600' : 'bg-surface-sunk text-ink-meta'}`}>
+                    done === phase.items.length ? 'bg-brand-50 text-brand-700' : 'bg-surface-sunk text-ink-meta'}`}>
                     {done}/{phase.items.length}
                   </span>
                 )}
@@ -117,7 +117,7 @@ export function RecGuide() {
                           href={l.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-700 transition-colors hover:border-brand-600 hover:bg-brand-50"
                         >
                           <FileDown size={12} aria-hidden />
                           {l.label}
@@ -127,7 +127,7 @@ export function RecGuide() {
                         <button
                           type="button"
                           onClick={() => setLetterOpen(true)}
-                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-700 transition-colors hover:border-brand-600 hover:bg-brand-50"
                         >
                           <FileText size={12} aria-hidden />
                           ร่างจดหมายนำส่ง

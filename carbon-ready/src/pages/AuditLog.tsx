@@ -171,7 +171,7 @@ function Diff({ prev, next }: { prev?: Record<string, unknown> | null; next?: Re
             <span className="font-mono text-ink-meta">{k}</span>
             {b !== undefined && <span className={'font-mono ' + (changed ? 'text-state-rejected line-through' : 'text-ink-secondary')}>{fmt(b)}</span>}
             {changed && b !== undefined && a !== undefined && <span className="text-ink-meta">→</span>}
-            {a !== undefined && <span className={'font-mono ' + (changed ? 'text-brand-600' : 'text-ink-secondary')}>{fmt(a)}</span>}
+            {a !== undefined && <span className={'font-mono ' + (changed ? 'text-brand-700' : 'text-ink-secondary')}>{fmt(a)}</span>}
           </div>
         );
       })}

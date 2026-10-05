@@ -82,13 +82,13 @@ const STEPS: Array<{
   title: string; detail: string; writes: LayerKey[];
 }> = [
   {
-    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
+    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
     title: 'สร้างโปรเจกต์ + กรอก PDD + แนบหลักฐาน',
     detail: 'ข้อมูลโครงการและเอกสารข้อเสนอ (T-VER-S-F001-PDD) ถูกบันทึกเป็น draft ไฟล์หลักฐานอัปโหลดขึ้น server พร้อม SHA-256 ของไฟล์จริง',
     writes: ['postgres', 'disk'],
   },
   {
-    icon: Send, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
+    icon: Send, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
     title: 'Submit — โครงการขึ้นทะเบียน pipeline',
     detail: 'แบบเดียวกับ Verra: ยื่นครั้งแรกระบบสร้าง HCS topic ประจำโปรเจกต์ และประกาศ "project_listed" ต่อสาธารณะทันที ยังไม่ต้องรออนุมัติ',
     writes: ['postgres', 'hcs'],
@@ -106,7 +106,7 @@ const STEPS: Array<{
     writes: ['browser', 'postgres', 'hcs', 'guardian', 'hts'],
   },
   {
-    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
+    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
     title: 'อัปโหลดข้อมูล monitoring',
     detail: 'ค่าการผลิตไฟฟ้ารายเดือน (kWh) เข้าระบบ ผูกกับ methodology และ emission factor เวอร์ชันที่ประกาศใช้',
     writes: ['postgres'],
@@ -208,7 +208,7 @@ const ACCOUNT_GROUPS: Array<{
   {
     icon: Users, title: 'บัญชีในแอป (localhost:5173)', subtitle: 'แยกหน้าที่แบบทะเบียนจริง — คนเดียวทำครบวงจรไม่ได้',
     accounts: [
-      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-600',
+      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-700',
         duty: 'สร้างโปรเจกต์ · กรอก PDD + หลักฐาน · submit · อัปโหลด monitoring · ยื่น verification' },
       { name: 'vvb@gem.demo', role: 'VVB / Verifier', tone: 'bg-brand-50 text-state-review',
         duty: 'ตรวจ + อนุมัติ PDD (Register / Gate 1) · ตรวจแพ็กเกจ verification · anchor credential ขึ้น Hedera' },
@@ -223,7 +223,7 @@ const ACCOUNT_GROUPS: Array<{
     accounts: [
       { name: 'gemregistry', role: 'Standard Registry', tone: 'bg-brand-50 text-state-review',
         duty: 'เจ้าของ policy / schema / token GEMVCU — server สวมบทนี้กด approve หลัง VVB anchor แล้ว Guardian mint อัตโนมัติ · login ดู trust chain ทั้งหมด' },
-      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-600',
+      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-700',
         duty: 'server ใช้ส่งเอกสาร PDD เข้า policy ตอน Register — Guardian เซ็น VC ด้วย DID ของบัญชีนี้ และเป็นผู้รับเครดิต GEMVCU' },
       { name: 'gem-vvb', role: 'VVB', tone: 'bg-brand-50 text-state-review',
         duty: 'เตรียมไว้สำหรับ flow ตรวจสอบใน Guardian (ปัจจุบันการอนุมัติของ VVB ในแอปถูก map เป็น approve ของ SR)' },
@@ -232,9 +232,9 @@ const ACCOUNT_GROUPS: Array<{
   {
     icon: Wallet, title: 'บัญชี Hedera บน testnet', subtitle: 'ชั้น blockchain — ผู้จ่ายค่าธรรมเนียมและผู้ถือ token',
     accounts: [
-      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-brand-50 text-brand-600',
+      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-brand-50 text-brand-700',
         duty: 'จ่ายค่าธรรมเนียมทุกธุรกรรมของ server (topic / anchor / mint) · treasury ของ GVCU + ERC-1155 · key เดียวกันเป็น EVM address 0x91cF…864f ที่ deploy contract' },
-      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-brand-50 text-brand-600',
+      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-brand-50 text-brand-700',
         duty: 'ผู้รับเครดิต GEMVCU ที่ Guardian mint (ต้อง associate token ก่อนรับ — ทำแล้ว)' },
       { name: '0.0.9714453', role: 'Hedera ของ gem-vvb', tone: 'bg-brand-50 text-state-review',
         duty: 'เซ็นธุรกรรมฝั่ง VVB ใน Guardian (ยังไม่ถูกใช้ใน flow ปัจจุบัน)' },
@@ -245,7 +245,7 @@ const ACCOUNT_GROUPS: Array<{
 function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
     <h2 className="mb-4 mt-10 flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-      <span className="text-brand-600">{icon}</span>
+      <span className="text-brand-700">{icon}</span>
       {children}
     </h2>
   );
@@ -300,7 +300,7 @@ export function HowItWorks() {
           return (
             <div key={k} className="p-4">
               <div className="flex items-center justify-between">
-                <span className={clsx('text-brand-600', l.chip)}>
+                <span className={clsx('text-brand-700', l.chip)}>
                   <l.icon size={18} />
                 </span>
                 <LayerChip k={k} />
@@ -323,7 +323,7 @@ export function HowItWorks() {
           return (
             <details key={inv.layer} open={inv.open} className="group rounded-sheet border border-rule/80 bg-white">
               <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                <span className={clsx('text-brand-600', l.chip)}><l.icon size={14} /></span>
+                <span className={clsx('text-brand-700', l.chip)}><l.icon size={14} /></span>
                 <span className="text-sm font-semibold text-ink">{l.title}</span>
                 <LayerChip k={inv.layer} />
                 <span className="ml-auto text-ink-meta transition-colors duration-150 ease-out group-open:rotate-90"><ArrowRight size={14} /></span>
@@ -378,7 +378,7 @@ export function HowItWorks() {
         {ACCOUNT_GROUPS.map((g) => (
           <div key={g.title} className="p-4">
             <div className="flex items-center gap-2">
-              <span className="text-brand-600"><g.icon size={16} /></span>
+              <span className="text-brand-700"><g.icon size={16} /></span>
               <div>
                 <div className="text-sm font-semibold text-ink">{g.title}</div>
                 <div className="text-xs text-ink-meta">{g.subtitle}</div>
@@ -414,7 +414,7 @@ export function HowItWorks() {
           {VERIFY.map((v, i) => (
             <div key={v.title} className="flex flex-1 items-center gap-2">
               <div className="flex-1 border-b border-rule px-3 py-3">
-                <v.icon size={16} className="text-brand-600" />
+                <v.icon size={16} className="text-brand-700" />
                 <div className="mt-1.5 text-sm font-semibold text-ink">{v.title}</div>
                 <div className="mt-0.5 text-sm leading-snug text-ink-meta">{v.detail}</div>
               </div>
@@ -447,7 +447,7 @@ export function HowItWorks() {
           >
             <div className="flex items-center justify-between text-sm font-semibold text-ink">
               {x.t}
-              <ExternalLink size={14} className="text-ink-meta transition-colors group-hover:text-brand-600" />
+              <ExternalLink size={14} className="text-ink-meta transition-colors group-hover:text-brand-800" />
             </div>
             <div className="mt-1 text-xs text-ink-meta">{x.d}</div>
           </a>
