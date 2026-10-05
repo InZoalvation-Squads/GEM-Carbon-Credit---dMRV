@@ -7,9 +7,9 @@ Read `PRODUCT.md` (repo root) first. It holds product truth. This brief holds th
 ```html
 <!--
 THESIS: Every record is a block — figure, measured source, and the hash tying it to the one before; refuses the KPI-card SaaS dashboard.
-OWN-WORLD: Petrol #0e3e4e rail and chain spine, flat paper ground #f7f9f8, hairline-ruled ledger rows, monospace for hashes/ids/figures only, lime #d0ffa0 reserved for anchored/verified state. No gradients, glow, or icon tiles.
+OWN-WORLD: Original GEM Carbon Ready palette — emerald brand actions, slate ink text, petrol header gradient, lime only in the header avatar/logo and Login; ledger-row structure kept.
 STORY: Staff, auditors, registry officers and executives see where every number came from, what state each submission is in, and what is anchored — then act.
-FIRST VIEWPORT: Dashboard = head block (portfolio totals in one ruled row) atop a vertical chain of per-project latest blocks; provenance/anchor panel right; primary action in the page header row.
+FIRST VIEWPORT: Dashboard = head block, then daily generation chart (visual first), then the per-project latest-block chain with recent activity right; primary action in the page header row.
 FORM: Ledger Explorer, grounded list #5 of 7; seed 53c35950.
 FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
 -->
@@ -216,7 +216,7 @@ Revert the dark petrol rail. Rebuild the sidebar in the structure of the origina
 - **Data skeletons.** In server mode (`VITE_API_BASE_URL` set), while the store has not hydrated yet, show skeletons in head blocks, tables and charts instead of zeros or empty states. Read the existing hydrate/loading state from the store; do **not** change store logic. If no such flag exists, report it rather than inventing one.
 - **Lazy loading.**
   - Recharts chart components are `React.lazy` with a chart-shaped skeleton.
-  - Every `<img>` gets explicit `width`/`height`, `decoding="async"`, and `loading="lazy"`, except the first login slide (`fetchpriority="high"`).
+  - Every app-chrome `<img>` gets explicit `width`/`height` and `decoding="async"`; every <img> below the fold gets loading=lazy; above-the-fold images load eagerly. The first login slide and HowItWorks hero use `fetchpriority="high"`. Printed form bodies stay untouched.
   - Preload the next login slide image.
 - **Prefetch on intent.** Hovering or focusing a sidebar link calls the route's dynamic `import()` once (share the lazy factories with `App.tsx`), so clicking feels instant.
 - **Smooth interaction.**
@@ -246,3 +246,8 @@ The files are WebP, in one petrol and lime line-art family. Treat them as decora
   - PDD/document "not found" in pages and `OfficialForm.tsx`/`RecIssueOfficialForm.tsx` wrappers → `empty-document` (never inside the printed template bodies)
   - ProjectDetail "No PDD yet" → `empty-document`
   - Calculations, ProjectCreditsTab, ProjectEvidenceTab and RegistrationGate → pick the closest of the above
+
+
+### Phase 5 binding visual restoration
+
+The shipped look follows the ORIGINAL `21bf26e` fonts, colors, sizes and light sidebar: emerald `brand-*` actions and `bg-brand-gradient`, slate ink, petrol `bg-header-gradient`, Inter/Anuphan/JetBrains Mono and the grid ground. Lime remains limited to the header avatar/logo and Login art. Ink-500 is the lightest text. This overrides earlier replacement-palette, typography and shell proposals above. The direction contract now records the visual-first Dashboard order; `carbon-ready/DESIGN.md` describes the shipped primitives, compact/mobile layouts, loading behavior and illustration map.

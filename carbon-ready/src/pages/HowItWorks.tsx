@@ -259,7 +259,7 @@ export function HowItWorks() {
         subtitle="เส้นทางของข้อมูลตั้งแต่ร่างโครงการจนเป็นคาร์บอนเครดิตบน Hedera — และวิธีที่คนนอกตรวจสอบเราได้โดยไม่ต้องเชื่อใจ"
       />
 
-      <Illustration src="/illustrations/hiw-hero.webp" className="mb-6 h-auto w-full" />
+      <Illustration src="/illustrations/hiw-hero.webp" priority className="mx-auto mb-6 max-h-64 w-auto max-w-full object-contain" />
 
       {/* ============ pipeline hero ============ */}
       <div className="rounded-sheet border border-rule bg-surface p-6 text-ink">

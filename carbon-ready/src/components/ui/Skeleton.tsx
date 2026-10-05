@@ -26,9 +26,9 @@ export function SkeletonRows({ rows = 6, columns = 4, block = false, entity = fa
 }
 
 export function HeadBlockSkeleton({ figures = 4, sources = true }: { figures?: number; sources?: boolean }) {
-  return <div aria-hidden="true" data-skeleton-figures={figures} className="grid grid-cols-1 divide-y divide-ink-100 rounded-xl border border-ink-200/80 bg-white shadow-card sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0">
-    {Array.from({ length: figures }, (_, index) => <div key={index} className="min-w-0 px-5 py-4">
-      <Skeleton className="h-[21px] w-2/3" /><Skeleton className="mt-2 h-[26px] w-3/4" />{sources && <Skeleton className="mt-2 h-[18px] w-full" />}
+  return <div aria-hidden="true" data-skeleton-figures={figures} className="grid grid-cols-2 rounded-xl border border-ink-200/80 bg-white shadow-card sm:grid-cols-none sm:grid-flow-col sm:auto-cols-fr">
+    {Array.from({ length: figures }, (_, index) => <div key={index} className={clsx('min-w-0 border-ink-100 px-4 py-3 sm:border-b-0 sm:px-5 sm:py-4 sm:[&:not(:last-child)]:border-r sm:last:border-r-0', index % 2 === 0 && 'border-r', index < figures - (figures % 2 || 2) && 'border-b')}>
+      <Skeleton className="h-[21px] w-2/3" /><Skeleton className="mt-2 h-5 w-3/4 sm:h-[26px]" />{sources && <Skeleton className="mt-2 h-[18px] w-full" />}
     </div>)}
   </div>;
 }

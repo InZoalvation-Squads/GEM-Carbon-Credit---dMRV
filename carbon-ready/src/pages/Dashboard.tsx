@@ -108,14 +108,17 @@ export function Dashboard() {
       <section className="col-span-12 min-w-0 lg:col-span-4">
         {credentials.length > 0 && <section className="mb-6">
           <h2 className="mb-3 text-lg font-semibold">Guardian</h2>
-          <ChainList>{credentials.slice(0, 3).map((credential) => <BlockRow key={credential.id} blockId={credential.id}
-            figure={<Link to="/guardian" className="text-base text-brand-600 hover:underline">{String(credential.subject.project_name ?? projects.find((p) => p.id === credential.subject.project_id)?.name ?? credential.subject.project_id ?? credential.id)}</Link>}
-            state="anchored" hash={credential.package_hash} source={<span className="break-all font-mono text-xs">{displayHcs(credential).topic_id} · #{displayHcs(credential).sequence_number}</span>}>
-            <a href={displayHcs(credential).explorer_url} className="mt-2 inline-flex min-h-8 items-center gap-1 text-sm text-brand-600 underline" target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
+          <ChainList density="compact">{credentials.slice(0, 3).map((credential) => <BlockRow density="compact" key={credential.id} blockId={credential.id}
+            figure={<Link to="/guardian" className="text-brand-600 hover:underline">{String(credential.subject.project_name ?? projects.find((p) => p.id === credential.subject.project_id)?.name ?? credential.subject.project_id ?? credential.id)}</Link>}
+            state="anchored" hash={credential.package_hash} source={fmtDateTime(credential.issued_at)}>
+            <div className="mt-1 flex flex-wrap items-center gap-2 font-mono text-xs text-ink-meta">
+              <span>{displayHcs(credential).topic_id} · #{displayHcs(credential).sequence_number}</span>
+              <a href={displayHcs(credential).explorer_url} className="inline-flex min-h-8 items-center gap-1 font-sans text-sm text-brand-600 underline" target="_blank" rel="noreferrer">HashScan <ExternalLink size={14} /></a>
+            </div>
           </BlockRow>)}</ChainList>
         </section>}
         <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
-        {audit.length ? <ChainList>{audit.map((a) => <BlockRow key={a.id} blockId={a.id}
+        {audit.length ? <ChainList density="compact">{audit.map((a) => <BlockRow density="compact" key={a.id} blockId={a.id}
           figure={ACTION_LABEL[a.action] ?? a.action} source={<span className="font-mono text-xs">{fmtDateTime(a.created_at)}</span>}
           state={a.hcs_sequence_number != null ? 'anchored' : 'active'} hash={a.row_hash ?? undefined} />)}</ChainList> : <Card><EmptyState icon={<Activity size={22} />} illustration="/illustrations/empty-activity.webp" title="No activity yet" hint="Actions across the platform will appear here."
           action={<Link to="/upload" className="text-brand-600 underline">Upload monitoring data</Link>} /></Card>}

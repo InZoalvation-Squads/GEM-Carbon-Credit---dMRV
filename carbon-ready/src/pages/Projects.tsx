@@ -80,7 +80,26 @@ const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
   projects: Project[]; uploads: Map<string, string>; onEdit: (project: Project) => void;
 }) {
   return (
-  <Table mobileLabels={["Name", "Location", "Capacity", "Status", "Commissioned", "Last Upload", "Actions"]}>
+  <>
+  <ul aria-label="Projects on mobile" className="sm:hidden divide-y divide-ink-100">
+    {projects.map((p) => {
+      const lu = uploads.get(p.id);
+      return <li key={p.id} className="flex min-h-[90px] items-center gap-2 px-4 py-2">
+        <div className="min-w-0 flex-1 space-y-0.5">
+          <div className="flex items-start justify-between gap-2">
+            <Link to={`/projects/${p.id}`} aria-label={`View ${p.name}`} className="min-w-0 whitespace-normal text-sm font-medium hover:text-brand-600">{p.name}</Link>
+            <StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} className="shrink-0 whitespace-nowrap" />
+          </div>
+          <p className="text-sm text-ink-secondary">{p.location} · <span className="whitespace-nowrap">{formatNumber(p.capacity_kwp, 2)} kWp</span></p>
+          <p className="text-xs text-ink-meta">Commissioned <span className="whitespace-nowrap">{fmtDate(p.commission_date)}</span> · Last upload <span className="whitespace-nowrap">{lu ? fmtDate(lu.slice(0, 10)) : '—'}</span></p>
+        </div>
+        <button type="button" onClick={() => onEdit(p)} className="inline-flex min-h-11 min-w-11 shrink-0 items-center justify-center rounded-md text-ink-meta hover:text-ink" aria-label={`Edit ${p.name}`}>
+          <Pencil size={16} aria-hidden="true" />
+        </button>
+      </li>;
+    })}
+  </ul>
+  <Table className="hidden sm:block">
     <THead>
       <TR>
         <TH>Name</TH><TH>Location</TH><TH className="text-right">Capacity</TH>
@@ -108,6 +127,7 @@ const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
       })}
     </tbody>
   </Table>
+  </>
   );
 });
 

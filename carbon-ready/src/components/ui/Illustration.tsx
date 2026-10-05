@@ -9,8 +9,8 @@ export const illustrations = {
   steps: Array.from({ length: 7 }, (_, index) => `/illustrations/hiw-${index + 1}.webp`),
 };
 
-export function Illustration({ src, className }: { src: string; className?: string }) {
+export function Illustration({ src, className, priority = false }: { src: string; className?: string; priority?: boolean }) {
   const [width, height] = dimensions[src.split('/').pop()!.replace('.webp', '')];
   return <img src={src} alt="" aria-hidden="true" width={width} height={height}
-    loading="lazy" decoding="async" className={className} />;
+    loading={priority ? 'eager' : 'lazy'} {...{ fetchpriority: priority ? 'high' : undefined }} decoding="async" className={className} />;
 }

@@ -120,7 +120,7 @@ export function ProjectDetail() {
       ) }))} />
       <section className="mt-6">
         <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
-        {activity.length ? <ChainList>{activity.map((a) => <BlockRow key={a.id} blockId={a.id}
+        {activity.length ? <ChainList density="compact">{activity.map((a) => <BlockRow density="compact" key={a.id} blockId={a.id}
           figure={ACTION_LABEL[a.action] ?? a.action} source={<span className="font-mono text-xs">{fmtDateTime(a.created_at)}</span>}
           state={a.hcs_sequence_number != null ? 'anchored' : 'active'} statusLabel={a.hcs_sequence_number != null ? 'Anchored' : '—'} hash={a.row_hash ?? undefined} />)}</ChainList> :
           <p className="text-sm text-ink-meta">No activity recorded yet.</p>}

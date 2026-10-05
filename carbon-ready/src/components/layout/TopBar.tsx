@@ -92,7 +92,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
         </button>
         <div className="flex items-center gap-3">
           <img
-            src="/gem-logo.svg" width={1003} height={210} loading="lazy" decoding="async"
+            src="/gem-logo.svg" width={1003} height={210} loading="eager" decoding="async"
             alt="GEM Carbon Credit"
             className="h-7 md:h-8 w-auto select-none"
             draggable={false}

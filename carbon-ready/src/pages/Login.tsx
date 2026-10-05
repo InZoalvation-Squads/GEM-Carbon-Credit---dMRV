@@ -192,7 +192,7 @@ export function Login() {
       <div className="flex flex-1 items-center justify-center bg-[#f2f4f3] px-4 py-10 lg:px-10">
         <div className="w-full max-w-[460px] rounded-[28px] bg-white px-7 py-8 shadow-card sm:px-10 sm:py-10">
           <div className="flex items-start justify-between">
-            <img src="/gem-logo-dark.svg" width={1003} height={210} loading="lazy" decoding="async" alt="GEM Carbon Credit" className="h-9 w-auto" />
+            <img src="/gem-logo-dark.svg" width={1003} height={210} loading="eager" decoding="async" alt="GEM Carbon Credit" className="h-9 w-auto" />
             <button
               type="button"
               onClick={toggleLang}

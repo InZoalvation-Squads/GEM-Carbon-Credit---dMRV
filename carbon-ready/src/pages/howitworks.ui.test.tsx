@@ -15,7 +15,11 @@ describe('HowItWorks page', () => {
       expect(img).toHaveAttribute('height', String(sizes[index][1]));
       expect(img).toHaveAttribute('alt', '');
       expect(img).toHaveAttribute('aria-hidden', 'true');
-      expect(img).toHaveAttribute('loading', 'lazy');
+      expect(img).toHaveAttribute('loading', index === 0 ? 'eager' : 'lazy');
+      if (index === 0) {
+        expect(img).toHaveAttribute('fetchpriority', 'high');
+        expect(img).toHaveClass('mx-auto', 'max-h-64', 'w-auto', 'max-w-full', 'object-contain');
+      } else expect(img).not.toHaveAttribute('fetchpriority');
       expect(img).toHaveAttribute('decoding', 'async');
       if (index) expect(img.closest('li')).toBeInTheDocument();
     });
