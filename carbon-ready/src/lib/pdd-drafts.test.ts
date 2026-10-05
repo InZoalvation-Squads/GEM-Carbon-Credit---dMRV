@@ -82,7 +82,27 @@ describe('draftActivityText — boilerplate composed from real project data', ()
     expect(draftActivityText('after_project', PROJECT, {})).toContain('Solar Rooftop มรภ.หมู่บ้านจอมบึง');
   });
 
+  it('project_activity: one MCRU-style cover sentence — mount, capacity, grid, owner', () => {
+    const text = draftActivityText('project_activity', PROJECT, MCRU_DATA);
+    expect(text).toBe(
+      'โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ที่ติดตั้งบนหลังคา (Solar Rooftop) ' +
+      'ขนาดกำลังติดตั้งไม่น้อยกว่า 667.20 กิโลวัตต์สูงสุด (kWp) ' +
+      'โดยการเชื่อมต่อกับสายส่งของการไฟฟ้าส่วนภูมิภาคเพื่อผลิตใช้เองภายในมหาวิทยาลัยราชภัฏหมู่บ้านจอมบึง',
+    );
+    expect(text).not.toContain('\n');
+  });
+
+  it('project_activity follows ground-mounted and off-grid selections', () => {
+    const text = draftActivityText('project_activity', PROJECT, {
+      ...MCRU_DATA, technology: 'Solar PV ground-mounted', grid_connection: 'Off-grid',
+    });
+    expect(text).toContain('แบบติดตั้งบนพื้นดิน (Solar Ground-mounted)');
+    expect(text).toContain('โดยไม่เชื่อมต่อกับระบบสายส่ง (Off-grid)');
+    expect(text).not.toContain('Solar Rooftop');
+  });
+
   it('exposes the draftable field keys for the wizard', () => {
+    expect(draftableKeys).toContain('project_activity');
     expect(draftableKeys).toContain('before_project');
     expect(draftableKeys).toContain('after_project');
   });

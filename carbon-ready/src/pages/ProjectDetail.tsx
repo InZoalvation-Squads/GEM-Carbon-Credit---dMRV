@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useState, type ReactNode } from 'react';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { StatusBadge } from '../components/ui/StatusBadge';
@@ -18,8 +18,9 @@ import { formatNumber } from '../lib/format';
 import { PROJECT_STATUS_LABEL, ACTION_LABEL, sourceLabel } from '../lib/labels';
 import { ChevronLeft, Upload as UploadIcon, FileText } from 'lucide-react';
 import { RegistrationGate } from '../components/project/RegistrationGate';
+import { RecRoiDetail } from '../components/rec-roi/RecRoiDetail';
 
-type Tab = 'overview' | 'evidence' | 'credits' | 'pdd';
+type Tab = 'overview' | 'evidence' | 'credits' | 'pdd' | 'rec-roi';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -30,7 +31,12 @@ export function ProjectDetail() {
   const evidenceCount = useStore((s) => s.evidence.filter((e) => e.project_id === id && e.status === 'active').length);
   const pdd = useStore((s) => s.pdds.find((p) => p.project_id === id));
   const activity = useStore((s) => s.audit.filter((a) => a.entity_id === id));
-  const [tab, setTab] = useState<Tab>('overview');
+  const [searchParams] = useSearchParams();
+  const role = useStore((s) => s.currentUser.role);
+  // REC ROI is not offered to verifiers, so a deep link must not open it for them either.
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'rec-roi' && role !== 'verifier' ? 'rec-roi' : 'overview');
+  // A role switch while the REC ROI tab is open must not leave a verifier on it.
+  const activeTab: Tab = tab === 'rec-roi' && role === 'verifier' ? 'overview' : tab;
 
   if (!project) return <div className="text-sm text-ink-meta">Project not found. <Link to="/projects" className="text-brand-600 underline">Back to list</Link></div>;
 
@@ -58,11 +64,14 @@ export function ProjectDetail() {
         { label: 'Total Generation', value: formatNumber(totalKwh, 1), unit: 'kWh' },
         { label: 'Evidence', value: evidenceCount },
       ]} />
-      <Tabs label="Project" value={tab} onChange={setTab} items={([
+      <Tabs label="Project" value={activeTab} onChange={setTab} items={([
         ['overview', 'Monitoring'], ['evidence', <>Evidence{evidenceCount > 0 && <span className="ml-1.5 text-xs">{evidenceCount}</span>}</>], ['credits', 'Credits'], ['pdd', 'PDD Document'],
-      ] as const).map(([key, label]) => ({ value: key, label, content: (
+        ...(role !== 'verifier' ? [['rec-roi', 'REC ROI']] : []),
+      ] as [Tab, ReactNode][]).map(([key, label]) => ({ value: key, label, content: (
       /* PDD remains available outside the registration gate. */
-      key === 'pdd' ? (
+      key === 'rec-roi' ? (
+        <RecRoiDetail key={project.id} projectId={project.id} />
+      ) : key === 'pdd' ? (
         pdd ? (
           <PddDocument pddId={pdd.id} embedded />
         ) : (

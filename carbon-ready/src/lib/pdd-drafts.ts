@@ -4,7 +4,7 @@
 import { computeYearlyTable } from './pdd';
 import type { EmissionFactor, Project } from '../types';
 
-export const draftableKeys = ['before_project', 'after_project'] as const;
+export const draftableKeys = ['project_activity', 'before_project', 'after_project'] as const;
 export type DraftableKey = (typeof draftableKeys)[number];
 
 const MEA_AREAS = ['กรุงเทพ', 'นนทบุรี', 'สมุทรปราการ', 'Bangkok', 'Nonthaburi', 'Samut Prakan'];
@@ -35,6 +35,22 @@ export function draftActivityText(
   const owner = str('owner_name') ?? str('project_owner') ?? project.name;
   const address = str('project_address') ?? project.location;
   const utility = utilityFor(`${address} ${project.location}`);
+
+  if (key === 'project_activity') {
+    // One sentence, mirroring the MCRU reference cover (p.3 "กิจกรรมของโครงการ"):
+    // what is installed, how big, and how it connects — not the §1.1 narrative.
+    const mount = str('technology') === 'Solar PV ground-mounted'
+      ? 'แบบติดตั้งบนพื้นดิน (Solar Ground-mounted)'
+      : 'ที่ติดตั้งบนหลังคา (Solar Rooftop)';
+    const connection = str('grid_connection') === 'Off-grid'
+      ? 'โดยไม่เชื่อมต่อกับระบบสายส่ง (Off-grid)'
+      : `โดยการเชื่อมต่อกับสายส่งของ${utility}`;
+    return (
+      `โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์${mount} ` +
+      `ขนาดกำลังติดตั้งไม่น้อยกว่า ${fmtCap(project.capacity_kwp)} กิโลวัตต์สูงสุด (kWp) ` +
+      `${connection}เพื่อผลิตใช้เองภายใน${owner}`
+    );
+  }
 
   if (key === 'before_project') {
     // Two paragraphs, mirroring the MCRU reference PDD (p.6): an organisation

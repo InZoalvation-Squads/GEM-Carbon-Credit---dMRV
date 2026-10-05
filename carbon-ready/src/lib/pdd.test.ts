@@ -235,6 +235,8 @@ describe('computeYearlyTable — reproduces the MCRU reference PDD', () => {
     const t = computeYearlyTable(ctx)!;
     expect(t.totals.be).toBe(3121.48);
     expect(t.totals.er).toBe(3098);
+    // 2.7163 × 7, not the rounded 2.72 × 7 = 19.04 (MCRU p.18 prints 19.01)
+    expect(t.totals.pe).toBe(19.01);
     expect(t.avg.be).toBe(445.93);
     expect(t.avg.er).toBe(443);
     expect(t.years).toBe(7);

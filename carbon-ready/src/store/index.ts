@@ -6,6 +6,7 @@ import type {
   EvidenceFile, EvidenceCategory, VerificationRequest, VerificationComment,
   VerifiableCredential, GuardianConfig, GuardianToken,
   Methodology, ProjectDesignDocument, RecIssueRequest, RecIssueDraftPatch,
+  RecRoiSettings, RecRoiSettingsInput, RecRoiProjectSetting, RecRoiProjectSettingInput,
 } from '../types';
 import {
   seedOrg, seedUser, seedFactors, seedProjects, seedRecords, seedAudit,
@@ -23,9 +24,10 @@ import { MRV_APPROVAL_SCHEMA_V1, PDD_REGISTRATION_SCHEMA_V1 } from '../lib/guard
 import {
   serverMode, authApi, ApiError, SessionExpiredError, onSessionExpired,
   projectsApi, factorsApi, monitoringApi, methodologiesApi,
-  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi, recIssuesApi,
+  pddsApi, verificationsApi, evidenceApi, credentialsApi, tokensApi, recIssuesApi, recRoiApi,
   type ServerUser,
 } from '../lib/server-api';
+import { EMPTY_REC_ROI_SETTINGS } from '../lib/rec-roi';
 
 interface AppState {
   currentUser: User;
@@ -59,6 +61,13 @@ interface AppState {
   methodologies: Methodology[];
   pdds: ProjectDesignDocument[];
   recIssues: RecIssueRequest[];
+  // REC ROI assumptions (org-level) + optional per-project settings. Results
+  // are never stored — lib/rec-roi.ts recomputes them from current records.
+  recRoiSettings: RecRoiSettings;
+  recRoiProjectSettings: RecRoiProjectSetting[];
+  /** Demo-mode writes (server mode goes through api.ts → recRoiApi). */
+  saveRecRoiSettings: (input: RecRoiSettingsInput) => void;
+  saveRecRoiProjectSetting: (project_id: UUID, input: RecRoiProjectSettingInput) => void;
 
   // Methodology-as-data: import a validated JSON document into the library.
   importMethodology: (json: string) => { ok: boolean; error?: string; methodology?: Methodology };
@@ -309,6 +318,16 @@ export const useStore = create<AppState>()(
           ['tokens', tokensApi.list().then((tokens) => set({ tokens }))],
           ['recIssues', recIssuesApi.list().then((recIssues) => set({ recIssues }))],
         ];
+        // REC ROI endpoints 403 for the verifier role — skip them there, and drop
+        // any commercial values persisted from an earlier non-verifier session.
+        if (get().currentUser.role !== 'verifier') {
+          slices.push(
+            ['recRoiSettings', recRoiApi.getSettings().then((recRoiSettings) => set({ recRoiSettings }))],
+            ['recRoiProjectSettings', recRoiApi.listProjectSettings().then((recRoiProjectSettings) => set({ recRoiProjectSettings }))],
+          );
+        } else {
+          set({ recRoiSettings: EMPTY_REC_ROI_SETTINGS, recRoiProjectSettings: [] });
+        }
         if (projects) {
           const ids = projects.map((p) => p.id);
           slices.push(
@@ -367,6 +386,8 @@ export const useStore = create<AppState>()(
       methodologies: seedMethodologies,
       pdds: seedPdds,
       recIssues: seedRecIssues,
+      recRoiSettings: EMPTY_REC_ROI_SETTINGS,
+      recRoiProjectSettings: [],
 
       audit_write: (action, entity_type, entity_id, payload = {}, extra = {}) => {
         // Server mode: no-op — the server writes the hash-chained audit row
@@ -729,6 +750,30 @@ export const useStore = create<AppState>()(
         }));
       },
 
+      saveRecRoiSettings: (input) => {
+        const previous = get().recRoiSettings;
+        const next: RecRoiSettings = { ...input, updated_by: get().currentUser.name, updated_at: new Date().toISOString() };
+        set({ recRoiSettings: next });
+        get().audit_write('REC_ROI_SETTINGS_UPDATED', 'rec_roi', get().organization.id,
+          { horizon_years: input.horizon_years },
+          { previous_value: previous.updated_at === null ? null : { ...previous }, new_value: { ...next } });
+      },
+
+      saveRecRoiProjectSetting: (project_id, input) => {
+        const previous = get().recRoiProjectSettings.find((r) => r.project_id === project_id) ?? null;
+        const next: RecRoiProjectSetting = {
+          project_id, ...input, updated_by: get().currentUser.name, updated_at: new Date().toISOString(),
+        };
+        set((s) => ({
+          recRoiProjectSettings: previous
+            ? s.recRoiProjectSettings.map((r) => (r.project_id === project_id ? next : r))
+            : [...s.recRoiProjectSettings, next],
+        }));
+        get().audit_write('REC_ROI_PROJECT_UPDATED', 'rec_roi', project_id,
+          { issuance_type: input.issuance_type },
+          { previous_value: previous ? { ...previous } : null, new_value: { ...next } });
+      },
+
       // ---------------- Methodology-as-data: JSON import ----------------
       importMethodology: (json) => {
         // Only the Standard Registry curates the methodology library.
@@ -943,9 +988,10 @@ export const useStore = create<AppState>()(
         evidence: seedEvidence, verifications: seedVerifications, comments: seedComments,
         credentials: seedCredentials, tokens: [], guardianConfig: DEFAULT_GUARDIAN_CONFIG,
         methodologies: seedMethodologies, pdds: seedPdds, recIssues: seedRecIssues,
+        recRoiSettings: EMPTY_REC_ROI_SETTINGS, recRoiProjectSettings: [],
       }),
     }),
-    { name: 'carbon-ready-store-v17' }
+    { name: 'carbon-ready-store-v18' }
   )
 );
 

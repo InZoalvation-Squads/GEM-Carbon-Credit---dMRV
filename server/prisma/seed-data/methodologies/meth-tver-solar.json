@@ -364,6 +364,14 @@
           "defaultValue": "Grid-connected"
         },
         {
+          "key": "project_activity",
+          "label": "กิจกรรมของโครงการ",
+          "type": "textarea",
+          "required": false,
+          "siteSpecific": true,
+          "help": "ประโยคสรุปสั้นๆ บนหน้ารายละเอียดโครงการ — เว้นว่างไว้ ระบบจะสร้างจากขนาดติดตั้งและการเชื่อมต่อสายส่ง"
+        },
+        {
           "key": "before_project",
           "label": "ก่อนดำเนินโครงการ",
           "type": "textarea",
@@ -372,7 +380,7 @@
         },
         {
           "key": "after_project",
-          "label": "หลังดำเนินโครงการ / กิจกรรมของโครงการ",
+          "label": "หลังดำเนินโครงการ",
           "type": "textarea",
           "required": false,
           "help": "รายละเอียดกิจกรรม เป้าหมาย และรูปแบบการดำเนินโครงการ"
@@ -771,6 +779,21 @@
           "label": "QA/QC procedure",
           "type": "textarea",
           "required": true
+        },
+        {
+          "key": "eg_monitoring_method",
+          "label": "วิธีการติดตามผล EG_Consumer,PJ,y",
+          "type": "textarea",
+          "required": false,
+          "help": "เช่น ตรวจวัดโดย Energy Meter ที่ติดตั้งอยู่ในอินเวอร์เตอร์ และแสดงผลผ่านโปรแกรม Fusion Solar — เว้นว่างไว้จะใช้ข้อความมาตรฐาน"
+        },
+        {
+          "key": "eg_deduction_pct",
+          "label": "หักค่าไฟฟ้าที่ตรวจวัดได้ก่อนคำนวณ",
+          "type": "number",
+          "required": false,
+          "unit": "%",
+          "help": "กรณีผู้พัฒนาโครงการหักค่าที่วัดได้ออกก่อนคำนวณการลดก๊าซ (เช่น 5) — แสดงในข้อ 4.3"
         }
       ]
     }

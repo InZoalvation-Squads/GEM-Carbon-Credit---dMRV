@@ -21,6 +21,7 @@ const Verifications = lazy(routeLoaders.Verifications);
 const ReviewDetail = lazy(routeLoaders.ReviewDetail);
 const RecIssuance = lazy(routeLoaders.RecIssuance);
 const RecIssueOfficialForm = lazy(routeLoaders.RecIssueOfficialForm);
+const RecRoi = lazy(routeLoaders.RecRoi);
 const Guardian = lazy(routeLoaders.Guardian);
 const Methodologies = lazy(routeLoaders.Methodologies);
 const Registration = lazy(routeLoaders.Registration);
@@ -71,6 +72,7 @@ export default function App() {
             <Route path="/verifications/:id" element={<ReviewDetail />} />
             <Route path="/rec-issuance" element={<RecIssuance />} />
             <Route path="/rec-issuance/:id/official" element={<RecIssueOfficialForm />} />
+            <Route path="/rec-roi" element={<RecRoi />} />
             <Route path="/guardian" element={<Guardian />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="*" element={<div className="p-8 text-ink-meta">Page not found</div>} />

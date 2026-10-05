@@ -15,6 +15,7 @@ import { evidenceRoutes } from './modules/evidence/routes.js';
 import { methodologiesRoutes } from './modules/methodologies/routes.js';
 import { pddsRoutes } from './modules/pdds/routes.js';
 import { recIssuesRoutes } from './modules/rec-issues/routes.js';
+import { recRoiRoutes } from './modules/rec-roi/routes.js';
 import { verificationsRoutes } from './modules/verifications/routes.js';
 import { credentialsRoutes } from './modules/credentials/routes.js';
 import { auditRoutes } from './modules/audit/routes.js';
@@ -128,6 +129,8 @@ export async function buildApp(opts: BuildAppOptions = {}): Promise<FastifyInsta
   // REC issue requests (SF-04) span /projects/:id/rec-issues AND
   // /rec-issues/:id/… — bare prefix, like pdds and evidence.
   await app.register(recIssuesRoutes, { prefix: '/api/v1' });
+  // REC ROI spans /rec-roi/…, /projects/:id/rec-roi-setting and /fx/… — bare prefix.
+  await app.register(recRoiRoutes, { prefix: '/api/v1' });
   await app.register(verificationsRoutes, { prefix: '/api/v1/verifications' });
   // Credentials span /verifications/:id/anchor, /pdds/:id/credential,
   // /credentials/… and /tokens — bare prefix, like evidence and pdds.

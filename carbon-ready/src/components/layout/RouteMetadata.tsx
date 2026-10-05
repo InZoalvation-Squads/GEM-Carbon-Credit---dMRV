@@ -15,7 +15,7 @@ export function pageTitle(path: string): string {
     registration: 'Register Project', validation: 'Validation Queue', projects: 'Projects',
     upload: 'Upload', iot: 'IoT Mapping', calculations: 'Calculations',
     'emission-factors': 'Emission Factors', verifications: 'Verifications',
-    'rec-issuance': 'REC Issuance', guardian: 'Guardian', 'audit-log': 'Audit Log',
+    'rec-issuance': 'REC Issuance', 'rec-roi': 'REC ROI', guardian: 'Guardian', 'audit-log': 'Audit Log',
   };
   return titles[path.split('/')[1]] ?? 'Page not found';
 }

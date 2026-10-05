@@ -18,6 +18,6 @@ export function TR({ children, className, hover }: { children: ReactNode; classN
 export function TH({ children, className }: { children: ReactNode; className?: string }) {
   return <th className={clsx('px-5 py-3 text-left font-semibold', className)}>{children}</th>;
 }
-export function TD({ children, className, label }: { children: ReactNode; className?: string; label?: string }) {
-  return <td data-label={label} className={clsx('px-5 py-3 text-ink-700', className)}>{children}</td>;
+export function TD({ children, className, label, colSpan }: { children: ReactNode; className?: string; label?: string; colSpan?: number }) {
+  return <td data-label={label} colSpan={colSpan} className={clsx('px-5 py-3 text-ink-700', className)}>{children}</td>;
 }

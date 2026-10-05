@@ -173,6 +173,12 @@ describe('validateRecRoiSettings — mirrors the server zod schema', () => {
   it('rejects a platform fee of 100% or more', () => {
     expect(validateRecRoiSettings({ ...base, platform_fee_pct: 100 })).toMatch(/ค่าบริการ/);
   });
+  it('rejects over-long price_source (>500) and eur_thb_source (>200), accepts the limits', () => {
+    expect(validateRecRoiSettings({ ...base, price_source: 'x'.repeat(500) })).toBeNull();
+    expect(validateRecRoiSettings({ ...base, price_source: 'x'.repeat(501) })).toMatch(/ที่มาของราคา.*500/);
+    expect(validateRecRoiSettings({ ...base, eur_thb_source: 'x'.repeat(200) })).toBeNull();
+    expect(validateRecRoiSettings({ ...base, eur_thb_source: 'x'.repeat(201) })).toMatch(/ที่มา.*FX.*200/);
+  });
   it('rejects a horizon outside 1–25 years', () => {
     expect(validateRecRoiSettings({ ...base, horizon_years: 0 })).toMatch(/1–25/);
   });

@@ -185,7 +185,8 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const years = numOrNull(ctx.sectionData.crediting_years) ?? 7;
   const d = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
   const gen1 = year1GenerationKwh(ctx);
-  const pe = round2((computeEcPj(ctx.sectionData.consumers) * ef) / 1000);
+  const peExact = (computeEcPj(ctx.sectionData.consumers) * ef) / 1000;
+  const pe = round2(peExact);
   // Bundle mode: each site degrades from its own first-synchronisation year, so
   // the yearly total is the staggered sum rather than one aggregate curve.
   const gens = isBundle(ctx.sectionData)
@@ -199,7 +200,9 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   }
   const totals = {
     be: round2(rows.reduce((a, r) => a + r.be, 0)),
-    pe: round2(rows.reduce((a, r) => a + r.pe, 0)),
+    // PE is the same every year, so the run total is the unrounded yearly value
+    // × years — MCRU p.18 prints 19.01 (2.7163 × 7), not 7 × 2.72 = 19.04.
+    pe: round2(peExact * years),
     le: 0,
     er: rows.reduce((a, r) => a + r.er, 0),
   };
@@ -244,7 +247,7 @@ export interface FinancialTable {
 // tariff, 7% discount rate, free O&M for the first 6 years then 1% of the
 // investment per year (300k THB on the 30M-THB MCRU sheet), 25-year plant
 // life, 5%-of-investment scrap value in the final year.
-const FIN_DEFAULTS = { price: 4.18, discount: 7, omPctOfInvestment: 1, omStart: 7, lifetime: 25, scrapPct: 5 };
+export const FIN_DEFAULTS = { price: 4.18, discount: 7, omPctOfInvestment: 1, omStart: 7, lifetime: 25, scrapPct: 5 };
 
 /** Internal-rate-of-return by bisection over the yearly net cash flows. */
 function irrFromFlows(flows: number[]): number | null {

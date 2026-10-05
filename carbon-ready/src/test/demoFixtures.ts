@@ -23,6 +23,7 @@ import {
 } from '../data/methodologies';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
+import { EMPTY_REC_ROI_SETTINGS } from '../lib/rec-roi';
 import { seedOrg, seedUser, seedFactors, seedMethodologies } from '../data/seed';
 import { useStore } from '../store';
 
@@ -622,5 +623,7 @@ export function seedDemo() {
     methodologies: seedMethodologies,
     pdds: demoPdds,
     recIssues: demoRecIssues,
+    recRoiSettings: EMPTY_REC_ROI_SETTINGS,
+    recRoiProjectSettings: [],
   });
 }

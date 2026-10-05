@@ -2,9 +2,11 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useStore } from './index';
 import { setSession } from '../lib/server-api';
 import { seedFactors } from '../data/seed';
+import { EMPTY_REC_ROI_SETTINGS } from '../lib/rec-roi';
 import type {
   Project, MonitoringRecord, EmissionFactor, ProjectDesignDocument,
   VerificationRequest, EvidenceFile, VerifiableCredential, GuardianToken, RecIssueRequest,
+  RecRoiProjectSetting,
 } from '../types';
 
 // ============================================================
@@ -72,6 +74,11 @@ const recIssue = { id: 'RIR-srv-1', project_id: 'prj-srv-1', state: 'draft' } as
 const evidenceRow = { id: 'ev-srv-1', project_id: 'prj-srv-1', status: 'active' } as EvidenceFile;
 const credential = { id: 'vc-srv-1', schema_id: 'sch-1' } as VerifiableCredential;
 const token = { id: 'tok-srv-1', credential_id: 'vc-srv-1' } as GuardianToken;
+const recRoiSettings = { ...EMPTY_REC_ROI_SETTINGS, price_source: 'quote', horizon_years: 5 };
+const recRoiProjectSetting: RecRoiProjectSetting = {
+  project_id: 'prj-srv-1', issuance_type: 'Normal', digital_meter_exempt: false,
+  investment_mthb: null, updated_by: null, updated_at: null,
+};
 
 const HAPPY_ROUTES: Record<string, unknown> = {
   '/projects': { projects: [project] },
@@ -88,6 +95,8 @@ const HAPPY_ROUTES: Record<string, unknown> = {
   '/credentials': { credentials: [credential] },
   '/tokens': { tokens: [token] },
   '/rec-issues': { rec_issues: [recIssue] },
+  '/rec-roi/settings': { settings: recRoiSettings },
+  '/rec-roi/project-settings': { project_settings: [recRoiProjectSetting] },
 };
 
 describe('hydrateFromServer', () => {
@@ -118,6 +127,8 @@ describe('hydrateFromServer', () => {
     expect(s.credentials).toEqual([credential]);
     expect(s.tokens).toEqual([token]);
     expect(s.recIssues).toEqual([recIssue]);
+    expect(s.recRoiSettings).toEqual(recRoiSettings);
+    expect(s.recRoiProjectSettings).toEqual([recRoiProjectSetting]);
     expect(s.hydration_errors).toEqual([]);
     // pdds merge the bare (in-flight) list with the explicit terminal states
     expect(s.pdds.map((p) => p.id).sort()).toEqual(['PDD-srv-1', 'PDD-srv-2']);
@@ -162,5 +173,27 @@ describe('hydrateFromServer', () => {
     // independent slices still hydrated
     expect(s.factors).toEqual([factor]);
     expect(s.credentials).toEqual([credential]);
+  });
+
+  it('skips REC ROI slices for the verifier role (server answers 403)', async () => {
+    useStore.setState((st) => ({
+      currentUser: { ...st.currentUser, role: 'verifier' },
+      // stale values persisted from an earlier non-verifier session
+      recRoiSettings: { ...EMPTY_REC_ROI_SETTINGS, price_mid_thb: 25, price_source: 'quote' },
+      recRoiProjectSettings: [{
+        project_id: 'prj-0001', issuance_type: 'Normal', digital_meter_exempt: false, investment_mthb: 5,
+        updated_by: 'x', updated_at: '2026-01-01T00:00:00Z',
+      }],
+    }));
+    const fetchMock = stubRoutes(HAPPY_ROUTES);
+
+    await useStore.getState().hydrateFromServer();
+
+    const urls = fetchMock.mock.calls.map(([url]) => String(url));
+    expect(urls.some((u) => u.includes('/rec-roi'))).toBe(false);
+    expect(useStore.getState().hydration_errors).toEqual([]);
+    // commercial data must not linger in the verifier's store
+    expect(useStore.getState().recRoiSettings).toEqual(EMPTY_REC_ROI_SETTINGS);
+    expect(useStore.getState().recRoiProjectSettings).toEqual([]);
   });
 });

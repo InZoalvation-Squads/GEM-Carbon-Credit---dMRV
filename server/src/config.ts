@@ -41,6 +41,9 @@ const EnvSchema = z.object({
   IOT_LOOKBACK_HOURS: z.coerce.number().positive().optional(),
   IOT_TIMEZONE: z.string().min(1).optional(),
   IOT_DEDUCTION_PCT: z.coerce.number().min(0).max(100).optional(),
+  // Bank of Thailand API token — present → GET /fx/eur-thb returns the BOT
+  // daily EUR mid rate for the REC ROI page; absent → manual FX entry only.
+  BOT_API_TOKEN: z.string().min(1).optional(),
 });
 
 export type Config = z.infer<typeof EnvSchema>;

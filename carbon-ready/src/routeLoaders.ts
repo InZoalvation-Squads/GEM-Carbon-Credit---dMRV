@@ -18,6 +18,7 @@ export const routeLoaders = {
   ReviewDetail: once(() => import('./pages/ReviewDetail').then((module) => ({ default: module.ReviewDetail }))),
   RecIssuance: once(() => import('./pages/RecIssuance').then((module) => ({ default: module.RecIssuance }))),
   RecIssueOfficialForm: once(() => import('./templates/RecIssueOfficialForm').then((module) => ({ default: module.RecIssueOfficialForm }))),
+  RecRoi: once(() => import('./pages/RecRoi').then((module) => ({ default: module.RecRoi }))),
   Guardian: once(() => import('./pages/Guardian').then((module) => ({ default: module.Guardian }))),
   Methodologies: once(() => import('./pages/Methodologies').then((module) => ({ default: module.Methodologies }))),
   Registration: once(() => import('./pages/Registration').then((module) => ({ default: module.Registration }))),
@@ -40,6 +41,7 @@ const sidebarLoaders: Record<string, keyof typeof routeLoaders> = {
   '/emission-factors': 'EmissionFactors',
   '/verifications': 'Verifications',
   '/rec-issuance': 'RecIssuance',
+  '/rec-roi': 'RecRoi',
   '/guardian': 'Guardian',
   '/audit-log': 'AuditLogPage',
 };

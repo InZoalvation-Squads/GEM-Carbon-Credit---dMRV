@@ -62,6 +62,8 @@ export const ACTION_LABEL: Record<AuditAction, string> = {
   REC_ISSUE_ISSUED: 'REC Certificates Issued',
   REC_ISSUE_REJECTED: 'REC Issue Request Rejected',
   REC_ISSUE_DELETED: 'REC Issue Request Deleted',
+  REC_ROI_SETTINGS_UPDATED: 'REC ROI Assumptions Updated',
+  REC_ROI_PROJECT_UPDATED: 'REC ROI Project Setting Updated',
 };
 
 export const ENTITY_LABEL: Record<EntityType, string> = {
@@ -75,6 +77,7 @@ export const ENTITY_LABEL: Record<EntityType, string> = {
   pdd: 'PDD',
   token: 'VCU Token',
   rec_issue: 'REC Issue Request',
+  rec_roi: 'REC ROI',
 };
 
 export const PROJECT_STATUS_LABEL: Record<ProjectStatus, string> = {
