@@ -68,13 +68,13 @@ export function RecRoi() {
                       <>
                         <TD className="text-right">
                           {formatNumber(r.annual.annual_mwh, 1)}
-                          {r.annual.partial && <span className="ml-2"><Badge tone="amber">ข้อมูล {r.annual.coverage_days} วัน</Badge></span>}
+                          {r.annual.partial && <div className="mt-1"><Badge tone="amber" className="whitespace-nowrap">ข้อมูล {r.annual.coverage_days} วัน</Badge></div>}
                         </TD>
                         <TD className="text-right">{roi ? breakEvenText(roi.own) : '—'}</TD>
                         <TD className="text-right">{roi ? breakEvenText(roi.platform) : '—'}</TD>
                         <TD className={`text-right ${mid && mid.net_thb < 0 ? 'text-state-rejected' : ''}`}>{mid ? pct(mid.roi_pct) : '—'}</TD>
                         <TD>
-                          {rec ? <Badge tone={rec.tone}>{rec.text}</Badge> : '—'}
+                          {rec ? <Badge tone={rec.tone} className="whitespace-nowrap">{rec.text}</Badge> : '—'}
                         </TD>
                       </>
                     )}

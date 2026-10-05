@@ -14,7 +14,12 @@ export const MISSING_LABEL: Record<RecRoiMissing, string> = {
   fx: 'ยังไม่กรอกอัตรา EUR→THB → เส้นทาง ก คำนวณไม่ได้',
 };
 
-export const thb = (n: number, digits = 0) => `฿${formatNumber(n, digits)}`;
+/** Baht amount; negatives get a typographic minus before the symbol ("−฿392,481"). */
+export function thb(n: number, digits = 0): string {
+  const abs = formatNumber(Math.abs(n), digits);
+  const isZero = /^[0.,]*$/.test(abs); // -0 or a tiny negative that rounds to 0 shows no sign
+  return `${n < 0 && !isZero ? '\u2212' : ''}฿${abs}`;
+}
 export const pricePerMwh = (n: number) => formatNumber(n, 2);
 export const pct = (n: number | null) => (n === null ? '—' : `${n >= 0 ? '+' : ''}${formatNumber(n, 1)}%`);
 

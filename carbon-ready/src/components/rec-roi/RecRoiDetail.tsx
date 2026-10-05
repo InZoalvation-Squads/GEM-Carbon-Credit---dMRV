@@ -28,7 +28,7 @@ function pathBadge(roi: RecRoiResult, path: RecPath) {
   if (roi.recommended !== path) return undefined;
   const rec = recommendationBadge(roi);
   if (!rec) return undefined;
-  return <Badge tone={rec.tone}>{rec.tone === 'green' ? 'แนะนำ' : rec.text}</Badge>;
+  return <Badge tone={rec.tone} className="whitespace-nowrap">{rec.tone === 'green' ? 'แนะนำ' : rec.text}</Badge>;
 }
 
 function PathCard({ result, badge, capacityKwp, exempt }: {
@@ -187,7 +187,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
         <CardBody className="p-5 text-sm text-ink-secondary">
           {formatNumber(annual.annual_mwh, 1)} MWh/ปี (= REC/ปี) จาก {formatNumber(annual.total_kwh, 0)} kWh
           ช่วง {annual.window_start} – {annual.window_end}
-          {annual.partial && <span className="ml-2"><Badge tone="amber">ข้อมูล {annual.coverage_days} วัน — ประมาณเป็นรายปี</Badge></span>}
+          {annual.partial && <span className="ml-2"><Badge tone="amber" className="whitespace-nowrap">ข้อมูล {annual.coverage_days} วัน — ประมาณเป็นรายปี</Badge></span>}
         </CardBody>
       </Card>
 
