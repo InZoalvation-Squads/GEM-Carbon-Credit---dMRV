@@ -91,7 +91,8 @@ function seedMcruData(overrides: Record<string, unknown> = {}) {
   const {
     permit_no: _p1, permit_date: _p2, owner_name: _p3, project_address: _p4,
     equipment_specs: _p5, sites: _p6, support_equipment: _p7, project_type: _p8,
-    project_start_date: _p9, coordinator_fax: _p10, ...base
+    project_start_date: _p9, coordinator_fax: _p10, project_activity: _p11,
+    eg_monitoring_method: _p12, eg_deduction_pct: _p13, ...base
   } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
     ...base,
@@ -1325,5 +1326,77 @@ describe('TverSF001Pdd — PDD-2010 reproduces the reference document', () => {
     // W × h ÷ 1000 × qty from the reference's inputs; its own kWh column rounds
     // the pump hours differently and sums to 2,227.11.
     expect(screen.getByTestId('ecpj-total').textContent).toBe('2,228.28');
+  });
+});
+
+// ============================================================
+// MCRU fidelity fixes — cover activity, permit sentence, §4.3 EG method,
+// PE run total.
+// ============================================================
+describe('TverSF001Pdd — MCRU fidelity fixes', () => {
+  /** The value cell of the cover's กิจกรรมของโครงการ row. */
+  const activityCell = () => screen.getByText('กิจกรรมของโครงการ').nextElementSibling?.textContent ?? '';
+  /** The วิธีการติดตามผล cell of the §4.3 EG_Consumer card. */
+  const egMethodCell = () => {
+    const card = screen.getAllByText('Consumer,PJ,y').map((el) => el.closest('table'))
+      .find((t) => t?.querySelector('tr')?.textContent === 'พารามิเตอร์EGConsumer,PJ,y')!;
+    return within(card).getByText('วิธีการติดตามผล').nextElementSibling?.textContent ?? '';
+  };
+
+  it('cover activity prints project_activity, not the §1.1 after_project narrative', () => {
+    seedMcruData({ project_activity: 'ประโยคสรุปกิจกรรม', after_project: 'ย่อหน้ายาวของข้อ 1.1' });
+    renderDoc();
+    expect(activityCell()).toBe('ประโยคสรุปกิจกรรม');
+  });
+
+  it('an unfilled single PDD gets the generated one-sentence activity summary', () => {
+    seedMcruData({ after_project: 'ย่อหน้ายาวของข้อ 1.1' });
+    renderDoc();
+    expect(activityCell()).toContain('โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ที่ติดตั้งบนหลังคา (Solar Rooftop)');
+    expect(activityCell()).toContain('กิโลวัตต์สูงสุด (kWp)');
+    expect(activityCell()).not.toContain('ย่อหน้ายาว');
+  });
+
+  it('does not repeat the permit sentence when the §1.1 text already cites the permit', () => {
+    seedMcruData({
+      permit_no: '12/2568', permit_date: '2025-03-25',
+      after_project: 'ซึ่งตั้งอยู่บนพื้นที่เดียวกันตามใบอนุญาตก่อสร้างอาคาร เลขที่ 12/2568 ลงวันที่ 25 มีนาคม 2568',
+    });
+    renderDoc();
+    expect(screen.queryByText(/ทำการติดตั้งตามใบอนุญาตก่อสร้างอาคาร/)).not.toBeInTheDocument();
+  });
+
+  it('still adds the permit sentence when the §1.1 text does not mention it', () => {
+    seedMcruData({ permit_no: '12/2568', permit_date: '2025-03-25', after_project: 'ข้อความไม่มีเลขใบอนุญาต' });
+    renderDoc();
+    expect(screen.getByText(/ทำการติดตั้งตามใบอนุญาตก่อสร้างอาคาร/).textContent).toContain('12/2568');
+  });
+
+  it('§4.3 EG method uses eg_monitoring_method and states the deduction', () => {
+    seedMcruData({
+      eg_monitoring_method: 'ตรวจวัดโดย Energy Meter หรือ Power Meter ที่ติดตั้งอยู่ในอินเวอร์เตอร์ และแสดงผลผ่านทางโปรแกรม Fusion Solar',
+      eg_deduction_pct: 5,
+    });
+    renderDoc();
+    const cell = egMethodCell();
+    expect(cell).toContain('Fusion Solar');
+    expect(cell).toContain('หักข้อมูลปริมาณไฟฟ้าที่ตรวจวัดได้ออก 5% ก่อนนำไปคำนวณ');
+    expect(cell).not.toContain('kWh Meter');
+  });
+
+  it('§4.3 EG method falls back to the standard wording with no deduction clause', () => {
+    seedMcruData();
+    renderDoc();
+    const cell = egMethodCell();
+    expect(cell).toContain('ตรวจวัดโดย kWh Meter');
+    expect(cell).not.toContain('หักข้อมูล');
+  });
+
+  it('§3.5 PE run total is 19.01, the unrounded yearly PE × 7', () => {
+    seedMcruData();
+    renderDoc();
+    const text = screen.getByTestId('yearly-table').textContent ?? '';
+    expect(text).toContain('19.01');
+    expect(text).not.toContain('19.04');
   });
 });

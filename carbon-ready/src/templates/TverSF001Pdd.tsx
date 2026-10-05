@@ -7,6 +7,7 @@ import { EmptyState } from '../components/ui/EmptyState';
 import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
 import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
+import { draftActivityText } from '../lib/pdd-drafts';
 import type { EvidenceFile, PddComputedSource } from '../types';
 
 // ============================================================
@@ -378,30 +379,74 @@ function TocPage({ formLabel }: { formLabel: string }) {
  * and meters inside a dashed boundary, consumer and PEA grid outside.
  */
 function BoundaryDiagram({ capacityKwp, owner, bundle = false }: { capacityKwp: string; owner: string; bundle?: boolean }) {
-  const box = 'border border-black bg-white px-2 py-1.5 text-center';
-  return (
-    <div data-testid="boundary-diagram" className="keep-together mx-auto my-2 flex w-[95%] items-stretch gap-2 text-[11px]">
-      <div className="relative flex-1 border-2 border-dashed border-black p-3 pt-4">
-        <span className="absolute -top-2 left-3 bg-white px-1">ขอบเขตโครงการ</span>
-        <div className="flex items-center gap-1.5">
-          <div className={`${box} w-36`}>ระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์ {capacityKwp} kW</div>
-          <span>→</span>
-          <div className={box}>มิเตอร์</div>
-          <span className="flex-1 text-center">EG<sub>Consumer,PJ,y</sub> →</span>
-        </div>
-        <div className="mt-3 flex items-center justify-end gap-1.5">
-          <div className={box}>ใช้เองในโครงการ</div>
-          <span>←</span>
-          <div className={box}>มิเตอร์</div>
-          <span className="text-center">← EC<sub>PJ,y</sub></span>
-        </div>
+  // Drawn in the reference figure's own coordinates so the geometry matches it:
+  // solar → meter → consumer along the top, a branch down to the project's own
+  // use, and the grid bus on the right feeding the consumer and (via the second
+  // meter) the project. Arrowheads are plain polygons rather than <marker>s so
+  // the two copies of this figure on one page never share an element id.
+  const head = (x: number, y: number, dir: 'left' | 'right' | 'down') => {
+    const p = dir === 'right' ? `${x},${y} ${x - 14},${y - 7} ${x - 14},${y + 7}`
+      : dir === 'left' ? `${x},${y} ${x + 14},${y - 7} ${x + 14},${y + 7}`
+      : `${x},${y} ${x - 7},${y - 14} ${x + 7},${y - 14}`;
+    return <polygon points={p} fill="black" />;
+  };
+  // Box labels go through foreignObject so a long owner name wraps inside its box.
+  const label = (x: number, y: number, w: number, h: number, bold: boolean, children: ReactNode, fontSize = 24) => (
+    <foreignObject x={x} y={y} width={w} height={h}>
+      <div style={{ display: 'flex', height: '100%', alignItems: 'center', justifyContent: 'center', textAlign: 'center', fontSize, lineHeight: 1.3, fontWeight: bold ? 700 : 400, padding: '0 8px', boxSizing: 'border-box', overflowWrap: 'anywhere' }}>
+        <span>{children}</span>
       </div>
-      <div className="flex w-32 flex-col justify-between py-2">
+    </foreignObject>
+  );
+  // Long owner names step the consumer label down so they stay inside the box.
+  const ownerFont = bundle || owner.length <= 18 ? 24 : owner.length <= 30 ? 20 : 17;
+  const rect = (x: number, y: number, w: number, h: number) => <rect x={x} y={y} width={w} height={h} fill="white" stroke="black" strokeWidth={2} />;
+  return (
+    <div data-testid="boundary-diagram" className="keep-together mx-auto my-2 w-[95%]">
+      <svg viewBox="20 0 1240 360" className="block h-auto w-full" role="img" aria-label="ขอบเขตโครงการ">
+        <text x={410} y={28} textAnchor="middle" fontSize={24}>ขอบเขตโครงการ</text>
+        <rect x={40} y={45} width={740} height={280} rx={18} fill="none" stroke="black" strokeWidth={2.5} strokeDasharray="10 7" />
+
+        {/* top row: solar → meter → EG_Consumer → consumer */}
+        {rect(65, 70, 275, 100)}
+        {label(65, 70, 275, 100, true, <>ระบบผลิตไฟฟ้าพลังงาน<br />แสงอาทิตย์ {capacityKwp} kW</>)}
+        <line x1={340} y1={120} x2={616} y2={120} stroke="black" strokeWidth={2} />
+        {head(630, 120, 'right')}
+        {rect(630, 100, 110, 40)}
+        {label(630, 100, 110, 40, true, 'มิเตอร์')}
+        <line x1={740} y1={120} x2={906} y2={120} stroke="black" strokeWidth={2} />
+        {head(920, 120, 'right')}
+        <text x={752} y={108} fontSize={24} fontWeight={700}>
+          EG<tspan fontSize={16} dy={6}>Consumer,PJ,y</tspan>
+        </text>
+        {rect(920, 65, 210, 110)}
         {/* แบบควบรวม: the consumers are the bundled sites' owners, not the
             developer, so the box carries the generic label as the reference does. */}
-        <div className={box}>ผู้ใช้ไฟฟ้า{!bundle && <><br />({owner})</>}</div>
-        <div className="text-center">↑<br />ระบบสายส่ง {bundle ? 'PEA / MEA' : 'PEA'}</div>
-      </div>
+        {label(920, 65, 210, 110, true, <>ผู้ใช้ไฟฟ้า{!bundle && <><br />({owner})</>}</>, ownerFont)}
+
+        {/* branch from the solar output down to the project's own use */}
+        <line x1={460} y1={120} x2={460} y2={211} stroke="black" strokeWidth={2} />
+        {head(460, 225, 'down')}
+        {rect(330, 225, 240, 70)}
+        {label(330, 225, 240, 70, true, 'ใช้เองในโครงการ')}
+
+        {/* bottom row: grid → EC_PJ,y → meter → own use */}
+        {rect(630, 245, 110, 40)}
+        {label(630, 245, 110, 40, true, 'มิเตอร์')}
+        <line x1={630} y1={265} x2={584} y2={265} stroke="black" strokeWidth={2} />
+        {head(570, 265, 'left')}
+        <line x1={1185} y1={265} x2={754} y2={265} stroke="black" strokeWidth={2} />
+        {head(740, 265, 'left')}
+        <text x={790} y={252} fontSize={24} fontWeight={700}>
+          EC<tspan fontSize={16} dy={6}>PJ,y</tspan>
+        </text>
+
+        {/* grid bus feeding the consumer */}
+        <line x1={1185} y1={70} x2={1185} y2={310} stroke="black" strokeWidth={2.5} />
+        <line x1={1185} y1={150} x2={1144} y2={150} stroke="black" strokeWidth={2} />
+        {head(1130, 150, 'left')}
+        <text x={1250} y={350} textAnchor="end" fontSize={24}>ระบบสายส่ง {bundle ? 'PEA / MEA' : 'PEA'}</text>
+      </svg>
     </div>
   );
 }
@@ -610,6 +655,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const address = typeof d.project_address === 'string' && d.project_address !== '' ? d.project_address : project.location;
   const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
+  const egDeductionPct = Number(d.eg_deduction_pct) || 0;
   const ecPj = computeEcPj(consumers);
   const consumersHaveNotes = consumers.some((r) => cellStr(r.note) !== '');
   const years = table?.years ?? Number(str('crediting_years')) ?? 7;
@@ -739,7 +785,14 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </tr>
               <tr>
                 <td className="font-bold">กิจกรรมของโครงการ</td>
-                <td>{str('after_project')}</td>
+                {/* Reference p.3 carries a one-sentence activity summary, not the
+                    §1.1 narrative. Unfilled single PDDs get the same sentence the
+                    form's draft button writes; bundles keep the narrative. */}
+                <td className="whitespace-pre-wrap">
+                  {str('project_activity') !== '-' ? str('project_activity')
+                    : bundle ? str('after_project')
+                    : draftActivityText('project_activity', project, d, factors)}
+                </td>
               </tr>
               <tr>
                 <td className="font-bold">เงินลงทุนทั้งหมดของโครงการ</td>
@@ -799,7 +852,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <p className="whitespace-pre-wrap indent-8">{str('before_project')}</p>
           <p className="mt-2 font-bold underline">หลังดำเนินโครงการ</p>
           <p className="whitespace-pre-wrap indent-8">{str('after_project')}</p>
-          {d.permit_no !== undefined && d.permit_no !== '' && (
+          {/* The after_project draft already cites the permit; repeating it here
+              printed the sentence twice. Only add it when the text lacks it. */}
+          {d.permit_no !== undefined && d.permit_no !== '' && !str('after_project').includes(str('permit_no')) && (
             <p className="indent-8">
               ทำการติดตั้งตามใบอนุญาตก่อสร้างอาคาร ดัดแปลงอาคาร หรือรื้อถอนอาคาร
               เลขที่ {str('permit_no')} ลงวันที่ {thaiDate(d.permit_date)}
@@ -1392,7 +1447,11 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               <tr><td className="bg-[#fbeeee] font-bold">หน่วย</td><td>kWh/year</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">ความหมาย</td><td>ปริมาณไฟฟ้าที่ผลิตได้เพื่อใช้เองจากการดำเนินโครงการพลังงานหมุนเวียน ในปี y</td></tr>
               <tr><td className="bg-[#fbeeee] font-bold">แหล่งข้อมูล</td><td>รายงานการตรวจวัด</td></tr>
-              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>ตรวจวัดโดย kWh Meter และตรวจวัดต่อเนื่องตลอดช่วงของการติดตามผล โดยรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน</td></tr>
+              <tr><td className="bg-[#fbeeee] font-bold">วิธีการติดตามผล</td><td>
+                {str('eg_monitoring_method') !== '-' ? str('eg_monitoring_method')
+                  : 'ตรวจวัดโดย kWh Meter และตรวจวัดต่อเนื่องตลอดช่วงของการติดตามผล โดยรายงานข้อมูลที่มีความละเอียดเป็นรายเดือน'}
+                {egDeductionPct > 0 && ` โดยผู้พัฒนาโครงการจะหักข้อมูลปริมาณไฟฟ้าที่ตรวจวัดได้ออก ${egDeductionPct.toLocaleString('en-US', { maximumFractionDigits: 2 })}% ก่อนนำไปคำนวณหาปริมาณก๊าซเรือนกระจกที่ลดได้`}
+              </td></tr>
             </tbody>
           </table>
           <table className="doc-table keep-together mt-3 w-full">

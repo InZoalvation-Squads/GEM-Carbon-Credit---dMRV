@@ -271,12 +271,15 @@ describe('PDD editor — draft boilerplate for activity fields', () => {
     fireEvent.click(screen.getByRole('button', { name: /A\. / })); // step chips show the section title up to the slash
     void useStore;
     const buttons = screen.getAllByText(/ร่างข้อความให้จากข้อมูลโครงการ/);
-    expect(buttons.length).toBe(2); // before_project + after_project
-    fireEvent.click(buttons[1]); // after_project is the later field
+    expect(buttons.length).toBe(3); // project_activity + before_project + after_project
+    fireEvent.click(buttons[2]); // after_project is the last field
     const areas = Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n');
     expect(areas).toContain('ขนาดติดตั้ง'); // ¶2 installation facts
     expect(areas).toContain('AEDP2015');   // ¶1 policy boilerplate
     expect(areas).toContain('การไฟฟ้าส่วนภูมิภาค'); // non-MEA address → PEA default
+    fireEvent.click(buttons[0]); // project_activity — the one-sentence cover summary, first field
+    const withActivity = Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n');
+    expect(withActivity).toContain('ขนาดกำลังติดตั้งไม่น้อยกว่า 250.00 กิโลวัตต์สูงสุด (kWp)');
 
   });
 });
