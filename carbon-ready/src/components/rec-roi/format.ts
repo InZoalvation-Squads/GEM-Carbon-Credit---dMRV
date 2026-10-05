@@ -20,6 +20,8 @@ export function thb(n: number, digits = 0): string {
   const isZero = /^[0.,]*$/.test(abs); // -0 or a tiny negative that rounds to 0 shows no sign
   return `${n < 0 && !isZero ? '\u2212' : ''}฿${abs}`;
 }
+/** Baht with an explicit sign, for an amount added on top of something ("+฿27", "−฿1,200"). */
+export const signedThb = (n: number, digits = 0) => (n >= 0 ? `+${thb(n, digits)}` : thb(n, digits));
 export const pricePerMwh = (n: number) => formatNumber(n, 2);
 export const pct = (n: number | null) => (n === null ? '—' : `${n >= 0 ? '+' : ''}${formatNumber(n, 1)}%`);
 

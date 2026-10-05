@@ -183,6 +183,17 @@ describe('/rec-roi portfolio page', () => {
     expect(screen.queryByRole('button', { name: /บันทึกสมมติฐาน/ })).toBeNull();
     expect(screen.getByLabelText(/ราคากลาง/)).toBeDisabled();
   });
+
+  it('tells a read-only viewer who can edit the assumptions', () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'project_owner' } }));
+    renderPage();
+    expect(screen.getByRole('note')).toHaveTextContent(/แก้ไขได้เฉพาะผู้ดูแลระบบ \(Admin\) หรือ ESG Manager/);
+  });
+
+  it('shows no permission note to an editor', () => {
+    renderPage(); // esg_manager
+    expect(screen.queryByRole('note')).toBeNull();
+  });
 });
 
 describe('Sidebar — REC ROI visibility', () => {
@@ -214,6 +225,46 @@ describe('ProjectDetail — REC ROI tab', () => {
     useStore.setState((s) => ({
       recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25, price_source: 'quote' },
     }));
+  });
+
+  it('leads with a plain-language summary of the verdict', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    const summary = screen.getByRole('region', { name: 'สรุป' });
+    expect(within(summary).getByText('คุ้ม')).toBeInTheDocument();
+    expect(within(summary).getByText(/^ขาย REC ผ่านแพลตฟอร์มที่ราคา 25\.00 ฿\/MWh ได้กำไรสุทธิ/)).toBeInTheDocument();
+    expect(within(summary).getByText(/= 37 REC\/ปี \(จากข้อมูลวัดจริง 92 วัน ประมาณเป็นรายปี\)/)).toBeInTheDocument();
+  });
+
+  it('summary shows money with vs without REC', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    const table = within(screen.getByRole('region', { name: 'สรุป' })).getByRole('table');
+    // 36.5 MWh × 1,000 × 4.18 ฿/kWh = ฿152,570/yr; net REC ฿132.875 over 5 yr (platform, ฿25).
+    const perYear = within(table).getByRole('row', { name: /ต่อปี/ });
+    expect(within(perYear).getByText('฿152,570')).toBeInTheDocument();
+    expect(within(perYear).getByText('฿152,597')).toBeInTheDocument();
+    expect(within(perYear).getByText('+฿27')).toBeInTheDocument();
+    const total = within(table).getByRole('row', { name: /รวม 5 ปี/ });
+    expect(within(total).getByText('฿762,850')).toBeInTheDocument();
+    expect(within(total).getByText('฿762,983')).toBeInTheDocument();
+    expect(within(total).getByText('+฿133')).toBeInTheDocument();
+    expect(within(screen.getByRole('region', { name: 'สรุป' })).getByText(/ค่าไฟ 4\.18 ฿\/kWh\s*\(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
+  });
+
+  it('money table waits for a REC price on the with-REC side', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    const table = within(screen.getByRole('region', { name: 'สรุป' })).getByRole('table');
+    const perYear = within(table).getByRole('row', { name: /ต่อปี/ });
+    expect(within(perYear).getByText('฿152,570')).toBeInTheDocument();
+    expect(within(perYear).getAllByText('รอราคา REC').length).toBe(2);
+  });
+
+  it('summary waits for a price when none is entered', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    const summary = screen.getByRole('region', { name: 'สรุป' });
+    expect(within(summary).getByText('รอราคา')).toBeInTheDocument();
+    expect(within(summary).getByText(/^ยังไม่มีราคา REC — ต้องขายได้อย่างน้อย 24\.19 ฿\/MWh \(ผ่านแพลตฟอร์ม\)/)).toBeInTheDocument();
   });
 
   it('opens from ?tab=rec-roi and shows both paths side by side', () => {
@@ -340,7 +391,8 @@ describe('ProjectDetail — REC ROI tab', () => {
         ? { ...p, section_data: { ...p.section_data, investment_mthb: '', discount_rate_pct: 9 } } : p)),
     }));
     renderProject('prj-0001', '?tab=rec-roi');
-    expect(screen.getByText(/ค่าไฟ 4\.18 ฿\/kWh \(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
+    // The uplift footnote (the money table's note also names the tariff, so match the footnote's run).
+    expect(screen.getByText(/ค่าไฟ 4\.18 ฿\/kWh \(ค่าเริ่มต้น PEA\) · อัตราคิดลด/)).toBeInTheDocument();
     expect(screen.getByText(/อัตราคิดลด 9% \(จาก PDD\)/)).toBeInTheDocument();
     expect(screen.getByText(/อายุโครงการ 25 ปี \(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
   });

@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '../ui/Table';
@@ -15,7 +15,8 @@ import type { FinancialValue } from '../../lib/rec-roi-project';
 import type { RecIrrUplift, RecPath, RecPathResult, RecRoiResult } from '../../lib/rec-roi';
 import type { UUID } from '../../types';
 import { formatNumber } from '../../lib/format';
-import { MISSING_LABEL, PATH_LABEL, pct, paybackText, pricePerMwh, recommendationBadge, thb } from './format';
+import { MISSING_LABEL, PATH_LABEL, PATH_SHORT, pct, paybackText, pricePerMwh, recommendationBadge, signedThb, thb } from './format';
+import { buildRecRoiSummary, type RecMoneyComparison } from './summary';
 
 const SCENARIO_LABEL = { low: 'ต่ำ', mid: 'กลาง', high: 'สูง' } as const;
 
@@ -103,6 +104,46 @@ const UPLIFT_MESSAGE: Record<Exclude<RecIrrUplift['status'], 'ok'>, string> = {
   missing_generation: 'ยังไม่มีข้อมูลการผลิตที่วัดได้',
 };
 
+/** Money a project earns without vs with REC, per year and over the horizon (undiscounted). */
+function MoneyTable({ money, recNote }: { money: RecMoneyComparison; recNote: string | null }) {
+  const waiting = <span className="text-ink-meta">รอราคา REC</span>;
+  const rows: Array<[string, number, number | null, number | null]> = [
+    ['ต่อปี', money.without_year, money.with_year, money.rec_year],
+    [`รวม ${money.years} ปี`, money.without_total, money.with_total, money.rec_total],
+  ];
+  return (
+    <div className="space-y-2 pt-1">
+      <Table>
+        <THead>
+          <TR>
+            <TH>ตัวเงิน</TH>
+            <TH className="text-right">ไม่มี REC</TH>
+            <TH className="text-right">มี REC</TH>
+            <TH className="text-right">ส่วนต่าง (REC สุทธิ)</TH>
+          </TR>
+        </THead>
+        <TBody>
+          {rows.map(([label, without, withRec, rec]) => (
+            <TR key={label}>
+              <TD className="font-medium text-ink">{label}</TD>
+              <TD className="text-right">{thb(without)}</TD>
+              <TD className="text-right font-medium text-ink">{withRec === null ? waiting : thb(withRec)}</TD>
+              <TD className={`text-right ${rec !== null && rec < 0 ? 'text-state-rejected' : ''}`}>
+                {rec === null ? waiting : signedThb(rec)}
+              </TD>
+            </TR>
+          ))}
+        </TBody>
+      </Table>
+      <p className="text-xs text-ink-meta">
+        ไม่มี REC = มูลค่าไฟฟ้าที่ผลิตได้จริง × ค่าไฟ {formatNumber(money.tariff.value, 2)} ฿/kWh
+        ({money.tariff.source === 'pdd' ? 'จาก PDD' : 'ค่าเริ่มต้น PEA'}) · มี REC = บวกรายได้ REC สุทธิหลังหักค่าธรรมเนียม
+        {recNote ? ` (${recNote})` : ''} · ไม่คิดส่วนลดและการเสื่อมของแผง
+      </p>
+    </div>
+  );
+}
+
 /** Per-project REC ROI: both account paths, the MWh basis, IRR uplift and project settings. */
 export function RecRoiDetail({ projectId }: { projectId: UUID }) {
   const project = useStore((s) => s.projects.find((p) => p.id === projectId));
@@ -126,6 +167,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
   const [investment, setInvestment] = useState(r?.setting.investment_mthb?.toString() ?? '');
   const [investmentBad, setInvestmentBad] = useState(false);
   const [saving, setSaving] = useState(false);
+  const summaryId = useId();
 
   // Re-sync only when a save landed (updated_at moved), never on a mere re-evaluation,
   // so a half-typed value survives unrelated store updates.
@@ -153,6 +195,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
   const annual = r.annual;
   const roi = r.roi;
   const u = r.uplift;
+  const summary = buildRecRoiSummary(r, settings);
 
   const saveSetting = async () => {
     // Never turn an unparseable entry into a silent "no investment".
@@ -180,6 +223,29 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
 
   return (
     <div className="space-y-6">
+      {summary && (
+        <section aria-labelledby={summaryId}>
+          <Card>
+            <CardHeader
+              title={<span id={summaryId}>สรุป</span>}
+              action={<Badge tone={summary.tone} className="whitespace-nowrap">{summary.label}</Badge>}
+            />
+            <CardBody className="space-y-3 p-5">
+              <p className="text-[15px] font-medium leading-relaxed text-ink">{summary.headline}</p>
+              <ul className="list-disc space-y-1 pl-5 text-sm text-ink-secondary">
+                {summary.points.map((point) => <li key={point}>{point}</li>)}
+              </ul>
+              <MoneyTable
+                money={summary.money}
+                recNote={roi.recommended && settings.price_mid_thb !== null
+                  ? `${PATH_SHORT[roi.recommended]} ที่ราคากลาง ${pricePerMwh(settings.price_mid_thb)} ฿/MWh`
+                  : null}
+              />
+            </CardBody>
+          </Card>
+        </section>
+      )}
+
       {roi.missing.length > 0 && (
         <div className="rounded-sheet border border-state-revision/30 bg-state-revision/5 px-4 py-3 text-xs text-state-revision">
           ยังขาด: {roi.missing.map((m) => MISSING_LABEL[m]).join(' · ')} — <FillAt />

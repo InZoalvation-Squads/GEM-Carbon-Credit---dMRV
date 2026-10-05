@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react';
-import { Info } from 'lucide-react';
+import { Info, Lock } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Input } from '../ui/Input';
 import { Button } from '../ui/Button';
@@ -142,7 +142,15 @@ export function RecRoiAssumptions() {
             )}
             {canEdit && bot.available && bot.rate === null && <span className="text-state-rejected">{bot.error}</span>}
           </div>
-          {canEdit && <Button onClick={save} disabled={saving}>บันทึกสมมติฐาน</Button>}
+          {canEdit ? (
+            <Button onClick={save} disabled={saving}>บันทึกสมมติฐาน</Button>
+          ) : (
+            // Disabled fields alone don't say why — name who can change them.
+            <p role="note" className="flex items-center gap-1.5 text-xs text-ink-secondary">
+              <Lock size={13} className="shrink-0" aria-hidden />
+              แก้ไขได้เฉพาะผู้ดูแลระบบ (Admin) หรือ ESG Manager — ค่าเหล่านี้ใช้ร่วมกันทั้งองค์กร
+            </p>
+          )}
         </div>
       </CardBody>
     </Card>
