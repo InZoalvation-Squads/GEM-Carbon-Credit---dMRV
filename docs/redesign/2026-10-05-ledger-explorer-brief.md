@@ -179,3 +179,70 @@ Every badge pairs colour with a text label (never colour alone).
 4. Every page listed above.
 5. `npx tsc -b` and `npx vitest run` green, plus `npx vite build`.
 6. Final message: files changed (grouped), every test file changed and why, anything you could not do and why, and remaining hard-coded colours outside templates (should be none).
+
+---
+
+## Amendment, 2026-10-05: user feedback after phase 1–2
+
+The user asked for three things. These override the brief above where they conflict.
+
+### A. Sidebar: close to the ORIGINAL, and easy on the eyes ("คล้ายๆเดิม และสบายตา")
+
+Revert the dark petrol rail. Rebuild the sidebar in the structure of the original (`git show 21bf26e:carbon-ready/src/components/layout/Sidebar.tsx`), re-skinned in the new tokens. Keep every phase-1 accessibility gain.
+
+- **Rail:** light rail `#f3f6f5` (add `--rail` token) with a 1px `--rule` right border. No petrol fill and no chain-spine motif.
+- **Group headings:** like the original (uppercase English, small, tracked), but legible:
+  - 12px, font-semibold, tracking 0.06em, colour `--ink-3`
+  - Thai headings: no uppercase, no tracking
+- **Items:** the original anatomy (`rounded-lg px-3 py-2 text-sm`, 18px icon, then the label).
+  - Inactive: `--ink-2` text and `--ink-3` icon. On hover, `bg-white/70` with `--ink` text.
+  - Active: white background, 1px `--rule` ring, a soft xs shadow, font-semibold, `--ink` text and a petrol-700 icon. The original's small left indicator bar comes back (3px × 20px, rounded-r) in **petrol-700**.
+  - Colour transitions take 150ms.
+- **Org card:** the original white card with border and radius, plus a small petrol-50/petrol-700 icon tile. The version line is static at 12px `--ink-3`, with **no pulsing dot**.
+- **Keep from phase 1:** `nav aria-label`, the mobile drawer (transform slide 200ms ease-out, `inert` when closed, Escape, focus in/out, backdrop petrol-950/40 without blur), and 44px touch targets on mobile.
+- **TopBar:** stays petrol-700 flat, as the original header was petrol.
+- **Contract:** update the direction-contract comment in `index.html`. OWN-WORLD becomes "Petrol top bar and chain spine, light rail…" (the rest unchanged).
+- **"Easy on the eyes" app-wide:**
+  - No pure-black text (`--ink` is fine).
+  - No pure-white page ground (`--ground` stays `#f7f9f8`).
+  - Sheets on white with soft `--rule` borders.
+  - Avoid large saturated petrol blocks inside page content: petrol is for the top bar, primary buttons and small state marks.
+
+### B. Skeleton loading, lazy loading, smooth response
+
+- **Skeletons that mirror layout.** Each route's Suspense fallback is a skeleton of that page's real shape: page title bar, then a head-block row of 3–4 figure skeletons, then a sheet with 6 row skeletons; forms show field skeletons. Heights must match the loaded layout, so there is **zero layout shift** when content arrives.
+  - Shimmer: a subtle 1.6s sweep on `--surface-sunk`. Under reduced motion, a static block.
+  - Expose a reusable `Skeleton` and `SkeletonRows` in `components/ui`.
+- **Data skeletons.** In server mode (`VITE_API_BASE_URL` set), while the store has not hydrated yet, show skeletons in head blocks, tables and charts instead of zeros or empty states. Read the existing hydrate/loading state from the store; do **not** change store logic. If no such flag exists, report it rather than inventing one.
+- **Lazy loading.**
+  - Recharts chart components are `React.lazy` with a chart-shaped skeleton.
+  - Every `<img>` gets explicit `width`/`height`, `decoding="async"`, and `loading="lazy"`, except the first login slide (`fetchpriority="high"`).
+  - Preload the next login slide image.
+- **Prefetch on intent.** Hovering or focusing a sidebar link calls the route's dynamic `import()` once (share the lazy factories with `App.tsx`), so clicking feels instant.
+- **Smooth interaction.**
+  - Search and filter inputs on large lists (Projects, AuditLog, Verifications, RecIssuance) use `useDeferredValue` or `startTransition`, so typing never stalls.
+  - Memoise expensive derived values at the page level with `useMemo` (for example Dashboard's summary) without touching `src/store`.
+  - Hover/press/selection transitions are 150–200ms ease-out on colour, background, border and opacity only.
+  - Route content may take at most a 120ms opacity fade-in, with no slide or stagger choreography.
+  - Scroll the main region to the top on route change.
+- **Verify.** No long tasks over 50ms on typing in Projects search with seed data (measure with `performance.now` in a quick test or reason from code), and no CLS from images or skeletons.
+
+### C. Illustrations painted by ChatGPT Sol 6.1 (assets already in `carbon-ready/public/illustrations/`)
+
+The files are WebP, in one petrol and lime line-art family. Treat them as decorative: `alt=""` + `aria-hidden` wherever adjacent text already says the same thing.
+
+- **Login** (`login-1.webp` … `login-3.webp`, 1200×800, petrol background): replace the three slide photos, in the same order and with the same copy. The slide panel sits on petrol so the art blends in. Use `object-contain` or `object-cover` without cropping the subject. The carousel behaviour from phase 2 stays (pause, reduced motion).
+- **HowItWorks:**
+  - `hiw-hero.webp` (transparent, cropped) heads the page under the h1
+  - `hiw-1.webp` … `hiw-7.webp` (transparent, cropped to content, longest side 480px; aspect ratios vary, so place each in a fixed square box with `object-contain` and pass its natural width/height) go one per FLOW step in order: create+PDD+evidence, submit, validate+register, sign+anchor credential, upload monitoring, verification+anchor, mint credits
+  - display at 64–96px beside each step on desktop, and above it on mobile
+- **EmptyState:** add an optional `illustration` prop (a src string), rendered at 120px with fixed width/height and `loading="lazy"`. Map:
+  - Projects "No projects yet" → `empty-projects`
+  - Dashboard "No activity yet" → `empty-activity`
+  - ValidationQueue "Queue is empty" → `empty-queue`
+  - Verifications, RecIssuance and AuditLog "no match" → `empty-filter`
+  - Guardian "No credentials anchored / no tokens / no trust chain" → `empty-anchor`
+  - IotMapping (all three) → `empty-iot`
+  - PDD/document "not found" in pages and `OfficialForm.tsx`/`RecIssueOfficialForm.tsx` wrappers → `empty-document` (never inside the printed template bodies)
+  - ProjectDetail "No PDD yet" → `empty-document`
+  - Calculations, ProjectCreditsTab, ProjectEvidenceTab and RegistrationGate → pick the closest of the above
