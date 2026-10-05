@@ -429,20 +429,25 @@ function PddEditor({ pddId }: { pddId: string }) {
       </div>
 
       {!isReview && (
-        <Card className="max-w-2xl space-y-5 p-6">
+        <Card className="space-y-6 p-6 md:p-8">
           <div>
             <h3 className="text-lg font-semibold text-ink-900">{sections[step].title}</h3>
             {sections[step].help && <p className="mt-1 text-sm text-ink-500">{sections[step].help}</p>}
           </div>
-          {sections[step].fields.filter((f) => isFieldVisible(f, data)).map((f) => (
-            <FieldInput key={f.key} field={f} value={data[f.key]} readonly={readonly}
-              computed={f.type === 'computed' ? resolveComputed(f.source as PddComputedSource, ctx) : undefined}
-              onDraft={(draftableKeys as readonly string[]).includes(f.key)
-                ? () => draftActivityText(f.key as DraftableKey, project, data, factors)
-                : undefined}
-              onChange={(v) => setField(f.key, v)} />
-          ))}
-          <div className="flex justify-between pt-2">
+          {/* 12-col grid: each field claims a span suited to the length of the
+              value it holds (see fieldSpan), so short inputs pair up on a row
+              instead of every field stretching the full width of the card. */}
+          <div className="grid grid-cols-1 items-start gap-x-5 gap-y-5 md:grid-cols-12">
+            {sections[step].fields.filter((f) => isFieldVisible(f, data)).map((f) => (
+              <FieldInput key={f.key} field={f} value={data[f.key]} readonly={readonly}
+                computed={f.type === 'computed' ? resolveComputed(f.source as PddComputedSource, ctx) : undefined}
+                onDraft={(draftableKeys as readonly string[]).includes(f.key)
+                  ? () => draftActivityText(f.key as DraftableKey, project, data, factors)
+                  : undefined}
+                onChange={(v) => setField(f.key, v)} />
+            ))}
+          </div>
+          <div className="flex justify-between border-t border-ink-100 pt-5">
             <Button variant="ghost" onClick={back} disabled={step === 0}>← Back</Button>
             <div className="flex items-center gap-3">
               {!readonly && <AutoSaveStatus state={saveState} />}
@@ -453,7 +458,7 @@ function PddEditor({ pddId }: { pddId: string }) {
       )}
 
       {isReview && (
-        <Card className="max-w-2xl space-y-4 p-6">
+        <Card className="space-y-4 p-6 md:p-8">
           <h3 className="text-lg font-semibold text-ink-900">Review & submit</h3>
           {check.ok ? (
             <p className="text-sm text-brand-700">All required fields are complete. You can submit for validation.</p>
@@ -487,6 +492,24 @@ function AutoSaveStatus({ state }: { state: 'idle' | 'saving' | 'saved' | 'error
   return <span aria-live="polite" className={`text-xs ${tone}`}>{text}</span>;
 }
 
+/**
+ * How many of the 12 columns a field claims, derived from the shape of the
+ * value it holds — the schema carries no width hint, and it lives in Postgres,
+ * so inferring here keeps the layout a pure front-end concern.
+ *
+ * Wide values (prose, tables) take the full row; a short value with a short
+ * label takes a third so three sit on a line; everything else takes half.
+ */
+function fieldSpan(field: PddFieldSchema): string {
+  if (field.type === 'table' || field.type === 'textarea') return 'md:col-span-12';
+  // A short value still needs a row wide enough for its label — these labels are
+  // full Thai phrases, so thirds only work when the label is short too.
+  const compact = field.type === 'date' || field.type === 'number'
+    || field.type === 'boolean' || field.type === 'computed';
+  if (compact && `${field.label}${field.unit ?? ''}`.length <= 24) return 'md:col-span-4';
+  return 'md:col-span-6';
+}
+
 function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
   field: PddFieldSchema; value: unknown; computed?: number | string | null; readonly: boolean;
   onChange: (v: unknown) => void;
@@ -499,9 +522,9 @@ function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
   // do NOT wrap them in another <label> (invalid nested labels).
   if (field.type === 'computed') {
     return (
-      <div>
-        <span className="mb-1 block text-sm font-medium text-ink-700">{labelText}</span>
-        <div className="rounded-lg bg-ink-50 px-3 py-2 text-sm text-ink-700 ring-1 ring-ink-200">
+      <div className={fieldSpan(field)}>
+        <span className="mb-1.5 block text-[13px] font-medium text-ink-700">{labelText}</span>
+        <div className="flex h-10 items-center rounded-lg bg-ink-50 px-3 text-sm text-ink-700 ring-1 ring-ink-200">
           {computed === null || computed === undefined ? '—' : String(computed)}
           <span className="ml-2 text-xs text-ink-400">auto-calculated</span>
         </div>
@@ -510,7 +533,7 @@ function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
   }
 
   if (field.type === 'table') {
-    return <TableFieldInput field={field} value={value} readonly={readonly} onChange={onChange} />;
+    return <TableFieldInput field={field} value={value} readonly={readonly} onChange={onChange} span={fieldSpan(field)} />;
   }
 
   let control;
@@ -555,40 +578,57 @@ function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
     );
   }
   return (
-    <div>
+    <div className={fieldSpan(field)}>
       {control}
-      {field.help && <span className="mt-1 block text-xs text-ink-400">{field.help}</span>}
+      {field.help && <span className="mt-1.5 block text-xs leading-snug text-ink-400">{field.help}</span>}
     </div>
   );
 }
 
-function TableFieldInput({ field, value, readonly, onChange }: {
+function TableFieldInput({ field, value, readonly, onChange, span }: {
   field: PddFieldSchema; value: unknown; readonly: boolean; onChange: (v: unknown) => void;
+  /** Grid span handed down from FieldInput — tables always take the full row. */
+  span?: string;
 }) {
   const columns = field.columns ?? [];
   const rows = (Array.isArray(value) ? value : []) as Array<Record<string, unknown>>;
   const setCell = (ri: number, key: string, v: unknown) =>
     onChange(rows.map((r, i) => (i === ri ? { ...r, [key]: v } : r)));
+  // Numbers are short and right-aligned; free text needs room to read. Without a
+  // floor the browser squeezes a wide table until headers wrap and values clip.
+  const colWidth = (type?: string) => (type === 'number' ? 'min-w-[6.5rem]' : 'min-w-[9rem]');
   return (
-    <div>
-      <span className="mb-1 block text-sm font-medium text-ink-700">{field.label}</span>
+    <div className={span}>
+      <div className="mb-1.5 flex flex-wrap items-baseline justify-between gap-x-3">
+        <span className="text-[13px] font-medium text-ink-700">{field.label}</span>
+        {columns.length > 5 && (
+          <span className="text-[11px] text-ink-400">เลื่อนตารางแนวนอนเพื่อดูคอลัมน์ที่เหลือ →</span>
+        )}
+      </div>
       <div className="overflow-x-auto rounded-lg ring-1 ring-ink-200">
-        <table className="w-full text-sm">
+        <table className="w-full border-collapse text-sm">
           <thead className="bg-ink-50 text-left text-xs text-ink-500">
             <tr>
+              <th className="w-10 px-2 py-2 text-center font-medium">#</th>
               {columns.map((c) => (
-                <th key={c.key} className="px-2 py-1.5 font-medium">{c.label}{c.unit ? ` (${c.unit})` : ''}</th>
+                <th key={c.key} className={`px-2 py-2 font-medium leading-snug ${colWidth(c.type)}`}>
+                  {c.label}{c.unit ? ` (${c.unit})` : ''}
+                </th>
               ))}
-              {!readonly && <th className="w-8" />}
+              {!readonly && <th className="w-10" />}
             </tr>
           </thead>
           <tbody>
             {rows.map((row, ri) => (
-              <tr key={ri} className="border-t border-ink-100">
+              <tr key={ri} className="border-t border-ink-100 hover:bg-ink-50/40">
+                <td className="px-2 py-1.5 text-center text-xs tabular-nums text-ink-400">{ri + 1}</td>
                 {columns.map((c) => (
-                  <td key={c.key} className="px-1 py-1">
+                  <td key={c.key} className={`px-1.5 py-1.5 ${colWidth(c.type)}`}>
                     <input
-                      className="w-full rounded border border-ink-200 px-2 py-1 text-sm disabled:bg-ink-50"
+                      className={`h-9 w-full rounded-md border border-ink-200 bg-white px-2 text-sm
+                        transition-colors hover:border-ink-300
+                        focus:border-brand-500 focus:outline-none focus:ring-2 focus:ring-brand-500/15
+                        disabled:bg-ink-50 ${c.type === 'number' ? 'text-right tabular-nums' : ''}`}
                       type={c.type === 'number' ? 'number' : 'text'}
                       placeholder={c.label}
                       aria-label={`${c.label} แถว ${ri + 1}`}
@@ -599,8 +639,9 @@ function TableFieldInput({ field, value, readonly, onChange }: {
                   </td>
                 ))}
                 {!readonly && (
-                  <td className="px-1 text-center">
-                    <button type="button" aria-label={`ลบแถว ${ri + 1}`} className="text-ink-400 hover:text-red-600"
+                  <td className="px-1.5 text-center">
+                    <button type="button" aria-label={`ลบแถว ${ri + 1}`}
+                      className="rounded p-1 text-ink-400 transition-colors hover:bg-red-50 hover:text-red-600"
                       onClick={() => onChange(rows.filter((_, i) => i !== ri))}>✕</button>
                   </td>
                 )}
@@ -609,10 +650,12 @@ function TableFieldInput({ field, value, readonly, onChange }: {
           </tbody>
         </table>
       </div>
-      {!readonly && (
-        <Button variant="ghost" className="mt-1" onClick={() => onChange([...rows, {}])}>+ เพิ่มแถว</Button>
-      )}
-      {field.help && <span className="mt-1 block text-xs text-ink-400">{field.help}</span>}
+      <div className="mt-2 flex flex-wrap items-center justify-between gap-2">
+        {field.help && <span className="max-w-[46rem] text-xs leading-snug text-ink-400">{field.help}</span>}
+        {!readonly && (
+          <Button variant="ghost" className="ml-auto" onClick={() => onChange([...rows, {}])}>+ เพิ่มแถว</Button>
+        )}
+      </div>
     </div>
   );
 }
