@@ -232,6 +232,14 @@
           "help": "วันที่เริ่มดำเนินโครงการจริง เช่น วันที่ได้รับอนุญาตขนานไฟฟ้าครั้งแรก — เว้นว่างเพื่อใช้วันเริ่มคิดเครดิต"
         },
         {
+          "key": "project_start_basis",
+          "label": "ที่มาของวันเริ่มดำเนินโครงการ",
+          "type": "text",
+          "required": false,
+          "siteSpecific": true,
+          "help": "แสดงในวงเล็บต่อท้ายวันที่ในข้อ 1.5 เช่น อ้างอิงวันที่ได้รับอนุญาตขนานไฟฟ้าของ บริษัท B จำกัด ซึ่งเป็นลำดับแรกของโครงการ"
+        },
+        {
           "key": "crediting_start",
           "label": "วันเริ่มคิดเครดิต (Crediting Start Date)",
           "type": "date",
@@ -384,6 +392,14 @@
           "type": "textarea",
           "required": false,
           "help": "รายละเอียดกิจกรรม เป้าหมาย และรูปแบบการดำเนินโครงการ"
+        },
+        {
+          "key": "boundary_description",
+          "label": "คำอธิบายขอบเขตการดำเนินโครงการ (ข้อ 1.2)",
+          "type": "textarea",
+          "required": false,
+          "siteSpecific": true,
+          "help": "รูปแบบการผลิตและจ่ายไฟฟ้า (ใช้เอง / จำหน่ายภายใต้ PPA) และอุปกรณ์หลัก — เว้นว่างไว้จะแสดงประโยคสรุปขนาดติดตั้งแทน"
         },
         {
           "key": "installations",
@@ -760,7 +776,8 @@
           "label": "Measurement method",
           "type": "text",
           "required": true,
-          "defaultValue": "Revenue-grade bi-directional meter"
+          "defaultValue": "มิเตอร์ซื้อขายไฟฟ้า (Energy Meter)",
+          "help": "ช่องทางติดตามไฟฟ้าที่ผลิตได้ แสดงในภาพที่ 8 เช่น มิเตอร์ซื้อขายไฟฟ้า (Energy Meter) หรือ Software Fusion Solar"
         },
         {
           "key": "monitoring_frequency",

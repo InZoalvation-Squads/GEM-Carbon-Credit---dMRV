@@ -101,6 +101,22 @@ describe('draftActivityText — boilerplate composed from real project data', ()
     expect(text).not.toContain('Solar Rooftop');
   });
 
+  it('boundary_description: single is MCRU p.8 self consumption', () => {
+    const text = draftActivityText('boundary_description', PROJECT, MCRU_DATA);
+    expect(text).toContain('สำหรับมหาวิทยาลัยราชภัฏหมู่บ้านจอมบึง');
+    expect(text).toContain('(Self Consumption)');
+    expect(text).toContain('การไฟฟ้าส่วนภูมิภาคมาเพิ่มเติม');
+    expect(text).not.toContain('PPA');
+  });
+
+  it('boundary_description: a bundle gets the aggregated PPA + equipment paragraphs', () => {
+    const text = draftActivityText('boundary_description', PROJECT, { sites: [{ owner: 'A', kwp: 100 }] });
+    const paragraphs = text.split('\n');
+    expect(paragraphs).toHaveLength(2);
+    expect(paragraphs[0]).toContain('(Private PPA)');
+    expect(paragraphs[1]).toContain('ดังตารางที่ 2');
+  });
+
   it('exposes the draftable field keys for the wizard', () => {
     expect(draftableKeys).toContain('project_activity');
     expect(draftableKeys).toContain('before_project');

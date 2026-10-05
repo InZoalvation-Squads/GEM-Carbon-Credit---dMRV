@@ -271,8 +271,9 @@ describe('PDD editor — draft boilerplate for activity fields', () => {
     fireEvent.click(screen.getByRole('button', { name: /A\. / })); // step chips show the section title up to the slash
     void useStore;
     const buttons = screen.getAllByText(/ร่างข้อความให้จากข้อมูลโครงการ/);
-    expect(buttons.length).toBe(3); // project_activity + before_project + after_project
-    fireEvent.click(buttons[2]); // after_project is the last field
+    // project_activity + before_project + after_project + boundary_description
+    expect(buttons.length).toBe(4);
+    fireEvent.click(buttons[2]); // after_project
     const areas = Array.from(document.querySelectorAll('textarea')).map((t) => t.value).join('\n');
     expect(areas).toContain('ขนาดติดตั้ง'); // ¶2 installation facts
     expect(areas).toContain('AEDP2015');   // ¶1 policy boilerplate

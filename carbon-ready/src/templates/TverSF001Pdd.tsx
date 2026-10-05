@@ -443,20 +443,34 @@ function BoundaryDiagram({ capacityKwp, owner, bundle = false }: { capacityKwp: 
   );
 }
 
+/**
+ * Consumers appendix grouping: "Smart Logger: Huawei / SLogger3000A00GL" files
+ * under a SMART LOGGER header row (reference p.32). A value without the
+ * "Category:" prefix prints as typed, ungrouped (MCRU p.24 has no groups).
+ */
+function consumerGroup(equipment: unknown): { group: string | null; label: string } {
+  const text = String(equipment ?? '').trim();
+  const m = /^([^:]{1,40}):\s*(.+)$/.exec(text);
+  return m ? { group: m[1].trim(), label: m[2].trim() } : { group: null, label: text === '' ? '-' : text };
+}
+
 /** แผนผังขั้นตอนการจัดเก็บข้อมูลและ QA/QC — four-step data-flow boxes. */
 function DataFlowDiagram({ measurement }: { measurement: string }) {
+  // Wording of both references' figure: "ติดตามผลผ่านมิเตอร์ซื้อขายไฟฟ้า (Energy
+  // Meter)" / "ติดตามผลผ่าน Software Fusion Solar" — a space only before Latin.
+  const via = measurement === '-' ? ' -' : /^[A-Za-z]/.test(measurement) ? ` ${measurement}` : measurement;
   const steps = [
-    `ไฟฟ้าที่ผลิตได้: ${measurement} · ไฟฟ้าที่ใช้ในโครงการ: คำนวณจากพิกัดกำลังไฟฟ้าของอุปกรณ์และบันทึกชั่วโมงการทำงาน`,
+    `ไฟฟ้าที่ผลิตได้ ติดตามผลผ่าน${via}\nไฟฟ้าที่ใช้ในโครงการ ติดตามผลโดยการคำนวณจากค่าพิกัดกำลังไฟฟ้าจากผู้ผลิตอุปกรณ์ และบันทึกชั่วโมงการทำงานของอุปกรณ์`,
     'ข้อมูลจะถูกรวบรวมเป็นรายเดือนและตรวจสอบโดยเจ้าหน้าที่ที่ได้รับมอบหมาย',
     'ข้อมูลจะถูกทวนสอบโดยพนักงานระดับหัวหน้างานขึ้นไป',
-    'ข้อมูลจะถูกส่งให้ทีมงานผู้ได้รับมอบหมายในการดำเนินโครงการ T-VER จัดทำรายงานติดตามผลต่อไป',
+    'ข้อมูลจะถูกส่งให้ทีมงานผู้รับมอบหมายในการดำเนินโครงการ T-VER เพื่อจัดทำรายงานติดตามผลต่อไป',
   ];
   return (
     <div data-testid="dataflow-diagram" className="keep-together mx-auto my-2 flex w-full items-stretch gap-1 text-[10.5px]">
       {steps.map((t, i) => (
         <Fragment key={i}>
           {i > 0 && <span className="self-center">→</span>}
-          <div className="flex-1 border border-black p-1.5">{t}</div>
+          <div className="flex-1 whitespace-pre-line border border-black p-1.5">{t}</div>
         </Fragment>
       ))}
     </div>
@@ -647,6 +661,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const ownerName = typeof d.owner_name === 'string' && d.owner_name !== '' ? d.owner_name : str('project_owner');
   const consumers = (Array.isArray(d.consumers) ? d.consumers : []) as Array<Record<string, unknown>>;
   const egDeductionPct = Number(d.eg_deduction_pct) || 0;
+  const appendixFirst = bundle ? 'sites' : table ? 'forecast' : 'consumers';
+  const hasBoundaryDescription = typeof d.boundary_description === 'string' && d.boundary_description.trim() !== '';
   const ecPj = computeEcPj(consumers);
   const consumersHaveNotes = consumers.some((r) => cellStr(r.note) !== '');
   const years = table?.years ?? Number(str('crediting_years')) ?? 7;
@@ -838,10 +854,21 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           <SectionBar>ส่วนที่ 1 รายละเอียดโครงการ</SectionBar>
 
           <p className="font-bold underline">1.1 รายละเอียดและกิจกรรมของโครงการ</p>
-          <p className="mt-1 font-bold underline">ก่อนดำเนินโครงการ</p>
-          <p className="whitespace-pre-wrap indent-8">{str('before_project')}</p>
-          <p className="mt-2 font-bold underline">หลังดำเนินโครงการ</p>
-          <p className="whitespace-pre-wrap indent-8">{str('after_project')}</p>
+          {bundle ? (
+            // Aggregated reference p.6: plain paragraphs under 1.1 — no
+            // ก่อน/หลังดำเนินโครงการ sub-headings — then ตารางที่ 1 (p.7).
+            <>
+              {str('before_project') !== '-' && <p className="mt-1 whitespace-pre-wrap indent-8">{str('before_project')}</p>}
+              {str('after_project') !== '-' && <p className="mt-1 whitespace-pre-wrap indent-8">{str('after_project')}</p>}
+            </>
+          ) : (
+            <>
+              <p className="mt-1 font-bold underline">ก่อนดำเนินโครงการ</p>
+              <p className="whitespace-pre-wrap indent-8">{str('before_project')}</p>
+              <p className="mt-2 font-bold underline">หลังดำเนินโครงการ</p>
+              <p className="whitespace-pre-wrap indent-8">{str('after_project')}</p>
+            </>
+          )}
           {/* The after_project draft already cites the permit; repeating it here
               printed the sentence twice. Only add it when the text lacks it. */}
           {d.permit_no !== undefined && d.permit_no !== '' && !str('after_project').includes(str('permit_no')) && (
@@ -851,11 +878,6 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             </p>
           )}
 
-          <p className="mt-3 font-bold underline">1.2 ขอบเขตการดำเนินโครงการ</p>
-          <p className="indent-8">
-            โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(totalKwp)} kWp
-            ({str('technology')}, {str('grid_connection')}) เพื่อทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
-          </p>
           {bundle && (
             <>
               <p className="mt-3 font-bold">ตารางที่ {sitesTableNo} รายละเอียดโครงการเบื้องต้น กำลังผลิตติดตั้งและปริมาณไฟฟ้าที่คาดว่าจะผลิตได้</p>
@@ -888,11 +910,27 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
               </table>
             </>
           )}
+
+          <p className="mt-3 font-bold underline">1.2 ขอบเขตการดำเนินโครงการ</p>
+          {/* Both references open 1.2 with the supply model (self consumption /
+              Private PPA). Without it, a one-line capacity summary stands in. */}
+          {hasBoundaryDescription ? (
+            <p className="whitespace-pre-wrap indent-8">{str('boundary_description')}</p>
+          ) : (
+            <p className="indent-8">
+              โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์ ขนาดกำลังติดตั้งรวม {fmt(totalKwp)} kWp
+              ({str('technology')}, {str('grid_connection')}) เพื่อทดแทนการใช้ไฟฟ้าจากระบบสายส่ง
+            </p>
+          )}
           <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} bundle={bundle} />
           <p className="text-center font-bold">รูปที่ 1 ขอบเขตของโครงการ</p>
           {equipmentSpecs.length > 0 && (
             <>
-              <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
+              {/* A bundle's 1.2 description already introduces the kit and ตารางที่ 2
+                  (reference p.8), so the lead-in would repeat it. */}
+              {!(bundle && hasBoundaryDescription) && (
+                <p className="mt-2 indent-8">เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยีผลิตไฟฟ้าจากแผงเซลล์แสงอาทิตย์ ซึ่งประกอบไปด้วย</p>
+              )}
               {bundle ? (
                 <>
                   <p className="mt-2 text-center font-bold">ตารางที่ {equipmentTableNo} รายการอุปกรณ์หลักสำหรับผลิตพลังงานไฟฟ้าจากแสงอาทิตย์ของโครงการ</p>
@@ -1056,7 +1094,12 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             {/* Commencement and crediting start are distinct on the official form;
                 fall back to the crediting date so PDDs predating the field are
                 unchanged. */}
-            <p>วันเริ่มดำเนินโครงการ: {thaiDate(d.project_start_date !== undefined && d.project_start_date !== '' ? d.project_start_date : d.crediting_start)}</p>
+            {/* Both references: "วันเริ่มดำเนินโครงการ: วันที่ …", the aggregated one
+                followed by why that date (the first site's grid-parallel permit). */}
+            <p>
+              วันเริ่มดำเนินโครงการ: วันที่ {thaiDate(d.project_start_date !== undefined && d.project_start_date !== '' ? d.project_start_date : d.crediting_start)}
+              {str('project_start_basis') !== '-' && ` (${str('project_start_basis')})`}
+            </p>
             <Check on={has('crediting_years', '7')}>{has('crediting_years', '7') ? creditingPeriod : '7 ปี'}</Check>
             <Check on={has('crediting_years', '10')}>{has('crediting_years', '10') ? creditingPeriod : '10 ปี'}</Check>
           </div>
@@ -1460,50 +1503,17 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </table>
         </Page>
 
-        {/* ============ ภาคผนวก ============ */}
-        {consumers.length > 0 && (
-          <Page formLabel={formLabel}>
-            <SectionBar>ภาคผนวก</SectionBar>
-            {/* Reference p.32. หมายเหตุ is this app's own column, so it appears only
-                when a row actually carries a note. */}
-            <p className="mt-2 text-center font-bold">ตารางแสดงปริมาณการใช้ไฟฟ้าสำหรับอุปกรณ์ประกอบการติดตั้ง</p>
-            <table data-testid="consumers-table" className="doc-table mt-1 w-full">
-              <thead>
-                <tr className="bg-[#f2f2f2] text-center font-bold">
-                  <td>อุปกรณ์</td><td>จำนวน (ชุด)</td><td>กำลังไฟ (W)</td><td>ชั่วโมงทำงานต่อปี</td><td>พลังงานไฟฟ้ารวมต่อปี (kWh)</td>
-                  {consumersHaveNotes && <td>หมายเหตุ</td>}
-                </tr>
-              </thead>
-              <tbody>
-                {consumers.map((r, i) => {
-                  const kwh = consumerKwh(r);
-                  return (
-                    <tr key={i}>
-                      <td>{String(r.equipment ?? '-')}</td>
-                      <td className="text-center">{cellStr(r.qty) === '' ? '1' : fmtInt(Number(r.qty))}</td>
-                      <td className="text-center">{cellStr(r.rated_w) === '' ? '-' : fmt(Number(r.rated_w))}</td>
-                      <td className="text-center">{cellStr(r.hours_per_year) === '' ? '-' : fmtInt(Number(r.hours_per_year))}</td>
-                      <td className="text-right">{kwh === null ? '-' : fmt(kwh)}</td>
-                      {consumersHaveNotes && <td>{cellStr(r.note)}</td>}
-                    </tr>
-                  );
-                })}
-                <tr className="font-bold">
-                  <td colSpan={4} className="text-center">รวม</td>
-                  <td className="text-right" data-testid="ecpj-total">{fmt(ecPj)}</td>
-                  {consumersHaveNotes && <td />}
-                </tr>
-              </tbody>
-            </table>
-          </Page>
-        )}
+        {/* ============ ภาคผนวก ============
+            Both references order it: [bundle: per-site blocks] → annual
+            forecast → consumers. The ภาคผนวก bar heads whichever page is first. */}
 
         {/* ============ ภาคผนวก — เอกสาร/หลักฐานประกอบ รายพื้นที่ ============
             The official form gives every bundled site its own appendix block
             (p.25-30); an aggregated submission without them is incomplete. */}
         {bundle && (
           <Page formLabel={formLabel}>
-            <SectionBar>เอกสาร/หลักฐานประกอบ</SectionBar>
+            <SectionBar>ภาคผนวก</SectionBar>
+            <p className="mt-2 text-center font-bold">เอกสาร/หลักฐานประกอบ</p>
             <div data-testid="site-appendix">
               {sites.map((s, i) => {
                 const siteRows = s.owner === '' ? [] : equipmentSpecs.filter((r) => String(r.site ?? '') === s.owner);
@@ -1545,6 +1555,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         {/* ============ ภาคผนวก — ปริมาณไฟฟ้าคาดการณ์รายปี ============ */}
         {table && (
           <Page formLabel={formLabel}>
+            {appendixFirst === 'forecast' && <SectionBar>ภาคผนวก</SectionBar>}
             {/* แบบเดี่ยว only: a bundle's forecast is the per-site matrix below
                 (reference p.31), and one degradation % cannot describe sites that
                 degrade at 0.55% and 0.60%. */}
@@ -1629,6 +1640,53 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 </>
               );
             })()}
+          </Page>
+        )}
+
+        {/* ============ ภาคผนวก — ปริมาณการใช้ไฟฟ้าของอุปกรณ์ (reference p.32 / MCRU p.24) ============ */}
+        {consumers.length > 0 && (
+          <Page formLabel={formLabel}>
+            {appendixFirst === 'consumers' && <SectionBar>ภาคผนวก</SectionBar>}
+            {/* Reference p.32. หมายเหตุ is this app's own column, so it appears only
+                when a row actually carries a note. */}
+            <p className="mt-2 text-center font-bold">ตารางแสดงปริมาณการใช้ไฟฟ้าสำหรับอุปกรณ์ประกอบการติดตั้ง</p>
+            <table data-testid="consumers-table" className="doc-table mt-1 w-full">
+              <thead>
+                <tr className="bg-[#f2f2f2] text-center font-bold">
+                  <td>อุปกรณ์</td><td>จำนวน (ชุด)</td><td>กำลังไฟ (W)</td><td>ชั่วโมงทำงานต่อปี</td><td>พลังงานไฟฟ้ารวมต่อปี (kWh)</td>
+                  {consumersHaveNotes && <td>หมายเหตุ</td>}
+                </tr>
+              </thead>
+              <tbody>
+                {consumers.map((r, i) => {
+                  const kwh = consumerKwh(r);
+                  // Reference p.32 groups rows under SMART LOGGER / PQM / … header
+                  // rows. An "Category: brand / model" equipment value opts in.
+                  const { group, label } = consumerGroup(r.equipment);
+                  const prevGroup = i > 0 ? consumerGroup(consumers[i - 1].equipment).group : null;
+                  return (
+                    <Fragment key={i}>
+                      {group !== null && group !== prevGroup && (
+                        <tr><td colSpan={consumersHaveNotes ? 6 : 5} className="font-bold">{group.toUpperCase()}</td></tr>
+                      )}
+                      <tr>
+                        <td className={group !== null ? 'pl-5' : undefined}>{label}</td>
+                        <td className="text-center">{cellStr(r.qty) === '' ? '1' : fmtInt(Number(r.qty))}</td>
+                        <td className="text-center">{cellStr(r.rated_w) === '' ? '-' : fmt(Number(r.rated_w))}</td>
+                        <td className="text-center">{cellStr(r.hours_per_year) === '' ? '-' : fmtInt(Number(r.hours_per_year))}</td>
+                        <td className="text-right">{kwh === null ? '-' : fmt(kwh)}</td>
+                        {consumersHaveNotes && <td>{cellStr(r.note)}</td>}
+                      </tr>
+                    </Fragment>
+                  );
+                })}
+                <tr className="font-bold">
+                  <td colSpan={4} className="text-center">รวม</td>
+                  <td className="text-right" data-testid="ecpj-total">{fmt(ecPj)}</td>
+                  {consumersHaveNotes && <td />}
+                </tr>
+              </tbody>
+            </table>
           </Page>
         )}
 

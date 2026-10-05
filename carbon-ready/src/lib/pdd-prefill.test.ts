@@ -96,7 +96,7 @@ describe('TVER solar methodology prefill data', () => {
       registered_elsewhere: 'ไม่มี',
       degradation_pct: 0.4,
       monitored_parameter: 'EG_PJ — net electricity supplied to the grid',
-      measurement_method: 'Revenue-grade bi-directional meter',
+      measurement_method: 'มิเตอร์ซื้อขายไฟฟ้า (Energy Meter)',
       monitoring_frequency: 'Monthly',
       baseline_scenario: 'Grid electricity displaced by solar generation', // single-option rule
       project_form: 'แบบเดี่ยว',  // aggregated-PDD selector; single is the standard case

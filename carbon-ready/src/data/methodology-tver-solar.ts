@@ -85,6 +85,8 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
         { key: 'crediting_years', label: 'ระยะเวลาคิดคาร์บอนเครดิต', type: 'select', options: ['7', '10'], required: true, unit: 'ปี', defaultValue: '7' },
         { key: 'project_start_date', label: 'วันเริ่มดำเนินโครงการ', type: 'date', required: false, siteSpecific: true,
           help: 'วันที่เริ่มดำเนินโครงการจริง เช่น วันที่ได้รับอนุญาตขนานไฟฟ้าครั้งแรก — เว้นว่างเพื่อใช้วันเริ่มคิดเครดิต' },
+        { key: 'project_start_basis', label: 'ที่มาของวันเริ่มดำเนินโครงการ', type: 'text', required: false, siteSpecific: true,
+          help: 'แสดงในวงเล็บต่อท้ายวันที่ในข้อ 1.5 เช่น อ้างอิงวันที่ได้รับอนุญาตขนานไฟฟ้าของ บริษัท B จำกัด ซึ่งเป็นลำดับแรกของโครงการ' },
         { key: 'crediting_start', label: 'วันเริ่มคิดเครดิต (Crediting Start Date)', type: 'date', required: true, siteSpecific: true },
       ],
     },
@@ -121,6 +123,8 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
           help: 'สภาพการใช้พลังงานเดิมก่อนติดตั้งระบบ เช่น ใช้ไฟฟ้าจากระบบสายส่งทั้งหมด' },
         { key: 'after_project', label: 'หลังดำเนินโครงการ', type: 'textarea', required: false,
           help: 'รายละเอียดกิจกรรม เป้าหมาย และรูปแบบการดำเนินโครงการ' },
+        { key: 'boundary_description', label: 'คำอธิบายขอบเขตการดำเนินโครงการ (ข้อ 1.2)', type: 'textarea', required: false, siteSpecific: true,
+          help: 'รูปแบบการผลิตและจ่ายไฟฟ้า (ใช้เอง / จำหน่ายภายใต้ PPA) และอุปกรณ์หลัก — เว้นว่างไว้จะแสดงประโยคสรุปขนาดติดตั้งแทน' },
         { key: 'installations', label: 'อุปกรณ์หลักที่ติดตั้งรายอาคาร', type: 'table', required: false, siteSpecific: true,
           columns: [
             { key: 'site', label: 'พื้นที่ติดตั้ง (แบบควบรวม)', type: 'text' },
@@ -212,7 +216,8 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
       title: 'E. Monitoring plan / แผนการติดตาม',
       fields: [
         { key: 'monitored_parameter', label: 'Monitored parameter', type: 'text', required: true, help: 'e.g. EG_PJ — net electricity to grid.', defaultValue: 'EG_PJ — net electricity supplied to the grid' },
-        { key: 'measurement_method', label: 'Measurement method', type: 'text', required: true, defaultValue: 'Revenue-grade bi-directional meter' },
+        { key: 'measurement_method', label: 'Measurement method', type: 'text', required: true, defaultValue: 'มิเตอร์ซื้อขายไฟฟ้า (Energy Meter)',
+          help: 'ช่องทางติดตามไฟฟ้าที่ผลิตได้ แสดงในภาพที่ 8 เช่น มิเตอร์ซื้อขายไฟฟ้า (Energy Meter) หรือ Software Fusion Solar' },
         { key: 'monitoring_frequency', label: 'Frequency', type: 'select', options: ['Continuous', 'Monthly', 'Quarterly'], required: true, defaultValue: 'Monthly' },
         { key: 'qaqc_procedure', label: 'QA/QC procedure', type: 'textarea', required: true },
         { key: 'eg_monitoring_method', label: 'วิธีการติดตามผล EG_Consumer,PJ,y', type: 'textarea', required: false,

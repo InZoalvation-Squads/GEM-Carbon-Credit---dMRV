@@ -1314,12 +1314,15 @@ describe('TverSF001Pdd — PDD-2010 reproduces the reference document', () => {
   it('consumer appendix carries the fifteen page-32 rows with their quantities', () => {
     renderReference();
     const rows = within(screen.getByTestId('consumers-table')).getAllByRole('row');
-    expect(rows).toHaveLength(17); // header + 15 rows + รวม
-    expect(within(rows[1]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
-      .toEqual(['Smart Logger: Huawei / SLogger3000A00GL', '5', '8.00', '8,760', '350.40']);
+    // header + 4 group rows (SMART LOGGER / PQM / INTERNET ROUTER / WATER PUMP) + 15 rows + รวม
+    expect(rows).toHaveLength(21);
+    expect(rows.map((r) => r.textContent).filter((t) => t === (t ?? '').toUpperCase() && /^[A-Z ]+$/.test(t ?? '')))
+      .toEqual(['SMART LOGGER', 'PQM', 'INTERNET ROUTER', 'WATER PUMP']);
+    expect(within(rows[2]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
+      .toEqual(['Huawei / SLogger3000A00GL', '5', '8.00', '8,760', '350.40']);
     // Calpeda pump has no rated power in the reference: '-' rather than a guess.
-    expect(within(rows[12]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
-      .toEqual(['Water Pump: Calpeda / PTV-24A', '1', '-', '144', '-']);
+    expect(within(rows[16]).getAllByRole('cell').map((c) => c.textContent).slice(0, 5))
+      .toEqual(['Calpeda / PTV-24A', '1', '-', '144', '-']);
     // W × h ÷ 1000 × qty from the reference's inputs; its own kWh column rounds
     // the pump hours differently and sums to 2,227.11.
     expect(screen.getByTestId('ecpj-total').textContent).toBe('2,228.28');
@@ -1456,5 +1459,86 @@ describe('TverSF001Pdd — aggregated fidelity to the reference (2026-10-06)', (
     const d = screen.getAllByTestId('boundary-diagram')[0];
     expect(d.textContent).toContain('ใช้เองในโครงการ');
     expect(d.textContent).toMatch(/แสงอาทิตย์ [\d,.]+ kW/);
+  });
+});
+
+describe('TverSF001Pdd — aggregated wording and order (reference re-check, items 4-8)', () => {
+  const renderReference = () => render(<MemoryRouter><TverSF001Pdd pddId="PDD-2010" /></MemoryRouter>);
+  /** True when `a` precedes `b` in document order. */
+  const before = (a: Element, b: Element) => Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
+
+  it('§1.5 prints "วันที่" and the reason for the start date', () => {
+    renderReference();
+    expect(screen.getByText(/วันเริ่มดำเนินโครงการ:/).textContent)
+      .toBe('วันเริ่มดำเนินโครงการ: วันที่ 7 พฤษภาคม 2563 (อ้างอิง วันที่ได้รับอนุญาตขนานไฟฟ้าของ บริษัท B จำกัด ซึ่งเป็นลำดับแรกของโครงการ)');
+  });
+
+  it('§1.5 has no brackets when no basis is given', () => {
+    seedMcruData({ project_start_date: '2026-01-01' });
+    renderDoc();
+    expect(screen.getByText(/วันเริ่มดำเนินโครงการ:/).textContent).not.toContain('(');
+  });
+
+  it('bundle §1.1 is plain paragraphs with ตารางที่ 1 inside it, before 1.2', () => {
+    renderReference();
+    expect(screen.queryByText('ก่อนดำเนินโครงการ')).toBeNull();
+    expect(screen.queryByText('หลังดำเนินโครงการ')).toBeNull();
+    expect(screen.getByText(/ประกอบธุรกิจด้านพลังงาน \(Energy Business\)/)).toBeInTheDocument();
+    expect(before(screen.getByTestId('sites-table'), screen.getByText('1.2 ขอบเขตการดำเนินโครงการ'))).toBe(true);
+    expect(before(screen.getByText('1.1 รายละเอียดและกิจกรรมของโครงการ'), screen.getByTestId('sites-table'))).toBe(true);
+  });
+
+  it('single §1.1 keeps the ก่อน/หลังดำเนินโครงการ headings', () => {
+    seedMcruData();
+    renderDoc();
+    expect(screen.getByText('ก่อนดำเนินโครงการ')).toBeInTheDocument();
+    expect(screen.getByText('หลังดำเนินโครงการ')).toBeInTheDocument();
+  });
+
+  it('§1.2 prints boundary_description, and a bundle drops the equipment lead-in it repeats', () => {
+    renderReference();
+    expect(screen.getByText(/ภายใต้สัญญาซื้อขายไฟฟ้า \(Private PPA\) โดยในสภาวะปกติ/)).toBeInTheDocument();
+    expect(screen.queryByText(/ขนาดกำลังติดตั้งรวม 2,009.30 kWp/)).toBeNull();
+    expect(screen.queryByText(/เทคโนโลยีที่ใช้ในโครงการจะเป็นเทคโนโลยี/)).toBeNull();
+  });
+
+  it('§1.2 falls back to the capacity sentence without a description', () => {
+    seedMcruData();
+    renderDoc();
+    expect(screen.getByText(/ขนาดกำลังติดตั้งรวม .* kWp/)).toBeInTheDocument();
+  });
+
+  it('bundle appendix runs per-site blocks → site forecast → consumers, under one ภาคผนวก bar', () => {
+    renderReference();
+    expect(before(screen.getByTestId('site-appendix'), screen.getByTestId('sites-forecast'))).toBe(true);
+    expect(before(screen.getByTestId('sites-forecast'), screen.getByTestId('consumers-table'))).toBe(true);
+    expect(screen.getAllByText('ภาคผนวก', { selector: 'div,p,h2,h3,span' }).filter((e) => !e.closest('[data-testid="toc"]'))).toHaveLength(1);
+  });
+
+  it('single appendix runs forecast → consumers, as MCRU pp.23-24', () => {
+    seedMcruData();
+    renderDoc();
+    expect(before(screen.getByTestId('forecast-table'), screen.getByTestId('consumers-table'))).toBe(true);
+  });
+
+  it('consumers without a "Category:" prefix print ungrouped (MCRU)', () => {
+    seedMcruData();
+    renderDoc();
+    const rows = within(screen.getByTestId('consumers-table')).getAllByRole('row');
+    expect(rows).toHaveLength(MCRU_CONSUMERS.length + 2); // header + rows + รวม
+  });
+
+  it('ภาพที่ 8 reads "ติดตามผลผ่าน…" in the reference wording', () => {
+    renderReference();
+    const flow = screen.getByTestId('dataflow-diagram').textContent ?? '';
+    expect(flow).toContain('ไฟฟ้าที่ผลิตได้ ติดตามผลผ่านมิเตอร์ซื้อขายไฟฟ้า (Energy Meter)');
+    expect(flow).toContain('ไฟฟ้าที่ใช้ในโครงการ ติดตามผลโดยการคำนวณจากค่าพิกัดกำลังไฟฟ้าจากผู้ผลิตอุปกรณ์');
+    expect(flow).toContain('เพื่อจัดทำรายงานติดตามผลต่อไป');
+  });
+
+  it('ภาพที่ 8 spaces a Latin measurement method, as MCRU "ผ่าน Software Fusion Solar"', () => {
+    seedMcruData({ measurement_method: 'Software Fusion Solar' });
+    renderDoc();
+    expect(screen.getByTestId('dataflow-diagram').textContent).toContain('ติดตามผลผ่าน Software Fusion Solar');
   });
 });
