@@ -31,9 +31,9 @@
 11. Scope 2 options compared: T-VER credits vs REC sold vs REC retained & redeemed, with a
     no-double-claim warning.
 12. Who consumes: unknown → Scope 2 figures assume all production is self-consumed, labelled.
-13. Emission factors: location-based uses the emission-factor registry's current TH factor; a new
-    version **TGO 0.4750 kgCO₂e/kWh, effective 2026-01-01** is added to the registry (decision 2 of
-    the design review). Market-based residual mix: no official Thailand value → stated in words, no
+13. Emission factors: location-based Scope 2 uses **TGO 0.4750 kgCO₂e/kWh, effective 2026-01-01**,
+    kept in a dedicated data file — see §2 (changed from "add to the registry" during planning, user
+    approved). Market-based residual mix: no official Thailand value → stated in words, no
     number.
 14. Benefits named: ESG / CDP / SET disclosure and RE100.
 15. No contact/CTA block. Preparer = "จัดทำจากข้อมูลวัดจริงในระบบ ณ วันที่ …", no person's name.
@@ -66,8 +66,8 @@ export interface ProjectReportData {
   scope2: Scope2Block | null;        // null when not eligible / no data
 }
 export interface Scope2Block {
-  factor: { value_kg_per_kwh: number; source: string; version: number; effective_date: string };
-  annual_tco2e_location: number;     // annual MWh × factor (assumes all self-consumed)
+  factor: Scope2Factor | null;
+  annual_tco2e_location: number | null;     // annual MWh × factor (assumes all self-consumed)
   tver: { tco2e_per_year: number; pdd_code: string } | null;  // null = no registered T-VER PDD
   rec: { recs_per_year: number; net_thb_total: number | null; years: number };
 }
@@ -82,23 +82,24 @@ export function buildPortfolioReport(args: { ...store slices..., now }): Portfol
 
 - `monthly`: group the same records `annualMwh` uses (driver filter, latest 365-day window) by
   `YYYY-MM`.
-- Scope 2 factor: newest TH factor (`locationToCountryCode(project.location)`) with
-  `effective_date ≤ window_end` (reuse `pickFactorForDate` after a country filter). No factor →
-  `scope2.factor` null-path: block shows "ไม่มีค่า EF ในทะเบียน".
+- Scope 2 factor: from `data/scope2-factors.ts` (§2) for the project's country with
+  `effective_date ≤ window_end`. No factor → `factor` null and the block says so.
 - T-VER tCO₂e/yr: the project's governing PDD (`governingPdd`) when its methodology standard is
   `T-VER` → `computeYearlyTable` with `year1_generation_kwh` = measured annual kWh → `avg.er`
   (TGO's own arithmetic, incl. PE). No T-VER PDD → null ("ไม่มี PDD T-VER").
 - `rec_net_total` sums only projects with a computable mid-price net; null when none.
 
-## 2. Registry change
+## 2. Scope 2 factor as data (NOT the shared emission-factor registry)
 
-Add emission factor `{ id: 'ef-0005', country: 'TH', source: 'TGO', factor_kgco2e_per_kwh: 0.475,
-effective_date: '2026-01-01', version: 1, is_current: true }` to the demo seed
-(`carbon-ready/src/data/seed.ts`) **and** the server seed (`server/prisma/seed.ts`, which upserts
-factors by id); flip `ef-0003` (TH EGAT 0.51) to `is_current: false`. The factor is picked by date,
-so data before 2026-01-01 keeps using 0.51. The seed is NOT run against the company database by
-this work — in server mode an admin adds the factor on the Emission Factors page (or the user runs
-the seed); the plan states that step.
+Decision during planning: the registry feeds registered T-VER PDDs (`gridFactor` picks the current TH
+factor) and the Calculations/Credits pipeline (picked by date), so adding TGO 0.4750 there would
+silently change official documents and 2026 credit figures. An organisation's Scope 2 EF and a T-VER
+project EF are different factors anyway. So the report reads a separate, sourced data file
+`carbon-ready/src/data/scope2-factors.ts` (pattern of `rec-fees.ts`):
+`{ country: 'TH', source: 'TGO', value_kg_per_kwh: 0.475, effective_date: '2026-01-01', source_url }`.
+The factor used is the newest entry for the project's country with `effective_date <= window_end`;
+none → "ไม่มีค่า EF Scope 2 สำหรับช่วงข้อมูลนี้". The emission-factor registry and both seeds are
+untouched.
 
 ## 3. Pages — `carbon-ready/src/templates/InvestorReport.tsx`
 
@@ -141,7 +142,7 @@ REC ROI tab (single).
 | No REC price | hero shows break-even; money "รอราคา REC"; REC-sold row "รอราคา" |
 | Not eligible / no data | project omitted from portfolio; single route shows the same message as the tab |
 | No investment | IRR block "ขาดข้อมูลเงินลงทุน" |
-| No TH factor | Scope 2 numbers "ไม่มีค่า EF ในทะเบียน" |
+| No Scope 2 factor for the window | Scope 2 numbers replaced by "ไม่มีค่า EF Scope 2 สำหรับช่วงข้อมูลนี้" |
 | No T-VER PDD | T-VER row "ไม่มี PDD T-VER" |
 | Verifier | no-access (prices are commercial) |
 | Partial year | "ข้อมูล N วัน ประมาณเป็นรายปี" on every annual figure's page |
@@ -153,8 +154,7 @@ REC ROI tab (single).
 - `templates/investor-report.ui.test.tsx`: portfolio renders overview + 2 pages/project; single
   route; no-price state; verifier no-access; SF-04 quote present; no person's name in the preparer
   line.
-- Seed: new TGO factor present and current for TH; existing calc tests unaffected (factor picked by
-  date — check Calculations/T-VER tests that may assume 0.51).
+- `data/scope2-factors.test.ts`: the TGO entry and the by-date lookup.
 
 ## Out of scope
 
