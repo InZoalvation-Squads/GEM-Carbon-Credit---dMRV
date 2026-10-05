@@ -1,9 +1,11 @@
 import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
+import { FileDown } from 'lucide-react';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
+import { LinkButton } from '../components/ui/Button';
 import { RecRoiAssumptions } from '../components/rec-roi/RecRoiAssumptions';
 import { breakEvenText, pct, recommendationBadge } from '../components/rec-roi/format';
 import { useStore } from '../store';
@@ -51,7 +53,11 @@ export function RecRoi() {
 
   return (
     <div>
-      <PageHeader title="REC ROI" subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) ผ่านแพลตฟอร์ม — ต่อโปรเจกต์" />
+      <PageHeader
+        title="REC ROI"
+        subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) ผ่านแพลตฟอร์ม — ต่อโปรเจกต์"
+        action={<LinkButton to="/reports/investor" variant="secondary"><FileDown size={16} aria-hidden /> ดาวน์โหลดรายงานนักลงทุน</LinkButton>}
+      />
       <RecRoiAssumptions />
       <Card>
         <CardHeader title="พอร์ตโปรเจกต์" action={<span className="text-xs text-ink-secondary">รวม {formatNumber(totalRecs, 1)} REC/ปี</span>} />

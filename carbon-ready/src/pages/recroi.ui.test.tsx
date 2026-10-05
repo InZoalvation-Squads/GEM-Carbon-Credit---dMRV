@@ -38,6 +38,11 @@ const renderPage = () => render(
 const puneRow = () => screen.getByRole('row', { name: /Pune Rooftop Phase 1/ });
 
 describe('/rec-roi portfolio page', () => {
+  it('links to the portfolio investor report', () => {
+    renderPage();
+    expect(screen.getByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toHaveAttribute('href', '/reports/investor');
+  });
+
   it('explains there is no reference price and leaves ROI blank until prices are entered', () => {
     renderPage();
     expect(screen.getByText(/ไม่มีราคากลาง REC/)).toBeInTheDocument();
@@ -225,6 +230,11 @@ describe('ProjectDetail — REC ROI tab', () => {
     useStore.setState((s) => ({
       recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25, price_source: 'quote' },
     }));
+  });
+
+  it('links to the single-project investor report', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toHaveAttribute('href', '/reports/investor/prj-0001');
   });
 
   it('leads with a plain-language summary of the verdict', () => {

@@ -1,9 +1,10 @@
 import { useEffect, useId, useMemo, useRef, useState } from 'react';
 import { Link } from 'react-router-dom';
+import { FileDown } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '../ui/Table';
 import { Badge } from '../ui/Badge';
-import { Button } from '../ui/Button';
+import { Button, LinkButton } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { Select } from '../ui/Select';
 import { toast } from '../layout/Toast';
@@ -223,6 +224,9 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
 
   return (
     <div className="space-y-6">
+      <div className="flex justify-end">
+        <LinkButton to={`/reports/investor/${projectId}`} variant="secondary" size="sm"><FileDown size={14} aria-hidden /> ดาวน์โหลดรายงานนักลงทุน</LinkButton>
+      </div>
       {summary && (
         <section aria-labelledby={summaryId}>
           <Card>
