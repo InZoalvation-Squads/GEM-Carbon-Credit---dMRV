@@ -269,6 +269,15 @@ describe('ProjectDetail — REC ROI tab', () => {
     expect(within(screen.getByRole('region', { name: 'สรุป' })).getByText(/ค่าไฟ 4\.18 ฿\/kWh\s*\(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
   });
 
+  it('money table headers say what each column is; footnote says it is not profit', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    const summary = within(screen.getByRole('region', { name: 'สรุป' }));
+    for (const name of ['มูลค่าไฟ (ไม่มี REC)', 'มูลค่าไฟ + REC สุทธิ', 'ส่วนต่างจาก REC']) {
+      expect(summary.getByRole('columnheader', { name })).toBeInTheDocument();
+    }
+    expect(summary.getByText(/^มูลค่าไฟ = ค่าไฟที่ประหยัดได้หรือรายได้จากการขายไฟ คิดจาก kWh จริง × ค่าไฟ 4\.18 ฿\/kWh[\s\S]*— ไม่ใช่กำไร/)).toBeInTheDocument();
+  });
+
   it('money table waits for a REC price on the with-REC side', () => {
     useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
     renderProject('prj-0001', '?tab=rec-roi');

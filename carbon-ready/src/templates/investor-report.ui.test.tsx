@@ -44,7 +44,7 @@ describe('single-project investor report', () => {
     expect(pages(container)).toHaveLength(2);
     const [money, scope2] = [...pages(container)] as HTMLElement[];
     expect(within(money).getByText(/^ขาย REC ผ่าน GEM ที่ราคา 25\.00 ฿\/MWh/)).toBeInTheDocument();
-    expect(within(money).getByText('ไม่มี REC')).toBeInTheDocument();
+    expect(within(money).getByRole('columnheader', { name: 'มูลค่าไฟ (ไม่มี REC)' })).toBeInTheDocument();
     // 36.5 MWh/yr × 0.475 = 17.34 tCO2e/yr
     expect(within(scope2).getByText('17.34')).toBeInTheDocument();
     expect(within(scope2).getByText(/TGO 0\.475 kgCO₂e\/kWh/)).toBeInTheDocument();
@@ -196,6 +196,128 @@ describe('honest copy, structure and states', () => {
   it('the overview chart caption says it is the platform path', () => {
     const { container } = renderAt('/reports/investor');
     expect(pages(container)[0]).toHaveTextContent(/ทางขายผ่าน GEM/);
+  });
+});
+
+describe('executive summary (page 1)', () => {
+  const summaryOf = (c: HTMLElement) => {
+    const money = pages(c)[0] as HTMLElement;
+    const box = within(money).getByRole('region', { name: 'สรุปสำหรับผู้บริหาร' });
+    return { money, box, bullets: [...box.querySelectorAll('li')].map((li) => li.textContent) };
+  };
+
+  it('sits at the top of page 1, before the hero box, with exactly three bullets', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const { money, box, bullets } = summaryOf(container);
+    expect(bullets).toHaveLength(3);
+    const body = money.querySelector('.inv-grow') as HTMLElement;
+    expect(body.firstElementChild).toBe(box);
+  });
+
+  it('with a REC price: electricity value, REC net and its share of that value, low-share note', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    // 36.5 MWh × 1,000 × 4.18 = ฿152,570/yr; net REC ฿26.575/yr on platform at ฿25 → 0.02%.
+    expect(summaryOf(container).bullets).toEqual([
+      'โครงการผลิตไฟ 36.5 MWh/ปี คิดเป็นมูลค่าไฟประมาณ ฿152,570/ปี (ค่าไฟ 4.18 ฿/kWh · ค่าเริ่มต้น PEA)',
+      'ถ้าขาย REC 37 ใบ/ปี ที่ 25.00 ฿/MWh (ขายผ่าน GEM) ได้เพิ่มสุทธิ +฿27/ปี = 0.02% ของมูลค่าไฟ',
+      'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด (Scope 2 / RE100) ดูหน้าถัดไป',
+    ]);
+  });
+
+  it('a negative REC net shows a negative share and still the low-share note', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 1 } }));
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const { bullets } = summaryOf(container);
+    expect(bullets[1]).toMatch(/^ถ้าขาย REC 37 ใบ\/ปี ที่ 1\.00 ฿\/MWh \(ขายผ่าน GEM\) ได้เพิ่มสุทธิ \u2212฿[\d,]+\/ปี = \u2212\d+\.\d{2}% ของมูลค่าไฟ$/);
+    expect(bullets[2]).toMatch(/^รายได้จาก REC น้อย/);
+  });
+
+  it('a share of 5% or more says REC adds income and still points to the claim', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 1000 } }));
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const { bullets } = summaryOf(container);
+    expect(bullets[2]).toMatch(/^REC เพิ่มรายได้ \d+\.\d{2}% ของมูลค่าไฟ — และให้สิทธิ์ claim ไฟสะอาด \(ดูหน้าถัดไป\)$/);
+    expect(Number(bullets[2]?.match(/(\d+\.\d{2})%/)?.[1])).toBeGreaterThanOrEqual(5);
+  });
+
+  it('without a REC price: the per-10-฿/MWh scale (not a price), its share, and the break-even', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const { bullets } = summaryOf(container);
+    // 36.5 MWh × 10 = ฿365/yr = 0.24% of ฿152,570; break-even 24.19.
+    expect(bullets[1]).toBe('ยังไม่มีราคา REC — ทุก 10 ฿/MWh ที่ขายได้ = ฿365/ปี ก่อนหักค่าธรรมเนียม (0.24% ของมูลค่าไฟ) · ต้องขายได้อย่างน้อย 24.19 ฿/MWh จึงคุ้มค่าธรรมเนียม');
+    expect(bullets[2]).toMatch(/^รายได้จาก REC น้อย/);
+  });
+
+  it('without a price and without a computable path: no break-even clause', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '', platform_fee_pct: null, eur_thb: null } }));
+    const { container } = renderAt('/reports/investor/prj-0001');
+    expect(summaryOf(container).bullets[1]).toBe('ยังไม่มีราคา REC — ทุก 10 ฿/MWh ที่ขายได้ = ฿365/ปี ก่อนหักค่าธรรมเนียม (0.24% ของมูลค่าไฟ)');
+  });
+});
+
+describe('money table clarity', () => {
+  it('headers say what each column is and the footnote says it is not profit', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const money = pages(container)[0] as HTMLElement;
+    for (const name of ['มูลค่าไฟ (ไม่มี REC)', 'มูลค่าไฟ + REC สุทธิ', 'ส่วนต่างจาก REC']) {
+      expect(within(money).getByRole('columnheader', { name })).toBeInTheDocument();
+    }
+    expect(within(money).queryByRole('columnheader', { name: 'ส่วนต่าง (REC สุทธิ)' })).toBeNull();
+    expect(within(money).getByText(/^มูลค่าไฟ = ค่าไฟที่ประหยัดได้หรือรายได้จากการขายไฟ คิดจาก kWh จริง × ค่าไฟ 4\.18 ฿\/kWh[\s\S]*— ไม่ใช่กำไร/)).toBeInTheDocument();
+  });
+});
+
+describe('glossary (page 1)', () => {
+  it('explains the jargon in one line each, after the paths/IRR block', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const money = pages(container)[0] as HTMLElement;
+    const box = within(money).getByRole('region', { name: 'อธิบายศัพท์' });
+    const terms = [...box.querySelectorAll('dt')].map((d) => d.textContent);
+    expect(terms).toEqual(['REC', 'T-VER', 'Scope 2', 'Location-based', 'Market-based', 'ราคาคุ้มทุน']);
+    expect(within(box).getByText('ใบรับรองว่าไฟ 1 MWh ผลิตจากพลังงานหมุนเวียน ขายหรือเก็บไว้อ้างสิทธิ์ได้')).toBeInTheDocument();
+    expect(within(box).getByText('ราคา REC ต่ำสุดที่รายได้พอจ่ายค่าธรรมเนียมทั้งหมด')).toBeInTheDocument();
+    const irr = within(money).getByText('IRR โครงการโซลาร์');
+    expect(irr.compareDocumentPosition(box) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+});
+
+describe('Scope 2 page clarity', () => {
+  const scope2Of = (c: HTMLElement) => pages(c)[1] as HTMLElement;
+
+  it('says whose Scope 2 the big number is, and where the PPA decides', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    expect(within(scope2Of(container)).getByText('ตัวเลขนี้เป็น Scope 2 ของผู้ใช้ไฟ (เจ้าของอาคาร) — ถ้าคุณเป็นเจ้าของระบบที่ขายไฟให้ผู้ใช้ สิทธิ์ใน Scope 2 และ REC เป็นไปตามสัญญาซื้อขายไฟ (PPA)')).toBeInTheDocument();
+  });
+
+  it('"ช่วยอะไรคุณ" becomes "ใช้ประโยชน์อย่างไร" with the three uses', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const s2 = scope2Of(container);
+    expect(within(s2).queryByText('ช่วยอะไรคุณ')).toBeNull();
+    const h = within(s2).getByText('ใช้ประโยชน์อย่างไร');
+    const items = [...(h.nextElementSibling as HTMLElement).querySelectorAll('li')].map((li) => li.textContent);
+    expect(items).toEqual([
+      'ผู้ใช้ไฟใช้ตัวเลขลด Scope 2 (location-based) ในรายงาน ESG / CDP / SET',
+      'REC ที่ redeem นำไปนับในเป้า RE100 ได้ตามเกณฑ์ของ RE100',
+      'เลือก T-VER เมื่อเป้าหมายคือคาร์บอนเครดิต ไม่ใช่การ claim ไฟสะอาด',
+    ]);
+  });
+
+  it('the warning box carries the double-claim caution and the SF-04 wording in Thai first, English below', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const s2 = scope2Of(container);
+    const thai = within(s2).getByText(/ผู้ยื่นขอ I-REC\(E\) รับรองว่าไฟฟ้าส่วนที่ขอใบรับรอง ไม่เคยและจะไม่ถูกนำไปขอสิทธิ์ในระบบติดตามคุณลักษณะพลังงานอื่น ใบรับรองการลดการปล่อยก๊าซ หรือคาร์บอนออฟเซ็ตใดๆ/);
+    const english = within(s2).getByText(/has not and will not be submitted for any other energy attribute tracking methodology/);
+    const box = thai.closest('div') as HTMLElement;
+    expect(box).toContainElement(english);
+    expect(thai.compareDocumentPosition(english) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(within(box).getByText('ถ้าขาย T-VER หรือ REC ออกไป ผู้ซื้อเป็นผู้ใช้สิทธิ์นั้น — ห้ามนำผลการลดเดียวกันไปอ้างเป็นเครดิตหรือการใช้ไฟสะอาดของตัวเองซ้ำ')).toBeInTheDocument();
+  });
+
+  it('lists the fee structure source once, without a doubled FN-01', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const li = within(scope2Of(container)).getByText(/^Fee Structure I-REC\(E\) 2026/);
+    expect(li.textContent).toBe('Fee Structure I-REC(E) 2026 — FN-01 2026 v2.1');
   });
 });
 

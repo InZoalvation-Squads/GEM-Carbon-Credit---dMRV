@@ -5,11 +5,11 @@ import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from 'recha
 import { useStore } from '../store';
 import { Button, LinkButton } from '../components/ui/Button';
 import {
-  buildPortfolioReport, buildProjectReport, cheapestPath, recNetTotal, recommendedMid, recommendedPath,
-  type ProjectReportData, type ReportSources,
+  buildPortfolioReport, buildProjectReport, cheapestPath, recNetTotal, recShareOfElectricity, recommendedMid, recommendedPath,
+  REC_SHARE_LOW_PCT, REC_PRICE_SCALE_THB_PER_MWH, type ProjectReportData, type ReportSources,
 } from '../lib/investor-report';
-import { buildRecRoiSummary } from '../components/rec-roi/summary';
-import { PATH_LABEL, PATH_SHORT, breakEvenText, paybackText, pct, pricePerMwh, signedThb, thb } from '../components/rec-roi/format';
+import { buildRecRoiSummary, type RecRoiSummary } from '../components/rec-roi/summary';
+import { MONEY_HEAD, PATH_LABEL, PATH_SHORT, breakEvenText, moneyFootnote, paybackText, pct, pricePerMwh, signedThb, thb } from '../components/rec-roi/format';
 import { REC_FEES } from '../data/rec-fees';
 import { formatNumber, localIsoDate } from '../lib/format';
 import type { RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
@@ -21,6 +21,8 @@ import type { RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
 // ============================================================
 
 const SF04_QUOTE = 'warrants that the energy for which I-REC(E) certificates are being sought has not and will not be submitted for any other energy attribute tracking methodology, emissions reduction certificate, or carbon offset.';
+// Thai rendering of the SF-04 warranty above, shown as the main text; the English original stays beneath it.
+const SF04_QUOTE_TH = 'ผู้ยื่นขอ I-REC(E) รับรองว่าไฟฟ้าส่วนที่ขอใบรับรอง ไม่เคยและจะไม่ถูกนำไปขอสิทธิ์ในระบบติดตามคุณลักษณะพลังงานอื่น ใบรับรองการลดการปล่อยก๊าซ หรือคาร์บอนออฟเซ็ตใดๆ';
 const NO_ACCESS = 'หน้านี้สำหรับผู้พัฒนาโครงการและผู้ดูแลองค์กร — ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC';
 const RESIDUAL_MIX_URL = 'https://greencalculus.com/glossary/residual-mix/';
 const GEM_GREEN = '#059669'; // brand-600, for chart fills
@@ -70,7 +72,7 @@ function ReportShell({ backTo, children }: { backTo: string; children: ReactNode
         <LinkButton to={backTo} variant="secondary"><ArrowLeft size={16} /> กลับ</LinkButton>
         <Button onClick={() => window.print()}><Printer size={16} /> Print / PDF</Button>
       </div>
-      <div className="inv-doc text-[12px] leading-relaxed text-ink-700">{children}</div>
+      <div className="inv-doc text-[12px] leading-normal text-ink-700">{children}</div>
       <style>{PRINT_CSS}</style>
     </div>
   );
@@ -80,7 +82,7 @@ function ReportShell({ backTo, children }: { backTo: string; children: ReactNode
 function PageHeader({ title, subtitle, generatedAt, primary }: { title: string; subtitle: string; generatedAt: string; primary?: boolean }) {
   const Title = primary ? 'h1' : 'h2';
   return (
-    <header className="mb-4 border-b-2 border-brand-600 pb-3">
+    <header className="mb-3 border-b-2 border-brand-600 pb-3">
       <div className="flex items-start justify-between gap-4">
         <span className="text-[11px] font-extrabold tracking-wide text-brand-700">GEM CARBON CREDIT</span>
         <span className="text-[11px] text-ink-500">สร้างเมื่อ {localIsoDate(generatedAt)}</span>
@@ -93,7 +95,7 @@ function PageHeader({ title, subtitle, generatedAt, primary }: { title: string; 
 
 function PageFooter({ generatedAt }: { generatedAt: string }) {
   return (
-    <footer className="mt-4 flex items-center justify-between gap-4 border-t border-ink-200 pt-2 text-[10px] text-ink-500">
+    <footer className="mt-3 flex items-center justify-between gap-4 border-t border-ink-200 pt-2 text-[10px] text-ink-500">
       <span>จัดทำจากข้อมูลวัดจริงในระบบ ณ วันที่ {localIsoDate(generatedAt)} · ค่าธรรมเนียม I-REC(E) Fee Structure {REC_FEES.version}</span>
       <span className="inv-pageno" />
     </footer>
@@ -104,7 +106,7 @@ function Kpi({ label, value, unit, note }: { label: string; value: ReactNode; un
   return (
     <div className="min-w-0">
       <div className="text-[11px] uppercase text-ink-500">{label}</div>
-      <div className="text-2xl font-semibold tnum text-ink">{value}</div>
+      <div className="text-xl font-semibold tnum text-ink">{value}</div>
       {unit && value !== '—' && <div className="text-xs text-ink-500">{unit}</div>}
       {note && <div className="text-[11px] text-ink-500">{note}</div>}
     </div>
@@ -112,7 +114,7 @@ function Kpi({ label, value, unit, note }: { label: string; value: ReactNode; un
 }
 
 const KpiStrip = ({ children }: { children: ReactNode }) => (
-  <div className="mb-4 grid grid-cols-4 gap-4 border-b border-ink-200 pb-4">{children}</div>
+  <div className="mb-3 grid grid-cols-4 gap-4 border-b border-ink-200 pb-3">{children}</div>
 );
 
 const SectionTitle = ({ children }: { children: ReactNode }) => (
@@ -120,13 +122,13 @@ const SectionTitle = ({ children }: { children: ReactNode }) => (
 );
 
 const TH = ({ children, right }: { children: ReactNode; right?: boolean }) => (
-  <th scope="col" className={`border-b border-ink-300 px-2 py-1.5 text-[11px] font-semibold text-ink-600 ${right ? 'text-right' : 'text-left'}`}>{children}</th>
+  <th scope="col" className={`border-b border-ink-300 px-2 py-1 text-[11px] font-semibold text-ink-600 ${right ? 'text-right' : 'text-left'}`}>{children}</th>
 );
 const RowHead = ({ children }: { children: ReactNode }) => (
-  <th scope="row" className="border-b border-ink-100 px-2 py-1.5 text-left align-top font-medium text-ink">{children}</th>
+  <th scope="row" className="border-b border-ink-100 px-2 py-1 text-left align-top font-medium text-ink">{children}</th>
 );
 const TD = ({ children, right, className = '' }: { children: ReactNode; right?: boolean; className?: string }) => (
-  <td className={`border-b border-ink-100 px-2 py-1.5 align-top ${right ? 'text-right tnum' : ''} ${className}`}>{children}</td>
+  <td className={`border-b border-ink-100 px-2 py-1 align-top ${right ? 'text-right tnum' : ''} ${className}`}>{children}</td>
 );
 
 const waiting = <span className="text-ink-500">รอราคา REC</span>;
@@ -139,7 +141,7 @@ function pathMid(p: RecPathResult) {
 function PathColumn({ result }: { result: RecPathResult }) {
   const mid = pathMid(result);
   return (
-    <div className="min-w-0 border border-ink-200 p-3">
+    <div className="min-w-0 border border-ink-200 p-2">
       <div className="mb-1.5 text-[12px] font-semibold text-ink">{PATH_LABEL[result.path]}</div>
       {result.status !== 'ok' ? (
         <p className="text-ink-500">{MISSING_PATH[result.status]}</p>
@@ -167,6 +169,72 @@ function monthlyLabel(monthly: ProjectReportData['monthly']): string {
 const irrText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 2)}%`);
 const yearsText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 1)} ปี`);
 
+/**
+ * The three executive-summary bullets, built only from the evaluation already
+ * on the page: the electricity value, REC income (or the scale of it when no
+ * price is entered) as a share of that value, and what that share means.
+ */
+function execSummaryBullets(r: ProjectReportData['roi'], summary: RecRoiSummary, mwhYear: number): [string, string, string] {
+  const { money } = summary;
+  const share = recShareOfElectricity(money, mwhYear);
+  const pctText = (n: number | null) => (n === null ? '—' : `${n < 0 ? '\u2212' : ''}${formatNumber(Math.abs(n), 2)}%`);
+  const a = `โครงการผลิตไฟ ${formatNumber(mwhYear, 1)} MWh/ปี คิดเป็นมูลค่าไฟประมาณ ${thb(money.without_year)}/ปี `
+    + `(ค่าไฟ ${formatNumber(money.tariff.value, 2)} ฿/kWh · ${money.tariff.source === 'pdd' ? 'จาก PDD' : 'ค่าเริ่มต้น PEA'})`;
+
+  const mid = recommendedMid(r);
+  const path = recommendedPath(r);
+  let b: string;
+  let shown: number | null;
+  if (money.rec_year !== null && mid && path) {
+    shown = share.share_pct;
+    b = `ถ้าขาย REC ${formatNumber(mwhYear, 0)} ใบ/ปี ที่ ${pricePerMwh(mid.price_thb)} ฿/MWh (${PATH_SHORT[path.path]}) `
+      + `ได้เพิ่มสุทธิ ${signedThb(money.rec_year)}/ปี = ${pctText(share.share_pct)} ของมูลค่าไฟ`;
+  } else {
+    shown = share.per10_share_pct;
+    const cheapest = cheapestPath(r);
+    b = `ยังไม่มีราคา REC — ทุก ${REC_PRICE_SCALE_THB_PER_MWH} ฿/MWh ที่ขายได้ = ${thb(share.per10_thb)}/ปี ก่อนหักค่าธรรมเนียม (${pctText(share.per10_share_pct)} ของมูลค่าไฟ)`
+      + (cheapest ? ` · ต้องขายได้อย่างน้อย ${pricePerMwh(cheapest.break_even_price_thb)} ฿/MWh จึงคุ้มค่าธรรมเนียม` : '');
+  }
+  const c = shown === null || shown < REC_SHARE_LOW_PCT
+    ? 'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด (Scope 2 / RE100) ดูหน้าถัดไป'
+    : `REC เพิ่มรายได้ ${pctText(shown)} ของมูลค่าไฟ — และให้สิทธิ์ claim ไฟสะอาด (ดูหน้าถัดไป)`;
+  return [a, b, c];
+}
+
+function ExecSummary({ bullets }: { bullets: string[] }) {
+  return (
+    <section aria-labelledby="inv-exec-title" className="border border-brand-600 px-3 py-2">
+      <h3 id="inv-exec-title" className="mb-0.5 text-[12px] font-semibold text-brand-700">สรุปสำหรับผู้บริหาร</h3>
+      <ul className="list-disc space-y-0.5 pl-5 text-[11px] leading-snug text-ink">
+        {bullets.map((t) => <li key={t}>{t}</li>)}
+      </ul>
+    </section>
+  );
+}
+
+/** Plain-language meaning of the jargon on these pages, for readers who are investors, not carbon specialists. */
+const GLOSSARY: Array<[string, string]> = [
+  ['REC', 'ใบรับรองว่าไฟ 1 MWh ผลิตจากพลังงานหมุนเวียน ขายหรือเก็บไว้อ้างสิทธิ์ได้'],
+  ['T-VER', 'คาร์บอนเครดิตของไทย (อบก.) นับเป็นตันคาร์บอนที่ลดได้'],
+  ['Scope 2', 'การปล่อยก๊าซจากไฟฟ้าที่องค์กรซื้อมาใช้'],
+  ['Location-based', 'คิด Scope 2 จากไฟที่ซื้อจริง × ค่าเฉลี่ยของกริด'],
+  ['Market-based', 'คิด Scope 2 ตามใบรับรองที่ถือ (เช่น REC ที่ redeem)'],
+  ['ราคาคุ้มทุน', 'ราคา REC ต่ำสุดที่รายได้พอจ่ายค่าธรรมเนียมทั้งหมด'],
+];
+
+function Glossary() {
+  return (
+    <section aria-labelledby="inv-glossary-title" className="border-t border-ink-200 pt-2">
+      <h3 id="inv-glossary-title" className="mb-1 text-[11px] font-semibold text-ink-600">อธิบายศัพท์</h3>
+      <dl className="grid grid-cols-2 gap-x-6 gap-y-0.5 text-[10px] leading-snug text-ink-600">
+        {GLOSSARY.map(([term, meaning]) => (
+          <div key={term}><dt className="inline font-semibold text-ink">{term}</dt>{' '}<dd className="inline">{meaning}</dd></div>
+        ))}
+      </dl>
+    </section>
+  );
+}
+
 /** Page 1 of a project: how much money REC makes (or the price it needs to). */
 function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; assumptions: RecRoiAssumptions; primary?: boolean }) {
   const { project, roi: r, generated_at } = data;
@@ -183,7 +251,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
   ];
   const u = r.uplift;
   const recNote = roi.recommended && assumptions.price_mid_thb !== null
-    ? ` (${PATH_SHORT[roi.recommended]} ที่ราคากลาง ${pricePerMwh(assumptions.price_mid_thb)} ฿/MWh)` : '';
+    ? `${PATH_SHORT[roi.recommended]} ที่ราคากลาง ${pricePerMwh(assumptions.price_mid_thb)} ฿/MWh` : null;
 
   return (
     <section className="inv-page">
@@ -193,17 +261,18 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
         subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp · ข้อมูล ${annual.window_start} – ${annual.window_end}${annual.partial ? ` (ข้อมูล ${annual.coverage_days} วัน ประมาณเป็นรายปี)` : ''}`}
         generatedAt={generated_at}
       />
-      <div className="inv-grow space-y-4">
-        <div className="grid grid-cols-[auto_1fr] items-center gap-6 border border-ink-200 p-4">
+      <div className="inv-grow space-y-3">
+        <ExecSummary bullets={execSummaryBullets(r, summary, annual.annual_mwh)} />
+        <div className="grid grid-cols-[auto_1fr] items-center gap-6 border border-ink-200 p-3">
           <div>
             {money.rec_year !== null ? (
               <>
-                <div className={`text-4xl font-semibold tnum ${negative(money.rec_year) || 'text-brand-700'}`}>{signedThb(money.rec_year)}</div>
+                <div className={`text-3xl font-semibold tnum ${negative(money.rec_year) || 'text-brand-700'}`}>{signedThb(money.rec_year)}</div>
                 <div className="text-xs text-ink-500">บาท/ปี จาก REC</div>
               </>
             ) : (
               <>
-                <div className="text-4xl font-semibold tnum text-ink">{cheapest ? pricePerMwh(cheapest.break_even_price_thb) : '—'}</div>
+                <div className="text-3xl font-semibold tnum text-ink">{cheapest ? pricePerMwh(cheapest.break_even_price_thb) : '—'}</div>
                 <div className="text-xs text-ink-500">{cheapest ? '฿/MWh ราคาคุ้มทุน' : 'ราคาคุ้มทุน'}</div>
               </>
             )}
@@ -224,7 +293,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
         <div>
           <SectionTitle>ผลิตไฟรายเดือน (kWh)</SectionTitle>
           <div role="img" aria-label={monthlyLabel(data.monthly)}>
-            <BarChart width={680} height={170} data={data.monthly} margin={{ top: 4, right: 8, bottom: 0, left: 8 }}>
+            <BarChart width={680} height={100} data={data.monthly} margin={{ top: 4, right: 8, bottom: 0, left: 8 }}>
               <CartesianGrid vertical={false} stroke="#e2e8f0" />
               <XAxis dataKey="month" tick={TICK} tickLine={false} />
               <YAxis tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatNumber(v)} />
@@ -238,7 +307,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
           <SectionTitle>ตัวเงิน: มี REC กับไม่มี REC</SectionTitle>
           <table className="w-full border-collapse">
             <thead>
-              <tr><TH>ตัวเงิน</TH><TH right>ไม่มี REC</TH><TH right>มี REC</TH><TH right>ส่วนต่าง (REC สุทธิ)</TH></tr>
+              <tr><TH>ตัวเงิน</TH><TH right>{MONEY_HEAD.without}</TH><TH right>{MONEY_HEAD.withRec}</TH><TH right>{MONEY_HEAD.diff}</TH></tr>
             </thead>
             <tbody>
               {rows.map(([label, without, withRec, rec]) => (
@@ -251,10 +320,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
               ))}
             </tbody>
           </table>
-          <p className="mt-1 text-[11px] text-ink-500">
-            ไม่มี REC = มูลค่าไฟฟ้าที่ผลิตได้จริง × ค่าไฟ {formatNumber(money.tariff.value, 2)} ฿/kWh
-            ({money.tariff.source === 'pdd' ? 'จาก PDD' : 'ค่าเริ่มต้น PEA'}) · มี REC = บวกรายได้ REC สุทธิหลังหักค่าธรรมเนียม{recNote} · ไม่คิดส่วนลดและการเสื่อมของแผง
-          </p>
+          <p className="mt-1 text-[10px] leading-snug text-ink-500">{moneyFootnote(money.tariff, recNote)}</p>
         </div>
 
         <div>
@@ -276,6 +342,8 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
             <p className="text-ink-500">ขาดข้อมูลเงินลงทุน — ยังประเมิน IRR ไม่ได้</p>
           )}
         </div>
+
+        <Glossary />
       </div>
       <PageFooter generatedAt={generated_at} />
     </section>
@@ -293,7 +361,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
   return (
     <section className="inv-page">
       <PageHeader title={`Scope 2 ช่วยอะไร · ${project.name}`} subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp${partialNote}`} generatedAt={generated_at} />
-      <div className="inv-grow space-y-4">
+      <div className="inv-grow space-y-3">
         <div className="border border-ink-200 p-4">
           {factor && scope2.tco2e_location_year !== null ? (
             <>
@@ -301,6 +369,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
                 <span className="text-4xl font-semibold tnum text-brand-700">{formatNumber(scope2.tco2e_location_year, 2)}</span>
                 <span className="text-xs text-ink-500">tCO₂e/ปี</span>
               </div>
+              <p className="mt-1 text-ink-600">ตัวเลขนี้เป็น Scope 2 ของผู้ใช้ไฟ (เจ้าของอาคาร) — ถ้าคุณเป็นเจ้าของระบบที่ขายไฟให้ผู้ใช้ สิทธิ์ใน Scope 2 และ REC เป็นไปตามสัญญาซื้อขายไฟ (PPA)</p>
               <p className="mt-1 text-ink">
                 ลด Scope 2 แบบ location-based (สมมติใช้ไฟที่ผลิตเองทั้งหมด) · {formatNumber(scope2.annual_mwh, 1)} MWh × {factor.source} {factor.value_kg_per_kwh} kgCO₂e/kWh (มีผล {factor.effective_date})
               </p>
@@ -339,14 +408,16 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
 
         <div className="border border-amber-600/30 bg-amber-50 p-3 text-amber-800">
           <p className="font-semibold">ไฟ MWh เดียวกันเลือกได้ทางเดียว: SF-04 ข้อรับรองของผู้ยื่น</p>
-          <p className="mt-1 italic">“{SF04_QUOTE}”</p>
-          <p className="mt-1 text-[11px]">(Evident SF-04 Issue Request v1.2.1)</p>
+          <p className="mt-1">“{SF04_QUOTE_TH}”</p>
+          <p className="mt-1 text-[10px]">ต้นฉบับภาษาอังกฤษ (Evident SF-04 Issue Request v1.2.1):</p>
+          <p className="text-[10px] italic">“{SF04_QUOTE}”</p>
+          <p className="mt-1.5 font-medium">ถ้าขาย T-VER หรือ REC ออกไป ผู้ซื้อเป็นผู้ใช้สิทธิ์นั้น — ห้ามนำผลการลดเดียวกันไปอ้างเป็นเครดิตหรือการใช้ไฟสะอาดของตัวเองซ้ำ</p>
         </div>
 
         <div>
-          <SectionTitle>ช่วยอะไรคุณ</SectionTitle>
+          <SectionTitle>ใช้ประโยชน์อย่างไร</SectionTitle>
           <ul className="list-disc space-y-1 pl-5">
-            <li>ใช้ตัวเลขลด Scope 2 ในรายงาน ESG / CDP / SET (location-based)</li>
+            <li>ผู้ใช้ไฟใช้ตัวเลขลด Scope 2 (location-based) ในรายงาน ESG / CDP / SET</li>
             <li>REC ที่ redeem นำไปนับในเป้า RE100 ได้ตามเกณฑ์ของ RE100</li>
             <li>เลือก T-VER เมื่อเป้าหมายคือคาร์บอนเครดิต ไม่ใช่การ claim ไฟสะอาด</li>
           </ul>
@@ -357,7 +428,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
         <div>
           <SectionTitle>แหล่งอ้างอิง</SectionTitle>
           <ul className="space-y-0.5 text-[11px] text-ink-600">
-            <li>Fee Structure I-REC(E) 2026 — FN-01 {REC_FEES.version}</li>
+            <li>Fee Structure I-REC(E) 2026 — {REC_FEES.version}</li>
             <li>Evident SF-04 Issue Request v1.2.1</li>
             {factor && <li>{factor.source_label} · {factor.source_url}</li>}
             <li>Residual mix — ตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — {RESIDUAL_MIX_URL}</li>

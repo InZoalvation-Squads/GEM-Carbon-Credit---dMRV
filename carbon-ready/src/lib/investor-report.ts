@@ -120,6 +120,37 @@ export function recNetTotal(r: ProjectRecRoi): number | null {
   return recommendedMid(r)?.net_thb ?? null;
 }
 
+/**
+ * Below this share of the electricity value the executive summary calls REC
+ * income small. A wording threshold for the report's tone, not a market figure.
+ */
+export const REC_SHARE_LOW_PCT = 5;
+
+/** The per-MWh step used to size REC income when no price is entered: a scale unit, never a market price. */
+export const REC_PRICE_SCALE_THB_PER_MWH = 10;
+
+export interface RecShare {
+  /** Net REC income per year as a % of the electricity value; null without a REC price. Negative when REC loses money. */
+  share_pct: number | null;
+  /** What each REC_PRICE_SCALE_THB_PER_MWH of price would earn per year before fees (MWh × 10). */
+  per10_thb: number;
+  /** per10_thb as a % of the electricity value. */
+  per10_share_pct: number | null;
+}
+
+/** REC income against the value of the electricity itself (without_year, rec_year as in RecMoneyComparison). */
+export function recShareOfElectricity(
+  money: { without_year: number; rec_year: number | null }, recsYear: number,
+): RecShare {
+  const per10 = recsYear * REC_PRICE_SCALE_THB_PER_MWH;
+  const base = money.without_year;
+  return {
+    share_pct: money.rec_year === null || base <= 0 ? null : (money.rec_year / base) * 100,
+    per10_thb: per10,
+    per10_share_pct: base <= 0 ? null : (per10 / base) * 100,
+  };
+}
+
 /** Why a project has no report, so the route can say the right thing. */
 export type ProjectReportResult =
   | { status: 'ok'; data: ProjectReportData }

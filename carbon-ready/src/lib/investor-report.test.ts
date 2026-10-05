@@ -4,7 +4,7 @@ import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
 import { seedFactors } from '../data/seed';
 import { EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions } from './rec-roi';
 import {
-  buildPortfolioReport, buildProjectReport, cheapestPath, monthlyProduction, projectCountry, recNetTotal, recommendedMid, recommendedPath,
+  buildPortfolioReport, buildProjectReport, cheapestPath, monthlyProduction, projectCountry, recNetTotal, recShareOfElectricity, recommendedMid, recommendedPath,
   tverEstimate, type ProjectReportData, type ReportSources,
 } from './investor-report';
 import { evaluateProjectRecRoi } from './rec-roi-project';
@@ -202,5 +202,31 @@ describe('path selection helpers (one source)', () => {
     const r = evalTh();
     expect(recommendedPath(r.roi)).toBe(recommendedPath(r));
     expect(cheapestPath(null)).toBeNull();
+  });
+});
+
+describe('recShareOfElectricity — REC income as a share of the electricity value', () => {
+  // 108.3 MWh × 1,000 kWh × 4.18 ฿/kWh = ฿452,694 a year.
+  const without = 108.3 * 1000 * 4.18;
+
+  it('with a REC price: rec_year ÷ without_year, as a percentage', () => {
+    const r = recShareOfElectricity({ without_year: without, rec_year: 27_000 }, 108.3);
+    expect(without).toBeCloseTo(452_694, 6);
+    expect(r.share_pct).toBeCloseTo((27_000 / without) * 100, 9);
+  });
+  it('a loss stays negative', () => {
+    expect(recShareOfElectricity({ without_year: without, rec_year: -without / 100 }, 108.3).share_pct).toBeCloseTo(-1, 9);
+  });
+  it('without a price: share_pct is null and the per-10 ฿/MWh scale is MWh × 10 against the electricity value', () => {
+    const r = recShareOfElectricity({ without_year: without, rec_year: null }, 108.3);
+    expect(r.share_pct).toBeNull();
+    expect(r.per10_thb).toBeCloseTo(1083, 9);
+    expect(r.per10_share_pct).toBeCloseTo((108.3 * 10) / without * 100, 9);
+    expect(r.per10_share_pct).toBeCloseTo(0.2392, 3);
+  });
+  it('no electricity value → no shares, never a division by zero', () => {
+    const r = recShareOfElectricity({ without_year: 0, rec_year: 5 }, 10);
+    expect(r.share_pct).toBeNull();
+    expect(r.per10_share_pct).toBeNull();
   });
 });

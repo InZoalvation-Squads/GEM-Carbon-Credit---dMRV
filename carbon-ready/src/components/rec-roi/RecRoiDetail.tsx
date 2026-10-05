@@ -16,7 +16,7 @@ import type { FinancialValue } from '../../lib/rec-roi-project';
 import type { RecIrrUplift, RecPath, RecPathResult, RecRoiResult } from '../../lib/rec-roi';
 import type { UUID } from '../../types';
 import { formatNumber } from '../../lib/format';
-import { MISSING_LABEL, PATH_LABEL, PATH_SHORT, pct, paybackText, pricePerMwh, recommendationBadge, signedThb, thb } from './format';
+import { MISSING_LABEL, MONEY_HEAD, PATH_LABEL, PATH_SHORT, pct, paybackText, moneyFootnote, pricePerMwh, recommendationBadge, signedThb, thb } from './format';
 import { buildRecRoiSummary, type RecMoneyComparison } from './summary';
 
 const SCENARIO_LABEL = { low: 'ต่ำ', mid: 'กลาง', high: 'สูง' } as const;
@@ -118,9 +118,9 @@ function MoneyTable({ money, recNote }: { money: RecMoneyComparison; recNote: st
         <THead>
           <TR>
             <TH>ตัวเงิน</TH>
-            <TH className="text-right">ไม่มี REC</TH>
-            <TH className="text-right">มี REC</TH>
-            <TH className="text-right">ส่วนต่าง (REC สุทธิ)</TH>
+            <TH className="text-right">{MONEY_HEAD.without}</TH>
+            <TH className="text-right">{MONEY_HEAD.withRec}</TH>
+            <TH className="text-right">{MONEY_HEAD.diff}</TH>
           </TR>
         </THead>
         <TBody>
@@ -136,11 +136,7 @@ function MoneyTable({ money, recNote }: { money: RecMoneyComparison; recNote: st
           ))}
         </TBody>
       </Table>
-      <p className="text-xs text-ink-meta">
-        ไม่มี REC = มูลค่าไฟฟ้าที่ผลิตได้จริง × ค่าไฟ {formatNumber(money.tariff.value, 2)} ฿/kWh
-        ({money.tariff.source === 'pdd' ? 'จาก PDD' : 'ค่าเริ่มต้น PEA'}) · มี REC = บวกรายได้ REC สุทธิหลังหักค่าธรรมเนียม
-        {recNote ? ` (${recNote})` : ''} · ไม่คิดส่วนลดและการเสื่อมของแผง
-      </p>
+      <p className="text-xs text-ink-meta">{moneyFootnote(money.tariff, recNote)}</p>
     </div>
   );
 }
