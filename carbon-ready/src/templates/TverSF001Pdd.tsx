@@ -400,7 +400,8 @@ function BoundaryDiagram({ capacityKwp, owner, bundle = false }: { capacityKwp: 
 
         {/* top row: solar → meter → EG_Consumer → consumer */}
         {rect(65, 70, 275, 100)}
-        {label(65, 70, 275, 100, true, <>ระบบผลิตไฟฟ้าพลังงาน<br />แสงอาทิตย์ {capacityKwp} kW</>)}
+        {/* แบบควบรวม (reference p.8): no capacity — the box stands for six systems. */}
+        {label(65, 70, 275, 100, true, <>ระบบผลิตไฟฟ้าพลังงาน<br />แสงอาทิตย์{!bundle && ` ${capacityKwp} kW`}</>)}
         <line x1={340} y1={120} x2={616} y2={120} stroke="black" strokeWidth={2} />
         {head(630, 120, 'right')}
         {rect(630, 100, 110, 40)}
@@ -419,7 +420,7 @@ function BoundaryDiagram({ capacityKwp, owner, bundle = false }: { capacityKwp: 
         <line x1={460} y1={120} x2={460} y2={211} stroke="black" strokeWidth={2} />
         {head(460, 225, 'down')}
         {rect(330, 225, 240, 70)}
-        {label(330, 225, 240, 70, true, 'ใช้เองในโครงการ')}
+        {label(330, 225, 240, 70, true, bundle ? 'ใช้ในโครงการ' : 'ใช้เองในโครงการ')}
 
         {/* bottom row: grid → EC_PJ,y → meter → own use */}
         {rect(630, 245, 110, 40)}
@@ -1544,37 +1545,44 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
         {/* ============ ภาคผนวก — ปริมาณไฟฟ้าคาดการณ์รายปี ============ */}
         {table && (
           <Page formLabel={formLabel}>
-            <p className="text-center font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี</p>
-            <table className="doc-table mt-2 w-full" data-testid="forecast-table">
-              <thead>
-                <tr className="bg-[#e7f0e0] text-center font-bold">
-                  <td>ปีที่</td><td>ปริมาณการผลิตไฟฟ้าจากระบบ Solar Rooftop (kWh)</td><td>%การเสื่อมของแผงฯ</td>
-                </tr>
-              </thead>
-              <tbody>
-                {table.rows.map((r) => (
-                  <tr key={r.year}>
-                    <td className="text-center">{r.year}</td>
-                    <td className="text-right">{fmtInt(r.generation_kwh)}</td>
-                    {/* MCRU p.23: every row prints the annual rate (0.40%), not the
-                        loss accumulated since year 1. */}
-                    <td className="text-center">{fmt(bundleDegradationPct)}%</td>
-                  </tr>
-                ))}
-                <tr className="font-bold">
-                  <td className="text-center">รวม</td>
-                  <td className="text-right">{fmtInt(table.rows.reduce((a, r) => a + r.generation_kwh, 0))}</td>
-                  {/* MCRU p.23 sums the column: 7 × 0.40% = 2.80%. */}
-                  <td className="text-center">{fmt(bundleDegradationPct * table.rows.length)}%</td>
-                </tr>
-                <tr className="font-bold">
-                  <td className="text-center">เฉลี่ยต่อปี</td>
-                  <td className="text-right">{fmtInt(Math.round(table.rows.reduce((a, r) => a + r.generation_kwh, 0) / table.rows.length))}</td>
-                  {/* the per-year rate, unchanged — this row is an annual average */}
-                  <td className="text-center">{fmt(bundleDegradationPct)}%</td>
-                </tr>
-              </tbody>
-            </table>
+            {/* แบบเดี่ยว only: a bundle's forecast is the per-site matrix below
+                (reference p.31), and one degradation % cannot describe sites that
+                degrade at 0.55% and 0.60%. */}
+            {!bundle && (
+              <>
+                <p className="text-center font-bold">ตารางแสดงปริมาณไฟฟ้าคาดการณ์รายปี</p>
+                <table className="doc-table mt-2 w-full" data-testid="forecast-table">
+                  <thead>
+                    <tr className="bg-[#e7f0e0] text-center font-bold">
+                      <td>ปีที่</td><td>ปริมาณการผลิตไฟฟ้าจากระบบ Solar Rooftop (kWh)</td><td>%การเสื่อมของแผงฯ</td>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {table.rows.map((r) => (
+                      <tr key={r.year}>
+                        <td className="text-center">{r.year}</td>
+                        <td className="text-right">{fmtInt(r.generation_kwh)}</td>
+                        {/* MCRU p.23: every row prints the annual rate (0.40%), not the
+                            loss accumulated since year 1. */}
+                        <td className="text-center">{fmt(bundleDegradationPct)}%</td>
+                      </tr>
+                    ))}
+                    <tr className="font-bold">
+                      <td className="text-center">รวม</td>
+                      <td className="text-right">{fmtInt(table.rows.reduce((a, r) => a + r.generation_kwh, 0))}</td>
+                      {/* MCRU p.23 sums the column: 7 × 0.40% = 2.80%. */}
+                      <td className="text-center">{fmt(bundleDegradationPct * table.rows.length)}%</td>
+                    </tr>
+                    <tr className="font-bold">
+                      <td className="text-center">เฉลี่ยต่อปี</td>
+                      <td className="text-right">{fmtInt(Math.round(table.rows.reduce((a, r) => a + r.generation_kwh, 0) / table.rows.length))}</td>
+                      {/* the per-year rate, unchanged — this row is an annual average */}
+                      <td className="text-center">{fmt(bundleDegradationPct)}%</td>
+                    </tr>
+                  </tbody>
+                </table>
+              </>
+            )}
             {bundle && (() => {
               // Each site degrades from its own first-synchronisation year, so a
               // site that is not yet online shows blank — not a fabricated 0.

@@ -1426,3 +1426,35 @@ describe('TverSF001Pdd — capacity follows ตารางที่ 1', () => {
       .toContain('ไม่น้อยกว่า 667.20 กิโลวัตต์สูงสุด (kWp)');
   });
 });
+
+describe('TverSF001Pdd — aggregated fidelity to the reference (2026-10-06)', () => {
+  it('a bundle has no single-curve forecast table — only the per-site matrix', () => {
+    seedBundleDetail();
+    renderDoc();
+    expect(screen.queryByTestId('forecast-table')).toBeNull();
+  });
+
+  it('a single PDD still has the forecast table', () => {
+    seedMcruData();
+    renderDoc();
+    expect(screen.getByTestId('forecast-table')).toBeInTheDocument();
+  });
+
+  it('bundle รูปที่ 1 drops the capacity and reads ใช้ในโครงการ', () => {
+    seedBundleDetail();
+    renderDoc();
+    for (const d of screen.getAllByTestId('boundary-diagram')) {
+      expect(d.textContent).toContain('ใช้ในโครงการ');
+      expect(d.textContent).not.toContain('ใช้เองในโครงการ');
+      expect(d.textContent).not.toMatch(/\d kW/);
+    }
+  });
+
+  it('single รูปที่ 1 keeps the capacity and ใช้เองในโครงการ', () => {
+    seedMcruData();
+    renderDoc();
+    const d = screen.getAllByTestId('boundary-diagram')[0];
+    expect(d.textContent).toContain('ใช้เองในโครงการ');
+    expect(d.textContent).toMatch(/แสงอาทิตย์ [\d,.]+ kW/);
+  });
+});

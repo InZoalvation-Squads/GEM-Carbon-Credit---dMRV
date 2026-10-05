@@ -241,6 +241,13 @@ describe('computeYearlyTable — reproduces the MCRU reference PDD', () => {
     expect(t.avg.er).toBe(443);
     expect(t.years).toBe(7);
   });
+  it('BE run total sums the unrounded yearly BE, not the 2-dp rows', () => {
+    // 1,000 kWh × 0.4682 = 0.4682 t/yr → rows print 0.47, but 7 × 0.4682 = 3.2774
+    const t = computeYearlyTable({ project: PROJECT, factors: TGO_FACTORS,
+      sectionData: { year1_generation_kwh: 1000, degradation_pct: 0, crediting_years: '7' } })!;
+    expect(t.rows.every((r) => r.be === 0.47)).toBe(true);
+    expect(t.totals.be).toBe(3.28); // not 7 × 0.47 = 3.29
+  });
   it('returns null without a grid factor', () => {
     expect(computeYearlyTable({ project: PROJECT, factors: [], sectionData: MCRU_DATA })).toBeNull();
   });

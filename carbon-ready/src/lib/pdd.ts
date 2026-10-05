@@ -227,7 +227,9 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
     rows.push({ year: y, generation_kwh: gen, be, pe, le: 0, er: Math.floor(be - pe) });
   }
   const totals = {
-    be: round2(rows.reduce((a, r) => a + r.be, 0)),
+    // Like PE below: total the unrounded yearly BE — the aggregated reference
+    // p.20 prints 7,179.13 where its rounded rows add to 7,179.14.
+    be: round2(rows.reduce((a, r) => a + r.generation_kwh, 0) * ef / 1000),
     // PE is the same every year, so the run total is the unrounded yearly value
     // × years — MCRU p.18 prints 19.01 (2.7163 × 7), not 7 × 2.72 = 19.04.
     pe: round2(peExact * years),
