@@ -92,7 +92,7 @@ function seedMcruData(overrides: Record<string, unknown> = {}) {
     permit_no: _p1, permit_date: _p2, owner_name: _p3, project_address: _p4,
     equipment_specs: _p5, sites: _p6, support_equipment: _p7, project_type: _p8,
     project_start_date: _p9, coordinator_fax: _p10, project_activity: _p11,
-    eg_monitoring_method: _p12, eg_deduction_pct: _p13, ...base
+    eg_monitoring_method: _p12, eg_deduction_pct: _p13, installations: _p14, ...base
   } = pdd.section_data as Record<string, unknown>;
   pdd.section_data = {
     ...base,
@@ -661,7 +661,9 @@ describe('TverSF001Pdd — support-equipment table (อุปกรณ์สน�
   });
 
   it('numbers the table ตารางที่ 2 in single mode', () => {
-    seedMcruData({ support_equipment: [SUPPORT_EQUIPMENT[0]] });
+    // ตารางที่ 1 is the installations table; seed it rather than rely on a
+    // row leaked from an earlier test through the shared fixture object.
+    seedMcruData({ installations: [{ building: 'อาคาร 1', panels: 288, inverters: 5, kwp: 200.16 }], support_equipment: [SUPPORT_EQUIPMENT[0]] });
     renderDoc();
     expect(screen.getByText(/ตารางที่ 2 รายการอุปกรณ์สนับสนุน/)).toBeInTheDocument();
     expect(within(screen.getByTestId('support-equipment')).getByText('Schneider PM2200')).toBeInTheDocument();
@@ -982,18 +984,14 @@ describe('TverSF001Pdd — fixed diagram numbering and cumulative degradation', 
     expect(screen.getByText(/^ภาพที่ 8 แผนผังขั้นตอนการจัดเก็บข้อมูล/)).toBeInTheDocument();
   });
 
-  it('compounds the degradation column: year 1 is 0.00 and 0.5%/yr reaches 1.00 by year 3', () => {
-    seedMcruData({ degradation_pct: 0.5, crediting_years: '7' });
+  it('prints the degradation column as MCRU p.23 does: the rate per row, summed in รวม', () => {
+    seedMcruData({ degradation_pct: 0.4, crediting_years: '7' });
     renderDoc();
     const rows = within(screen.getByTestId('forecast-table')).getAllByRole('row');
     const pct = (i: number) => within(rows[i]).getAllByRole('cell')[2].textContent;
-    expect(pct(1)).toBe('0.00%');                      // year 1 — the reference year
-    expect(pct(2)).toBe('0.50%');                      // 1-(0.995)^1
-    expect(pct(3)).toBe('1.00%');                      // 1-(0.995)^2 = 0.9975% → 1.00
-    expect(pct(7)).toBe('2.96%');                      // 1-(0.995)^6
-    // รวม shows the final year's cumulative loss, not 7 × 0.5%.
-    expect(within(rows[8]).getAllByRole('cell')[2].textContent).toBe('2.96%');
-    expect(within(rows[9]).getAllByRole('cell')[2].textContent).toBe('0.50%'); // เฉลี่ยต่อปี = the annual rate
+    for (let y = 1; y <= 7; y++) expect(pct(y), `year ${y}`).toBe('0.40%');
+    expect(pct(8)).toBe('2.80%'); // รวม = 7 × 0.40%
+    expect(pct(9)).toBe('0.40%'); // เฉลี่ยต่อปี
   });
 
   it('prints a flat 0.00% column when no degradation rate is set', () => {
@@ -1398,5 +1396,34 @@ describe('TverSF001Pdd — MCRU fidelity fixes', () => {
     const text = screen.getByTestId('yearly-table').textContent ?? '';
     expect(text).toContain('19.01');
     expect(text).not.toContain('19.04');
+  });
+});
+
+describe('TverSF001Pdd — capacity follows ตารางที่ 1', () => {
+  // PDD-2000's project record says 250 kWp; the MCRU rows sum to 667.20.
+  const MCRU_INSTALLATIONS = [
+    { building: 'อาคาร 1', kwp: 200.16 }, { building: 'อาคาร 2', kwp: 66.72 }, { building: 'อาคาร 3', kwp: 133.44 },
+    { building: 'อาคาร 4', kwp: 133.44 }, { building: 'อาคาร 5', kwp: 133.44 },
+  ];
+
+  it('§1.2, รูปที่ 1 and the financial appendix all print the table total', () => {
+    seedMcruData({ installations: MCRU_INSTALLATIONS, investment_mthb: 30 });
+    renderDoc();
+    expect(screen.getByText(/ขนาดกำลังติดตั้งรวม 667.20 kWp/)).toBeInTheDocument();
+    for (const d of screen.getAllByTestId('boundary-diagram')) expect(d.textContent).toContain('667.20 kW');
+    expect(document.body.textContent).not.toMatch(/250\.00 kWp/);
+  });
+
+  it('falls back to the project capacity when ตารางที่ 1 has no kWp', () => {
+    seedMcruData({ installations: [] });
+    renderDoc();
+    expect(screen.getByText(/ขนาดกำลังติดตั้งรวม 250.00 kWp/)).toBeInTheDocument();
+  });
+
+  it('the generated cover activity sentence uses the same table total', () => {
+    seedMcruData({ installations: MCRU_INSTALLATIONS });
+    renderDoc();
+    expect(screen.getByText('กิจกรรมของโครงการ').nextElementSibling?.textContent)
+      .toContain('ไม่น้อยกว่า 667.20 กิโลวัตต์สูงสุด (kWp)');
   });
 });

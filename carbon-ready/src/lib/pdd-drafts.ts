@@ -1,7 +1,7 @@
 // Boilerplate drafts for the free-text PDD activity fields — composed from
 // data the form already holds, in the standard TGO wording. Deterministic and
 // offline: the user gets an editable starting point, never a locked sentence.
-import { computeYearlyTable } from './pdd';
+import { computeYearlyTable, documentCapacityKwp } from './pdd';
 import type { EmissionFactor, Project } from '../types';
 
 export const draftableKeys = ['project_activity', 'before_project', 'after_project'] as const;
@@ -33,6 +33,8 @@ export function draftActivityText(
     return typeof v === 'string' && v.trim() !== '' ? v.trim() : null;
   };
   const owner = str('owner_name') ?? str('project_owner') ?? project.name;
+  // Same figure the document prints in §1.2 — the ตารางที่ 1 total when filled.
+  const capacityKwp = documentCapacityKwp({ project, factors, sectionData });
   const address = str('project_address') ?? project.location;
   const utility = utilityFor(`${address} ${project.location}`);
 
@@ -47,7 +49,7 @@ export function draftActivityText(
       : `โดยการเชื่อมต่อกับสายส่งของ${utility}`;
     return (
       `โครงการติดตั้งระบบผลิตไฟฟ้าพลังงานแสงอาทิตย์${mount} ` +
-      `ขนาดกำลังติดตั้งไม่น้อยกว่า ${fmtCap(project.capacity_kwp)} กิโลวัตต์สูงสุด (kWp) ` +
+      `ขนาดกำลังติดตั้งไม่น้อยกว่า ${fmtCap(capacityKwp)} กิโลวัตต์สูงสุด (kWp) ` +
       `${connection}เพื่อผลิตใช้เองภายใน${owner}`
     );
   }
@@ -84,7 +86,7 @@ export function draftActivityText(
 
   const p2 =
     `โครงการผลิตไฟฟ้าจากพลังงานแสงอาทิตย์แบบติดตั้งบนหลังคา สำหรับ${owner} ` +
-    `ขนาดติดตั้ง ${fmtCap(project.capacity_kwp)} กิโลวัตต์ ทำการติดตั้งบนหลังคาและดาดฟ้า จำนวน ${buildingCount} อาคาร` +
+    `ขนาดติดตั้ง ${fmtCap(capacityKwp)} กิโลวัตต์ ทำการติดตั้งบนหลังคาและดาดฟ้า จำนวน ${buildingCount} อาคาร` +
     (permitNo && permitDate
       ? ` ซึ่งตั้งอยู่บนพื้นที่เดียวกันตามใบอนุญาตก่อสร้างอาคาร ดัดแปลงอาคาร หรือรื้อถอนอาคาร เลขที่ ${permitNo} ลงวันที่ ${permitDate}`
       : '');

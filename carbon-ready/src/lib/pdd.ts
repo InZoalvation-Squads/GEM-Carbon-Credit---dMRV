@@ -94,7 +94,7 @@ export function resolveComputed(source: PddComputedSource, ctx: ComputeContext):
       if (!t) return null;
       return source === 'be_annual' ? t.avg.be : source === 'pe_annual' ? t.avg.pe : t.avg.er;
     }
-    case 'bundle_capacity': return bundleCapacityKwp(ctx);
+    case 'bundle_capacity': return documentCapacityKwp(ctx);
     case 'site_count': return parseSites(ctx.sectionData.sites).length;
     default: return null;
   }
@@ -108,10 +108,38 @@ function numOrNull(v: unknown): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
-/** Installed capacity: Σ site rows in bundle mode, else the parent project's. */
-export function bundleCapacityKwp(ctx: ComputeContext): number {
+/**
+ * Σ kWp of the ตารางที่ 1 installation rows (แบบเดี่ยว), rounded to 3 dp like the
+ * site sums. Null when no row carries a capacity.
+ */
+export function installationsCapacityKwp(sectionData: Record<string, unknown>): number | null {
+  const rows = Array.isArray(sectionData.installations) ? sectionData.installations as Array<Record<string, unknown>> : [];
+  const values = rows.map((r) => numOrNull(r?.kwp)).filter((v): v is number => v !== null);
+  if (values.length === 0) return null;
+  return Math.round(values.reduce((a, b) => a + b, 0) * 1000) / 1000;
+}
+
+/**
+ * Installed capacity the PDD states (§1.2, รูปที่ 1, the financial appendix):
+ * Σ site rows in bundle mode, else Σ ตารางที่ 1 installation rows, else the
+ * parent project's. The table wins over the project record so the document
+ * never prints one capacity in §1.2 and a different total under ตารางที่ 1.
+ */
+export function documentCapacityKwp(ctx: ComputeContext): number {
   const sites = parseSites(ctx.sectionData.sites);
-  return sumSiteCapacityKwp(sites) ?? ctx.project.capacity_kwp;
+  if (sites.length > 0) return sumSiteCapacityKwp(sites) ?? ctx.project.capacity_kwp;
+  return installationsCapacityKwp(ctx.sectionData) ?? ctx.project.capacity_kwp;
+}
+
+/**
+ * แบบเดี่ยว: the ตารางที่ 1 total and the project record disagree (the PDD then
+ * follows the table). Null when they agree or there is nothing to compare.
+ */
+export function capacityMismatch(ctx: ComputeContext): { project: number; installations: number } | null {
+  if (isBundle(ctx.sectionData)) return null;
+  const installations = installationsCapacityKwp(ctx.sectionData);
+  if (installations === null || Math.abs(installations - ctx.project.capacity_kwp) < 0.0005) return null;
+  return { project: ctx.project.capacity_kwp, installations };
 }
 
 /** Buddhist-calendar year the crediting period starts, for the site matrix. */

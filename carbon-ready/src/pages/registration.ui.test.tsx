@@ -282,6 +282,27 @@ describe('PDD editor — draft boilerplate for activity fields', () => {
     expect(withActivity).toContain('ขนาดกำลังติดตั้งไม่น้อยกว่า 250.00 กิโลวัตต์สูงสุด (kWp)');
 
   });
+
+  it('warns when the ตารางที่ 1 total disagrees with the project capacity', async () => {
+    const { useStore } = await import('../store');
+    // PDD-2000's project is 250 kWp; these rows sum to 667.20.
+    useStore.setState((st) => ({
+      pdds: st.pdds.map((p) => (p.id === 'PDD-2000' ? {
+        ...p, state: 'draft' as const,
+        section_data: { ...p.section_data, installations: [{ building: 'A', kwp: 400 }, { building: 'B', kwp: 267.2 }] },
+      } : p)),
+      projects: st.projects.map((p) => (p.id === 'prj-0001' ? { ...p, lifecycle_stage: 'pdd_draft' as const } : p)),
+    }));
+    render(
+      <MemoryRouter initialEntries={['/registration/PDD-2000']}>
+        <Routes><Route path="/registration/:pddId" element={<Registration />} /></Routes>
+      </MemoryRouter>,
+    );
+    fireEvent.click(screen.getByRole('button', { name: /A\. / }));
+    const warning = screen.getByText(/ไม่ตรงกับขนาดของโครงการ/);
+    expect(warning.textContent).toContain('667.20 kWp');
+    expect(warning.textContent).toContain('250.00 kWp');
+  });
 });
 
 describe('PDD editor — auto-save', () => {

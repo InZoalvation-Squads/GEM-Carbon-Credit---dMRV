@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest';
-import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeFinancialTable, computeYearlyTable, bundleCapacityKwp, year1GenerationKwh } from './pdd';
+import { isFieldVisible, validatePdd, resolveComputed, pddContentHash, splitDisclosure, saltedValueHash, verifyDisclosedValue, computeEcPj, computeFinancialTable, computeYearlyTable, documentCapacityKwp, installationsCapacityKwp, capacityMismatch, year1GenerationKwh } from './pdd';
 import type { Methodology, Project, EmissionFactor } from '../types';
 
 const METH: Methodology = {
@@ -352,10 +352,39 @@ const BUNDLE_SITES = [
   { owner: 'B', kwp: 150, year1_kwh: 300000, first_sync_year: 2570, degradation_pct: 0.5 },
 ];
 
+describe('document capacity — ตารางที่ 1 total vs the project record', () => {
+  const MCRU_INSTALLATIONS = [
+    { building: 'A', kwp: 200.16 }, { building: 'B', kwp: 66.72 }, { building: 'C', kwp: 133.44 },
+    { building: 'D', kwp: 133.44 }, { building: 'E', kwp: 133.44 },
+  ];
+  const ctx = (sectionData: Record<string, unknown>) => ({ project: PROJECT, factors: FACTORS, sectionData });
+
+  it('sums the installation rows to the MCRU 667.20 kWp without float drift', () => {
+    expect(installationsCapacityKwp({ installations: MCRU_INSTALLATIONS })).toBe(667.2);
+  });
+  it('is null when no installation row carries a capacity', () => {
+    expect(installationsCapacityKwp({})).toBeNull();
+    expect(installationsCapacityKwp({ installations: [{ building: 'A', kwp: '' }] })).toBeNull();
+  });
+  it('single PDD states the ตารางที่ 1 total, falling back to the project capacity', () => {
+    expect(documentCapacityKwp(ctx({ installations: MCRU_INSTALLATIONS }))).toBe(667.2);
+    expect(documentCapacityKwp(ctx({}))).toBe(PROJECT.capacity_kwp);
+  });
+  it('flags a table total that disagrees with the project record', () => {
+    expect(capacityMismatch(ctx({ installations: MCRU_INSTALLATIONS })))
+      .toEqual({ project: PROJECT.capacity_kwp, installations: 667.2 });
+    expect(capacityMismatch(ctx({ installations: [{ kwp: PROJECT.capacity_kwp }] }))).toBeNull();
+    expect(capacityMismatch(ctx({}))).toBeNull();
+  });
+  it('never flags a bundle — its capacity is the site sum', () => {
+    expect(capacityMismatch(ctx({ sites: BUNDLE_SITES, installations: MCRU_INSTALLATIONS }))).toBeNull();
+  });
+});
+
 describe('bundle mode', () => {
   it('sums site capacity instead of using the parent project capacity', () => {
-    expect(bundleCapacityKwp({ project: PROJECT, factors: FACTORS, sectionData: {} })).toBe(820);
-    expect(bundleCapacityKwp({
+    expect(documentCapacityKwp({ project: PROJECT, factors: FACTORS, sectionData: {} })).toBe(820);
+    expect(documentCapacityKwp({
       project: PROJECT, factors: FACTORS, sectionData: { sites: BUNDLE_SITES },
     })).toBe(250);
   });

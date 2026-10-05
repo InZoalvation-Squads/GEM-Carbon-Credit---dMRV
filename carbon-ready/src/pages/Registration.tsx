@@ -13,7 +13,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { EmptyState } from '../components/ui/EmptyState';
 import { Modal } from '../components/ui/Modal';
 import { OFFICIAL_FORMS } from '../templates/registry';
-import { isFieldVisible, validatePdd, resolveComputed } from '../lib/pdd';
+import { isFieldVisible, validatePdd, resolveComputed, capacityMismatch } from '../lib/pdd';
 import { buildPrefill } from '../lib/pdd-prefill';
 import { toast } from '../components/layout/Toast';
 import { draftableKeys, draftActivityText, type DraftableKey } from '../lib/pdd-drafts';
@@ -339,6 +339,7 @@ function PddEditor({ pddId }: { pddId: string }) {
 
   const sections = methodology?.pdd_sections ?? [];
   const ctx = useMemo(() => ({ project, factors, sectionData: data }), [project, factors, data]);
+  const capacityWarning = capacityMismatch(ctx);
 
   if (!methodology) return <EmptyState title="Methodology not found" hint="This PDD references a methodology that no longer exists." />;
 
@@ -434,6 +435,12 @@ function PddEditor({ pddId }: { pddId: string }) {
             <h3 className="text-lg font-semibold text-ink-900">{sections[step].title}</h3>
             {sections[step].help && <p className="mt-1 text-sm text-ink-500">{sections[step].help}</p>}
           </div>
+          {capacityWarning && sections[step].fields.some((f) => f.key === 'installations') && (
+            <p role="status" className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">
+              ขนาดติดตั้งรวมในตารางอาคาร ({fmtKwp(capacityWarning.installations)} kWp) ไม่ตรงกับขนาดของโครงการ
+              ({fmtKwp(capacityWarning.project)} kWp) — เอกสาร PDD จะใช้ยอดรวมจากตาราง กรุณาแก้ขนาดของโครงการให้ตรงกัน
+            </p>
+          )}
           {/* 12-col grid: each field claims a span suited to the length of the
               value it holds (see fieldSpan), so short inputs pair up on a row
               instead of every field stretching the full width of the card. */}
@@ -509,6 +516,8 @@ function fieldSpan(field: PddFieldSchema): string {
   if (compact && `${field.label}${field.unit ?? ''}`.length <= 24) return 'md:col-span-4';
   return 'md:col-span-6';
 }
+
+const fmtKwp = (n: number) => n.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 3 });
 
 function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
   field: PddFieldSchema; value: unknown; computed?: number | string | null; readonly: boolean;
