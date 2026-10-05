@@ -8,7 +8,7 @@ import { buildPortfolioReport, buildProjectReport, recNetTotal, type ProjectRepo
 import { buildRecRoiSummary } from '../components/rec-roi/summary';
 import { PATH_LABEL, PATH_SHORT, breakEvenText, paybackText, pct, pricePerMwh, signedThb, thb } from '../components/rec-roi/format';
 import { REC_FEES } from '../data/rec-fees';
-import { formatNumber } from '../lib/format';
+import { formatNumber, localIsoDate } from '../lib/format';
 import { evaluateProjectRecRoi } from '../lib/rec-roi-project';
 import type { RecPathOk, RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
 
@@ -76,7 +76,7 @@ function PageHeader({ title, subtitle, generatedAt }: { title: string; subtitle:
     <header className="mb-4 border-b-2 border-brand-600 pb-3">
       <div className="flex items-start justify-between gap-4">
         <span className="text-[11px] font-extrabold tracking-wide text-brand-700">GEM CARBON CREDIT</span>
-        <span className="text-[11px] text-ink-500">สร้างเมื่อ {generatedAt.slice(0, 10)}</span>
+        <span className="text-[11px] text-ink-500">สร้างเมื่อ {localIsoDate(generatedAt)}</span>
       </div>
       <h1 className="mt-1 text-xl font-semibold text-ink">{title}</h1>
       <p className="text-[12px] text-ink-600">{subtitle}</p>
@@ -87,7 +87,7 @@ function PageHeader({ title, subtitle, generatedAt }: { title: string; subtitle:
 function PageFooter({ generatedAt }: { generatedAt: string }) {
   return (
     <footer className="mt-4 flex items-center justify-between gap-4 border-t border-ink-200 pt-2 text-[10px] text-ink-500">
-      <span>จัดทำจากข้อมูลวัดจริงในระบบ ณ วันที่ {generatedAt.slice(0, 10)} · ค่าธรรมเนียม I-REC(E) Fee Structure {REC_FEES.version}</span>
+      <span>จัดทำจากข้อมูลวัดจริงในระบบ ณ วันที่ {localIsoDate(generatedAt)} · ค่าธรรมเนียม I-REC(E) Fee Structure {REC_FEES.version}</span>
       <span className="inv-pageno" />
     </footer>
   );
@@ -268,10 +268,12 @@ function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions
 function Scope2Page({ data, years }: { data: ProjectReportData; years: number }) {
   const { project, roi, scope2, generated_at } = data;
   const { factor, tver } = scope2;
+  const annual = roi.annual;
+  const partialNote = annual.status === 'ok' && annual.partial ? ` · ข้อมูล ${annual.coverage_days} วัน ประมาณเป็นรายปี` : '';
   const net = recNetTotal(roi);
   return (
     <section className="inv-page">
-      <PageHeader title={`Scope 2 ช่วยอะไร · ${project.name}`} subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp`} generatedAt={generated_at} />
+      <PageHeader title={`Scope 2 ช่วยอะไร · ${project.name}`} subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp${partialNote}`} generatedAt={generated_at} />
       <div className="inv-grow space-y-4">
         <div className="border border-ink-200 p-4">
           {factor && scope2.tco2e_location_year !== null ? (
@@ -348,9 +350,66 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
   );
 }
 
-function PortfolioOverviewPage({ data, assumptions }: { data: ReturnType<typeof buildPortfolioReport>; assumptions: RecRoiAssumptions }) {
+/** Overview pagination: rows that fit under the KPI strip on page 1, then rows per continuation page. */
+const OVERVIEW_FIRST_ROWS = 12;
+const OVERVIEW_ROWS_PER_PAGE = 18;
+/** Above this many projects the break-even chart gets its own page instead of sharing page 1. */
+const OVERVIEW_CHART_OWN_PAGE_MIN = 8;
+const CHART_MAX_HEIGHT = 760;
+
+interface OverviewRow {
+  project: ProjectReportData['project'];
+  mwh: number;
+  platform: RecPathResult | null;
+  midRoi: number | null;
+  label: string;
+}
+
+function RankingTable({ rows }: { rows: OverviewRow[] }) {
+  return (
+    <table className="w-full border-collapse">
+      <thead>
+        <tr className="whitespace-nowrap"><TH>โครงการ</TH><TH right>MWh/ปี</TH><TH right>คุ้มทุน ข (฿/MWh)</TH><TH right>ROI @กลาง</TH><TH>ผล</TH></tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.project.id}>
+            <TD className="font-medium text-ink">{r.project.name}</TD>
+            <TD right className="whitespace-nowrap">{formatNumber(r.mwh, 1)}</TD>
+            <TD right className="whitespace-nowrap">{r.platform ? breakEvenText(r.platform) : '—'}</TD>
+            <TD right className={`whitespace-nowrap ${negative(r.midRoi)}`}>{pct(r.midRoi)}</TD>
+            <TD className="whitespace-nowrap">{r.label}</TD>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+}
+
+function BreakEvenChart({ chart, mid }: { chart: Array<{ name: string; be: number }>; mid: number | null }) {
+  return (
+    <div>
+      <SectionTitle>ราคาคุ้มทุนผ่านแพลตฟอร์ม (฿/MWh)</SectionTitle>
+      <BarChart layout="vertical" width={680} height={Math.min(CHART_MAX_HEIGHT, Math.max(160, 22 * chart.length + 40))} data={chart}
+        margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
+        <CartesianGrid horizontal={false} stroke="#e2e8f0" />
+        <XAxis type="number" tick={TICK} tickLine={false}
+          domain={[0, (max: number) => Math.max(max, mid ?? 0) * 1.1]} tickFormatter={(v: number) => formatNumber(v)} />
+        <YAxis type="category" dataKey="name" width={200} tick={TICK} tickLine={false} interval={0} />
+        <Bar dataKey="be" fill={GEM_GREEN} isAnimationActive={false} />
+        {mid !== null && <ReferenceLine x={mid} stroke={WARN} label={{ value: 'ราคากลาง', fontSize: 10, fill: WARN }} />}
+      </BarChart>
+      <p className="text-[11px] text-ink-500">แท่งที่สั้นกว่าเส้นราคากลางคือโครงการที่คุ้มทุนที่ราคากลาง</p>
+    </div>
+  );
+}
+
+/** Overview: page 1 (KPIs + first rows), continuation pages for the rest of the table, and the chart. */
+function PortfolioOverview({ data, assumptions, orgName }: {
+  data: ReturnType<typeof buildPortfolioReport>; assumptions: RecRoiAssumptions; orgName: string;
+}) {
   const { totals, projects, generated_at } = data;
-  const rows = projects.map((p) => {
+  const rows: OverviewRow[] = projects.map((p) => {
     const roi = p.roi.roi;
     const best = roi?.recommended ? [roi.own, roi.platform].find((x): x is RecPathOk => x.status === 'ok' && x.path === roi.recommended) : undefined;
     return {
@@ -363,67 +422,65 @@ function PortfolioOverviewPage({ data, assumptions }: { data: ReturnType<typeof 
   const chart = rows.flatMap((r) => (r.platform?.status === 'ok' ? [{ name: r.project.name, be: r.platform.break_even_price_thb }] : []));
   const mid = assumptions.price_mid_thb;
   const partial = (n: number) => (n < totals.projects ? `${n} จาก ${totals.projects} โครงการ` : undefined);
+  const windows = projects.flatMap((p) => (p.roi.annual.status === 'ok' ? [p.roi.annual] : []));
+  const partialCount = windows.filter((a) => a.partial).length;
+  const windowText = windows.length
+    ? ` · ข้อมูล ${windows.reduce((m, a) => (a.window_start < m ? a.window_start : m), windows[0].window_start)} – ${windows.reduce((m, a) => (a.window_end > m ? a.window_end : m), windows[0].window_end)}`
+    : '';
+  const subtitle = `${orgName} · ${totals.projects} โครงการที่มีข้อมูลการผลิตวัดจริง${windowText} · จัดทำ ${localIsoDate(generated_at)}`;
+  const chartOwnPage = chart.length > 0 && projects.length > OVERVIEW_CHART_OWN_PAGE_MIN;
+
+  const chunks: OverviewRow[][] = [rows.slice(0, OVERVIEW_FIRST_ROWS)];
+  for (let i = OVERVIEW_FIRST_ROWS; i < rows.length; i += OVERVIEW_ROWS_PER_PAGE) chunks.push(rows.slice(i, i + OVERVIEW_ROWS_PER_PAGE));
 
   return (
-    <section className="inv-page">
-      <PageHeader title="ภาพรวมพอร์ต · รายงานนักลงทุน REC และ Scope 2" subtitle={`${totals.projects} โครงการที่มีข้อมูลการผลิตวัดจริง`} generatedAt={generated_at} />
-      <div className="inv-grow space-y-4">
-        {projects.length === 0 ? (
-          <p className="text-ink-600">ยังไม่มีโครงการที่มีข้อมูลการผลิต</p>
-        ) : (
-          <>
-            <KpiStrip>
-              <Kpi label="MWh/ปี" value={formatNumber(totals.mwh_year, 1)} />
-              <Kpi label="REC/ปี" value={formatNumber(totals.recs_year, 0)} />
-              <Kpi label={`REC สุทธิ ${assumptions.horizon_years} ปี`}
-                value={totals.rec_net_total === null ? waiting : <span className={negative(totals.rec_net_total)}>{signedThb(totals.rec_net_total)}</span>}
-                unit={totals.rec_net_total === null ? undefined : `ใน ${assumptions.horizon_years} ปี`}
-                note={totals.rec_net_total === null ? undefined : partial(totals.rec_net_projects)} />
-              <Kpi label="tCO₂e/ปี (location-based)"
-                value={totals.tco2e_location_year === null ? '—' : formatNumber(totals.tco2e_location_year, 2)}
-                note={totals.tco2e_location_year === null ? undefined : partial(totals.tco2e_projects)} />
-            </KpiStrip>
-
-            <div>
-              <SectionTitle>เรียงตามโครงการ</SectionTitle>
-              <table className="w-full border-collapse">
-                <thead>
-                  <tr><TH>โครงการ</TH><TH right>MWh/ปี</TH><TH right>คุ้มทุน ข (฿/MWh)</TH><TH right>ROI @กลาง</TH><TH>ผล</TH></tr>
-                </thead>
-                <tbody>
-                  {rows.map((r) => (
-                    <tr key={r.project.id}>
-                      <TD className="font-medium text-ink">{r.project.name}</TD>
-                      <TD right>{formatNumber(r.mwh, 1)}</TD>
-                      <TD right>{r.platform ? breakEvenText(r.platform) : '—'}</TD>
-                      <TD right className={negative(r.midRoi)}>{pct(r.midRoi)}</TD>
-                      <TD>{r.label}</TD>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-
-            {chart.length > 0 && (
+    <>
+      <section className="inv-page">
+        <PageHeader title="ภาพรวมพอร์ต · รายงานนักลงทุน REC และ Scope 2" subtitle={subtitle} generatedAt={generated_at} />
+        <div className="inv-grow space-y-4">
+          {projects.length === 0 ? (
+            <p className="text-ink-600">ยังไม่มีโครงการที่มีข้อมูลการผลิต</p>
+          ) : (
+            <>
+              <KpiStrip>
+                <Kpi label="MWh/ปี" value={formatNumber(totals.mwh_year, 1)} />
+                <Kpi label="REC/ปี" value={formatNumber(totals.recs_year, 0)} />
+                <Kpi label={`REC สุทธิ ${assumptions.horizon_years} ปี`}
+                  value={totals.rec_net_total === null ? waiting : <span className={negative(totals.rec_net_total)}>{signedThb(totals.rec_net_total)}</span>}
+                  unit={totals.rec_net_total === null ? undefined : `ใน ${assumptions.horizon_years} ปี`}
+                  note={totals.rec_net_total === null ? undefined : partial(totals.rec_net_projects)} />
+                <Kpi label="tCO₂e/ปี (location-based)"
+                  value={totals.tco2e_location_year === null ? '—' : formatNumber(totals.tco2e_location_year, 2)}
+                  note={totals.tco2e_location_year === null ? undefined : partial(totals.tco2e_projects)} />
+              </KpiStrip>
+              {partialCount > 0 && (
+                <p className="-mt-2 text-[11px] text-ink-500">{partialCount} จาก {windows.length} โครงการใช้ข้อมูลไม่ครบปี — ตัวเลขรายปีประมาณจากข้อมูลที่มี</p>
+              )}
               <div>
-                <SectionTitle>ราคาคุ้มทุนผ่านแพลตฟอร์ม (฿/MWh)</SectionTitle>
-                <BarChart layout="vertical" width={680} height={Math.max(160, 22 * chart.length + 40)} data={chart}
-                  margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
-                  <CartesianGrid horizontal={false} stroke="#e2e8f0" />
-                  <XAxis type="number" tick={TICK} tickLine={false}
-                    domain={[0, (max: number) => Math.max(max, mid ?? 0) * 1.1]} tickFormatter={(v: number) => formatNumber(v)} />
-                  <YAxis type="category" dataKey="name" width={200} tick={TICK} tickLine={false} />
-                  <Bar dataKey="be" fill={GEM_GREEN} isAnimationActive={false} />
-                  {mid !== null && <ReferenceLine x={mid} stroke={WARN} label={{ value: 'ราคากลาง', fontSize: 10, fill: WARN }} />}
-                </BarChart>
-                <p className="text-[11px] text-ink-500">แท่งที่สั้นกว่าเส้นราคากลางคือโครงการที่คุ้มทุนที่ราคากลาง</p>
+                <SectionTitle>เรียงตามโครงการ</SectionTitle>
+                <RankingTable rows={chunks[0]} />
               </div>
-            )}
-          </>
-        )}
-      </div>
-      <PageFooter generatedAt={generated_at} />
-    </section>
+              {!chartOwnPage && chart.length > 0 && <BreakEvenChart chart={chart} mid={mid} />}
+            </>
+          )}
+        </div>
+        <PageFooter generatedAt={generated_at} />
+      </section>
+      {chunks.slice(1).map((chunk, i) => (
+        <section className="inv-page" key={`rows-${i}`}>
+          <PageHeader title="ภาพรวมพอร์ต (ต่อ)" subtitle={`เรียงตามโครงการ (ต่อ) · ${orgName}`} generatedAt={generated_at} />
+          <div className="inv-grow"><RankingTable rows={chunk} /></div>
+          <PageFooter generatedAt={generated_at} />
+        </section>
+      ))}
+      {chartOwnPage && (
+        <section className="inv-page">
+          <PageHeader title="ภาพรวมพอร์ต (ต่อ)" subtitle={`ราคาคุ้มทุนต่อโครงการ · ${orgName}`} generatedAt={generated_at} />
+          <div className="inv-grow"><BreakEvenChart chart={chart} mid={mid} /></div>
+          <PageFooter generatedAt={generated_at} />
+        </section>
+      )}
+    </>
   );
 }
 
@@ -463,12 +520,13 @@ export function InvestorProjectReport() {
 export function InvestorPortfolioReport() {
   const sources = useReportSources();
   const role = useStore((s) => s.currentUser.role);
+  const orgName = useStore((s) => s.organization.name);
   const data = useMemo(() => buildPortfolioReport(sources), [sources]);
 
   if (role === 'verifier') return <Notice>{NO_ACCESS}</Notice>;
   return (
     <ReportShell backTo="/rec-roi">
-      <PortfolioOverviewPage data={data} assumptions={sources.assumptions} />
+      <PortfolioOverview data={data} assumptions={sources.assumptions} orgName={orgName} />
       {data.projects.map((p) => (
         <Fragment key={p.project.id}>
           <MoneyPage data={p} assumptions={sources.assumptions} />

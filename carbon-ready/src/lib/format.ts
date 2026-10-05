@@ -14,3 +14,9 @@ export function formatBytes(bytes: number): string {
   if (bytes < 1024 * 1024) return `${formatNumber(bytes / 1024, 0)} KB`;
   return `${formatNumber(bytes / (1024 * 1024), 1)} MB`;
 }
+
+/** YYYY-MM-DD of an instant in the viewer's local time zone (the report date a reader expects, not UTC's). */
+export function localIsoDate(iso: string): string {
+  const d = new Date(iso);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+}

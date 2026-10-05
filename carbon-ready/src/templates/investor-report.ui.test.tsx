@@ -4,7 +4,8 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { useStore } from '../store';
 import { seedDemo } from '../test/demoFixtures';
 import { InvestorPortfolioReport, InvestorProjectReport } from './InvestorReport';
-import type { MonitoringRecord } from '../types';
+import type { MonitoringRecord, Project } from '../types';
+import { localIsoDate } from '../lib/format';
 
 function daily(projectId: string, days: number, kwh: number): MonitoringRecord[] {
   const start = Date.parse('2026-01-01T00:00:00Z');
@@ -53,6 +54,12 @@ describe('single-project investor report', () => {
     expect(within(scope2).getByText(/has not and will not be submitted for any other energy attribute tracking methodology/)).toBeInTheDocument();
   });
 
+  it('the Scope 2 page also says the annual figures are estimated from partial data', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const scope2 = pages(container)[1] as HTMLElement;
+    expect(within(scope2).getByText(/ข้อมูล 92 วัน ประมาณเป็นรายปี/)).toBeInTheDocument();
+  });
+
   it('names no person as preparer', () => {
     renderAt('/reports/investor/prj-0001');
     // The provenance footer is printed on each of the 2 pages.
@@ -97,5 +104,101 @@ describe('portfolio investor report', () => {
     expect((all.length - 1) % 2).toBe(0);
     expect(all.length).toBeGreaterThanOrEqual(3);
     expect(all[0]).toHaveTextContent(/Pune Rooftop Phase 1/);
+  });
+});
+
+describe('portfolio overview header and partial-year note', () => {
+  it('names the organisation and the data window', () => {
+    const { container } = renderAt('/reports/investor');
+    const overview = pages(container)[0] as HTMLElement;
+    expect(overview).toHaveTextContent(useStore.getState().organization.name);
+    expect(overview).toHaveTextContent(/ข้อมูล \d{4}-\d{2}-\d{2} – \d{4}-\d{2}-\d{2}/);
+  });
+
+  it('flags how many projects use less than a full year of data', () => {
+    const { container } = renderAt('/reports/investor');
+    expect(within(pages(container)[0] as HTMLElement)
+      .getByText(/^\d+ จาก \d+ โครงการใช้ข้อมูลไม่ครบปี — ตัวเลขรายปีประมาณจากข้อมูลที่มี$/)).toBeInTheDocument();
+  });
+
+  it('the plain demo portfolio overview stays on one page', () => {
+    const { container } = renderAt('/reports/investor');
+    const all = [...pages(container)];
+    const firstProject = all.findIndex((p) => p.querySelector('h1')?.textContent?.startsWith('การเงิน REC'));
+    expect(firstProject).toBe(1);
+  });
+});
+
+describe('portfolio overview pagination', () => {
+  /** Replace the portfolio with n Thai solar clones of prj-0001 (92 days of data each). */
+  function clones(n: number) {
+    useStore.setState((s) => {
+      const base = s.projects.find((p) => p.id === 'prj-0001') as Project;
+      const list = Array.from({ length: n }, (_, i): Project => ({
+        ...base, id: `clone-${String(i).padStart(2, '0')}`, name: `Clone Solar ${String(i).padStart(2, '0')}`,
+      }));
+      return {
+        projects: list,
+        records: list.flatMap((p) => daily(p.id, 92, 100)),
+        pdds: s.pdds.flatMap((d) => (d.project_id === 'prj-0001'
+          ? list.map((p) => ({ ...d, id: `${d.id}-${p.id}`, project_id: p.id })) : [])),
+      };
+    });
+  }
+  const overviewPages = (c: HTMLElement) => {
+    const all = [...pages(c)] as HTMLElement[];
+    const first = all.findIndex((p) => p.querySelector('h1')?.textContent?.startsWith('การเงิน REC'));
+    return all.slice(0, first);
+  };
+  const rankedNames = (ov: HTMLElement[]) =>
+    ov.flatMap((p) => [...p.querySelectorAll('td')].map((td) => td.textContent ?? '').filter((t) => t.startsWith('Clone Solar')));
+
+  it('20 projects: 12 rows, a continuation, then the chart on its own page', () => {
+    clones(20);
+    const { container } = renderAt('/reports/investor');
+    const ov = overviewPages(container);
+    expect(ov).toHaveLength(3);
+    expect(ov[0]).toHaveTextContent('ภาพรวมพอร์ต · รายงานนักลงทุน');
+    expect(ov[1]).toHaveTextContent('ภาพรวมพอร์ต (ต่อ)');
+    expect(ov[2]).toHaveTextContent('ภาพรวมพอร์ต (ต่อ)');
+    const names = rankedNames(ov);
+    expect(names).toHaveLength(20);
+    expect(new Set(names).size).toBe(20);
+    expect(ov[0].querySelectorAll('tbody tr')).toHaveLength(12);
+    expect(ov[1].querySelectorAll('tbody tr')).toHaveLength(8);
+    expect(pages(container)).toHaveLength(3 + 40);
+  });
+
+  it('40 projects: 12 + 18 + 10 rows over three table pages, then the chart page', () => {
+    clones(40);
+    const { container } = renderAt('/reports/investor');
+    const ov = overviewPages(container);
+    expect(ov).toHaveLength(4);
+    expect(ov.slice(0, 3).map((p) => p.querySelectorAll('tbody tr').length)).toEqual([12, 18, 10]);
+    expect(new Set(rankedNames(ov)).size).toBe(40);
+  });
+
+  it('8 projects: table and chart share the single overview page', () => {
+    clones(8);
+    const { container } = renderAt('/reports/investor');
+    expect(overviewPages(container)).toHaveLength(1);
+    expect(pages(container)).toHaveLength(1 + 16);
+  });
+
+  it('9 projects: the chart moves to its own page', () => {
+    clones(9);
+    const { container } = renderAt('/reports/investor');
+    expect(overviewPages(container)).toHaveLength(2);
+  });
+});
+
+describe('local report date', () => {
+  it('formats the local calendar date, not the UTC one', () => {
+    const iso = '2026-10-05T18:30:00.000Z';
+    const d = new Date(iso);
+    const local = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+    expect(localIsoDate(iso)).toBe(local);
+    // Asia/Bangkok (UTC+7): 18:30Z is already the next day.
+    if (d.getTimezoneOffset() === -420) expect(localIsoDate(iso)).toBe('2026-10-06');
   });
 });
