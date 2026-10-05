@@ -13,6 +13,6 @@ export function TR({ children, className, hover }: { children: ReactNode; classN
 export function TH({ children, className }: { children: ReactNode; className?: string }) {
   return <th className={clsx('bg-surface-sunk px-5 py-3 text-left font-medium', className)}>{children}</th>;
 }
-export function TD({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={clsx('px-5 py-3 text-ink-secondary', className)}>{children}</td>;
+export function TD({ children, className, colSpan }: { children: ReactNode; className?: string; colSpan?: number }) {
+  return <td colSpan={colSpan} className={clsx('px-5 py-3 text-ink-secondary', className)}>{children}</td>;
 }

@@ -20,6 +20,7 @@ const Verifications = lazy(() => import('./pages/Verifications').then((module) =
 const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then((module) => ({ default: module.ReviewDetail })));
 const RecIssuance = lazy(() => import('./pages/RecIssuance').then((module) => ({ default: module.RecIssuance })));
 const RecIssueOfficialForm = lazy(() => import('./templates/RecIssueOfficialForm').then((module) => ({ default: module.RecIssueOfficialForm })));
+const RecRoi = lazy(() => import('./pages/RecRoi').then((module) => ({ default: module.RecRoi })));
 const Guardian = lazy(() => import('./pages/Guardian').then((module) => ({ default: module.Guardian })));
 const Methodologies = lazy(() => import('./pages/Methodologies').then((module) => ({ default: module.Methodologies })));
 const Registration = lazy(() => import('./pages/Registration').then((module) => ({ default: module.Registration })));
@@ -65,6 +66,7 @@ export default function App() {
             <Route path="/verifications/:id" element={<ReviewDetail />} />
             <Route path="/rec-issuance" element={<RecIssuance />} />
             <Route path="/rec-issuance/:id/official" element={<RecIssueOfficialForm />} />
+            <Route path="/rec-roi" element={<RecRoi />} />
             <Route path="/guardian" element={<Guardian />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
