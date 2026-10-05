@@ -360,7 +360,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
             <li>Fee Structure I-REC(E) 2026 — FN-01 {REC_FEES.version}</li>
             <li>Evident SF-04 Issue Request v1.2.1</li>
             {factor && <li>{factor.source_label} · {factor.source_url}</li>}
-            <li>Residual mix — ตัวอย่างว่าตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — {RESIDUAL_MIX_URL}</li>
+            <li>Residual mix — ตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — {RESIDUAL_MIX_URL}</li>
             <li>GHG Protocol Scope 2 Guidance (market-based method)</li>
           </ul>
         </div>

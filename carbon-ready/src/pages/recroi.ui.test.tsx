@@ -114,6 +114,7 @@ describe('/rec-roi portfolio page', () => {
     expect(screen.queryByLabelText(/ราคากลาง/)).toBeNull();
     expect(screen.queryByRole('button', { name: /บันทึกสมมติฐาน/ })).toBeNull();
     expect(screen.queryByDisplayValue('25')).toBeNull();
+    expect(screen.queryByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toBeNull();
   });
 
   it('saves assumptions from the form (demo mode)', async () => {
@@ -366,6 +367,7 @@ describe('ProjectDetail — REC ROI tab', () => {
   it('non-electricity projects say REC does not apply', () => {
     renderProject('prj-0006', '?tab=rec-roi'); // forestry
     expect(screen.getByText(/REC ใช้กับโปรเจกต์ผลิตไฟฟ้าเท่านั้น/)).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toBeNull();
   });
 
   it('without kWh data it links to Upload', () => {
@@ -373,6 +375,7 @@ describe('ProjectDetail — REC ROI tab', () => {
     renderProject('prj-0001', '?tab=rec-roi');
     const msg = screen.getByText(/ยังไม่มีข้อมูลการผลิต/);
     expect(within(msg).getByRole('link', { name: 'Upload Data' })).toHaveAttribute('href', '/upload');
+    expect(screen.queryByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toBeNull();
   });
 
   it('is reachable by clicking the tab', () => {

@@ -115,7 +115,7 @@ describe('honest copy, structure and states', () => {
     expect(within(scope2).getByText(/claim ไฟสะอาดได้สูงสุด [\d.,]+ MWh\/ปี เมื่อผู้ใช้ไฟ redeem และเข้าเกณฑ์ market-based \/ RE100 ของผู้ใช้/)).toBeInTheDocument();
     expect(within(scope2).getByText('REC ที่ redeem นำไปนับในเป้า RE100 ได้ตามเกณฑ์ของ RE100')).toBeInTheDocument();
     expect(within(scope2).getByText(/ยังไม่พบค่า residual mix ที่เผยแพร่อย่างเป็นทางการสำหรับไทย/)).toBeInTheDocument();
-    expect(within(scope2).getByText(/Residual mix — ตัวอย่างว่าตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — https:\/\/greencalculus\.com\/glossary\/residual-mix\//)).toBeInTheDocument();
+    expect(within(scope2).getByText(/Residual mix — ตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — https:\/\/greencalculus\.com\/glossary\/residual-mix\//)).toBeInTheDocument();
     expect(within(scope2).getAllByText(/TGO \(ข่าว Nation Thailand 2025-11-30\)/).length).toBeGreaterThanOrEqual(1);
   });
 
