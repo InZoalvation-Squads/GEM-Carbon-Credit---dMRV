@@ -270,13 +270,27 @@ export type RecIrrUplift =
       without: { irr_pct: number | null; payback_years: number | null };
       with: { irr_pct: number | null; payback_years: number | null };
     }
-  | { status: 'missing_investment' | 'missing_price' | 'no_path' };
+  | { status: 'missing_investment' | 'missing_price' | 'no_path' | 'missing_generation' };
+
+/**
+ * Net REC cash flow for operating year `y` at `generationKwh`: MWh × (price
+ * net of the platform fee − issuance fee) minus that year's lump costs.
+ */
+export function recExtraBenefit(
+  path: RecPath, inputs: RecProjectInputs, a: RecRoiAssumptions, price: number,
+): (year: number, generationKwh: number) => number {
+  const fee = feeFraction(path, a);
+  const issuance = REC_FEES.issuance_thb_per_mwh[inputs.issuance_type];
+  return (y, gen) => (gen / 1000) * (price * (1 - fee) - issuance) - yearFixedCostThb(path, y, inputs, a);
+}
 
 /**
  * Runs the PEA 25-year cash flow twice — plain, and with net REC revenue on
  * the given path at the MID price. Year-1 generation is the measured annual
  * figure (never the kWp estimate); later years degrade exactly as electricity
  * does, and the registration/renewal/account lumps recur over the plant life.
+ * Lumps are discounted as year-end flows like O&M (consistent with the PEA
+ * sheet), so the "with" IRR is marginally optimistic.
  */
 export function computeIrrUplift(args: {
   project: Project;
@@ -292,6 +306,11 @@ export function computeIrrUplift(args: {
   const price = a.price_mid_thb;
   if (price === null) return { status: 'missing_price' };
   if (path === null) return { status: 'no_path' };
+  // A path whose own inputs are absent must not run on silent zeros.
+  if (path === 'own' && !hasFx(a)) return { status: 'no_path' };
+  if (path === 'platform' && a.platform_fee_pct === null) return { status: 'no_path' };
+  // Measured generation only — otherwise year1GenerationKwh falls back to the kWp estimate.
+  if (!(inputs.annual_mwh > 0)) return { status: 'missing_generation' };
 
   const sectionData: Record<string, unknown> = {
     investment_mthb,
@@ -301,12 +320,8 @@ export function computeIrrUplift(args: {
     if (args.pddSectionData[k] !== undefined && args.pddSectionData[k] !== '') sectionData[k] = args.pddSectionData[k];
   }
   const ctx: ComputeContext = { project: args.project, factors: args.factors, sectionData };
-  const fee = feeFraction(path, a);
-  const issuance = REC_FEES.issuance_thb_per_mwh[inputs.issuance_type];
-
   const without = computeFinancialTable(ctx);
-  const withRec = computeFinancialTable(ctx, (y, gen) =>
-    (gen / 1000) * (price * (1 - fee) - issuance) - yearFixedCostThb(path, y, inputs, a));
+  const withRec = computeFinancialTable(ctx, recExtraBenefit(path, inputs, a, price));
   if (!without || !withRec) return { status: 'missing_investment' };
 
   return {

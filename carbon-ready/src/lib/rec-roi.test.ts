@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import type { MonitoringRecord, Project } from '../types';
-import { annualMwh, computeRecRoi, computeIrrUplift, yearFixedCostThb, validateRecRoiSettings, EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions, type RecProjectInputs } from './rec-roi';
+import { annualMwh, computeRecRoi, computeIrrUplift, recExtraBenefit, yearFixedCostThb, validateRecRoiSettings, EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions, type RecProjectInputs } from './rec-roi';
 
 /** `days` consecutive daily records starting at `from`, each `kwh`. */
 function daily(from: string, days: number, kwh: number, extra: Partial<MonitoringRecord> = {}): MonitoringRecord[] {
@@ -253,5 +253,30 @@ describe('computeIrrUplift — solar project IRR without vs with REC', () => {
     expect(computeIrrUplift({ ...base, investment_mthb: null })).toEqual({ status: 'missing_investment' });
     expect(computeIrrUplift({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } })).toEqual({ status: 'missing_price' });
     expect(computeIrrUplift({ ...base, path: null })).toEqual({ status: 'no_path' });
+  });
+
+  it('never falls back to the kWp estimate when there is no measured generation', () => {
+    expect(computeIrrUplift({ ...base, inputs: { ...INPUTS, annual_mwh: 0 } })).toEqual({ status: 'missing_generation' });
+  });
+
+  it('a path whose own inputs are absent is not computed with silent zeros', () => {
+    expect(computeIrrUplift({ ...base, path: 'own', assumptions: { ...ASSUME, eur_thb: null } })).toEqual({ status: 'no_path' });
+    expect(computeIrrUplift({ ...base, path: 'own', assumptions: { ...ASSUME, eur_thb: 0 } })).toEqual({ status: 'no_path' });
+    expect(computeIrrUplift({ ...base, path: 'platform', assumptions: { ...ASSUME, platform_fee_pct: null } })).toEqual({ status: 'no_path' });
+  });
+});
+
+describe('recExtraBenefit — net REC cash flow per operating year', () => {
+  const a: RecRoiAssumptions = { ...ASSUME, platform_fee_pct: 0 };
+  const f = recExtraBenefit('platform', INPUTS, a, 25);
+
+  it('year 1 = MWh × (price − issuance) − registration', () => {
+    expect(f(1, 700_000)).toBeCloseTo(700 * (25 - 0.95) - 3_800, 6); // 13,035
+  });
+  it('year 6 carries the 40% renewal instead of the registration', () => {
+    expect(f(6, 700_000)).toBeCloseTo(700 * (25 - 0.95) - 1_520, 6); // 15,315
+  });
+  it('a year with no lump cost is pure margin', () => {
+    expect(f(2, 700_000)).toBeCloseTo(700 * 24.05, 6);
   });
 });
