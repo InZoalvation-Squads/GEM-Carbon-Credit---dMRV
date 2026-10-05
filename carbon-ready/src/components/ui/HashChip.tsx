@@ -17,12 +17,12 @@ export function HashChip({ value, className }: { value: string; className?: stri
         setCopied(true);
         setTimeout(() => setCopied(false), 1500);
       }}
-      className={`inline-flex max-w-full items-center gap-1 rounded-md bg-ink-50 px-1.5 py-0.5 font-mono text-[11px] text-ink-600 transition-colors hover:bg-ink-100 ${className ?? ''}`}
+      className={`inline-flex max-w-full items-center gap-1 rounded-md min-h-6 min-w-6 bg-surface-sunk px-2 py-1 font-mono text-xs text-ink-secondary transition-colors hover:bg-petrol-100 ${className ?? ''}`}
     >
       <span className="truncate">{short}</span>
       {copied
-        ? <Check size={11} className="shrink-0 text-brand-600" />
-        : <Copy size={11} className="shrink-0 text-ink-400" />}
+        ? <Check size={14} aria-hidden className="shrink-0 text-petrol-600" />
+        : <Copy size={14} aria-hidden className="shrink-0 text-ink-meta" />}
     </button>
   );
 }

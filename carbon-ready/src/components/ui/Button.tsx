@@ -4,49 +4,29 @@ import clsx from 'clsx';
 
 type Variant = 'primary' | 'secondary' | 'ghost' | 'danger';
 type Size = 'sm' | 'md' | 'lg';
-
 interface Props extends ButtonHTMLAttributes<HTMLButtonElement> {
   variant?: Variant;
   size?: Size;
   loading?: boolean;
 }
-
 const variants: Record<Variant, string> = {
-  primary:
-    'bg-brand-gradient text-white shadow-[0_1px_2px_rgba(6,78,59,0.25)] hover:shadow-glow hover:brightness-[1.03] active:brightness-95',
-  secondary:
-    'bg-white border border-ink-200 text-ink-800 shadow-xs hover:bg-ink-50 hover:border-ink-300 active:bg-ink-100',
-  ghost:
-    'bg-transparent text-ink-600 hover:bg-ink-100 hover:text-ink-900 active:bg-ink-200/60',
-  danger:
-    'bg-red-600 text-white shadow-[0_1px_2px_rgba(127,29,29,0.3)] hover:bg-red-700 hover:shadow-[0_8px_24px_-8px_rgba(220,38,38,0.45)] active:bg-red-800',
+  primary: 'bg-petrol-700 text-on-petrol hover:bg-petrol-800 active:bg-petrol-900',
+  secondary: 'border border-rule-strong bg-surface text-ink hover:bg-petrol-50',
+  ghost: 'bg-transparent text-petrol-600 hover:bg-petrol-50',
+  danger: 'bg-state-rejected text-on-petrol hover:bg-state-rejected/90',
 };
-
 const sizes: Record<Size, string> = {
-  sm: 'h-8 px-3 text-[13px] gap-1.5 rounded-lg',
-  md: 'h-10 px-4 text-sm gap-2 rounded-lg',
-  lg: 'h-11 px-5 text-[15px] gap-2 rounded-xl',
+  sm: 'min-h-8 min-w-8 px-3 text-sm gap-1.5',
+  md: 'min-h-10 min-w-10 px-4 text-sm gap-2',
+  lg: 'min-h-11 min-w-11 px-5 text-base gap-2',
 };
-
 export const Button = forwardRef<HTMLButtonElement, Props>(function Button(
-  { variant = 'primary', size = 'md', loading = false, className, children, disabled, ...rest },
-  ref,
+  { variant = 'primary', size = 'md', loading = false, className, children, disabled, ...rest }, ref,
 ) {
   return (
-    <button
-      ref={ref}
-      disabled={disabled || loading}
-      className={clsx(
-        'relative inline-flex items-center justify-center font-medium select-none',
-        'transition-[transform,box-shadow,background-color,filter] duration-150 ease-out',
-        'active:scale-[0.98] disabled:opacity-50 disabled:cursor-not-allowed disabled:active:scale-100 disabled:shadow-none',
-        variants[variant],
-        sizes[size],
-        className,
-      )}
-      {...rest}
-    >
-      {loading && <Loader2 className="animate-spin" size={size === 'sm' ? 14 : 16} aria-hidden />}
+    <button ref={ref} disabled={disabled || loading} aria-busy={loading || undefined}
+      className={clsx('inline-flex items-center justify-center rounded-sheet font-medium select-none transition-colors duration-150 focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-petrol-600 disabled:opacity-50 disabled:cursor-not-allowed', variants[variant], sizes[size], className)} {...rest}>
+      {loading && <Loader2 className="animate-spin motion-reduce:animate-none" size={16} aria-hidden />}
       {children}
     </button>
   );

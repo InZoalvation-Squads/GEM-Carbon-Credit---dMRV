@@ -1,77 +1,57 @@
-import { FileSpreadsheet, FileText, Image as ImageIcon } from 'lucide-react';
+import { FileSpreadsheet, FileText, Image as ImageIcon, Link2 } from 'lucide-react';
 import clsx from 'clsx';
-import { Badge } from './Badge';
+import { Badge, type Tone } from './Badge';
 import { CATEGORY_LABEL, STATE_LABEL } from '../../lib/labels';
-import type { EvidenceCategory, EvidenceStatus, FileKind, VerificationState, PddState, RecIssueState } from '../../types';
+import type { EvidenceCategory, EvidenceStatus, FileKind, PddState, RecIssueState } from '../../types';
 
-type Tone = 'green' | 'amber' | 'red' | 'gray' | 'blue' | 'violet';
-
-const stateTone: Record<VerificationState, Tone> = {
-  draft: 'gray',
-  submitted: 'blue',
-  under_review: 'violet',
-  revision_required: 'amber',
-  approved: 'green',
-  rejected: 'red',
+// One vocabulary for project, verification, PDD, REC and chain record states.
+export const STATUS_STYLES = {
+  draft: 'border-rule-strong bg-surface text-ink-secondary',
+  submitted: 'border-state-review/30 bg-state-review/10 text-state-review',
+  under_review: 'border-state-review/30 bg-state-review/10 text-state-review',
+  under_validation: 'border-state-review/30 bg-state-review/10 text-state-review',
+  revision_required: 'border-state-revision/30 bg-state-revision/5 text-state-revision',
+  approved: 'border-petrol-700 bg-petrol-700 text-on-petrol',
+  active: 'border-petrol-700 bg-petrol-700 text-on-petrol',
+  registered: 'border-petrol-700 bg-petrol-700 text-on-petrol',
+  issued: 'border-petrol-700 bg-petrol-700 text-on-petrol',
+  anchored: 'border-lime-400 bg-lime-400 text-petrol-800',
+  verified: 'border-lime-400 bg-lime-400 text-petrol-800',
+  rejected: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
+  suspended: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
+  archived: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
+  superseded: 'border-rule-strong bg-surface text-ink-secondary',
+} as const;
+export type LedgerState = keyof typeof STATUS_STYLES;
+const labels: Record<LedgerState, string> = {
+  ...STATE_LABEL, active: 'Active', suspended: 'Suspended', archived: 'Archived',
+  anchored: 'Anchored', verified: 'Verified', under_validation: 'Under Validation',
+  registered: 'Registered', issued: 'Issued', superseded: 'Superseded',
 };
-
-export function StatusBadge({ state }: { state: VerificationState }) {
-  return <Badge tone={stateTone[state]}>{STATE_LABEL[state]}</Badge>;
+export function StatusBadge({ state, label, className }: { state: LedgerState; label?: string; className?: string }) {
+  return <span className={clsx('inline-flex items-center gap-1.5 rounded-sheet border px-2 py-0.5 text-xs font-medium', STATUS_STYLES[state], className)}>
+    {(state === 'anchored' || state === 'verified') && <Link2 size={14} aria-hidden />}
+    {label ?? labels[state]}
+  </span>;
 }
-
 const categoryTone: Record<EvidenceCategory, Tone> = {
-  meter_reading: 'green',
-  utility_bill: 'blue',
-  commissioning_report: 'violet',
-  site_photo: 'amber',
-  maintenance_report: 'amber',
-  supporting_evidence: 'gray',
-  verification_report: 'violet',
+  meter_reading: 'green', utility_bill: 'blue', commissioning_report: 'violet',
+  site_photo: 'amber', maintenance_report: 'amber', supporting_evidence: 'gray', verification_report: 'violet',
 };
-
 export function CategoryChip({ category }: { category: EvidenceCategory }) {
   return <Badge tone={categoryTone[category]}>{CATEGORY_LABEL[category]}</Badge>;
 }
-
 export function FileKindIcon({ kind, className }: { kind: FileKind; className?: string }) {
   const cls = clsx('shrink-0', className);
-  if (kind === 'pdf') return <FileText size={16} className={clsx(cls, 'text-red-500')} />;
-  if (kind === 'xlsx') return <FileSpreadsheet size={16} className={clsx(cls, 'text-brand-600')} />;
-  return <ImageIcon size={16} className={clsx(cls, 'text-sky-500')} />;
+  if (kind === 'pdf') return <FileText size={16} aria-hidden className={clsx(cls, 'text-state-rejected')} />;
+  if (kind === 'xlsx') return <FileSpreadsheet size={16} aria-hidden className={clsx(cls, 'text-petrol-600')} />;
+  return <ImageIcon size={16} aria-hidden className={clsx(cls, 'text-state-review')} />;
 }
-
-const pddStateTone: Record<PddState, Tone> = {
-  draft: 'gray', submitted: 'blue', under_validation: 'violet',
-  revision_required: 'amber', registered: 'green', rejected: 'red',
-};
-const pddStateLabel: Record<PddState, string> = {
-  draft: 'Draft', submitted: 'Submitted', under_validation: 'Under Validation',
-  revision_required: 'Revision Required', registered: 'Registered', rejected: 'Rejected',
-};
-export function PddStatusBadge({ state }: { state: PddState }) {
-  return <Badge tone={pddStateTone[state]}>{pddStateLabel[state]}</Badge>;
-}
-
-const recIssueTone: Record<RecIssueState, Tone> = {
-  draft: 'gray', submitted: 'blue', issued: 'green', rejected: 'red',
-};
-const REC_ISSUE_LABEL: Record<RecIssueState, string> = {
-  draft: 'Draft', submitted: 'Submitted', issued: 'Issued', rejected: 'Rejected',
-};
-export function RecIssueStatusBadge({ state }: { state: RecIssueState }) {
-  return <Badge tone={recIssueTone[state]}>{REC_ISSUE_LABEL[state]}</Badge>;
-}
-
+export function PddStatusBadge({ state }: { state: PddState }) { return <StatusBadge state={state} />; }
+export function RecIssueStatusBadge({ state }: { state: RecIssueState }) { return <StatusBadge state={state} />; }
 export function EvidenceStatusDot({ status }: { status: EvidenceStatus }) {
-  const map: Record<EvidenceStatus, string> = {
-    active: 'bg-brand-500',
-    superseded: 'bg-ink-300',
-    archived: 'bg-amber-400',
-  };
-  return (
-    <span className="inline-flex items-center gap-1.5 text-xs text-ink-500 capitalize">
-      <span className={clsx('w-1.5 h-1.5 rounded-full', map[status])} />
-      {status}
-    </span>
-  );
+  return <span className="inline-flex items-center gap-1.5 text-xs capitalize text-ink-secondary">
+    <span aria-hidden className={clsx('h-1.5 w-1.5 rounded-full', status === 'active' ? 'bg-petrol-700' : status === 'archived' ? 'bg-state-rejected' : 'bg-ink-meta')} />
+    {status}
+  </span>;
 }

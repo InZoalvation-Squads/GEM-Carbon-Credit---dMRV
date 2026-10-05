@@ -1,5 +1,6 @@
-import { Outlet, useLocation } from 'react-router-dom';
-import { useEffect, useState } from 'react';
+import { Outlet } from 'react-router-dom';
+import { Suspense, useEffect, useState } from 'react';
+import { RouteSkeleton } from '../components/ui/RouteSkeleton';
 import { Sidebar } from '../components/layout/Sidebar';
 import { TopBar } from '../components/layout/TopBar';
 import { Toaster } from '../components/layout/Toast';
@@ -10,7 +11,6 @@ const REFRESH_MS = Number(import.meta.env.VITE_REFRESH_MS ?? 15_000);
 
 export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const location = useLocation();
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const refreshFromServer = useStore((s) => s.refreshFromServer);
 
@@ -38,13 +38,18 @@ export function AppShell() {
   }, [isAuthenticated, refreshFromServer]);
   return (
     <div className="flex h-full flex-col">
+      <a href="#content" className="skip-link" onClick={() => document.getElementById('content')?.focus()}>Skip to content</a>
       <Toaster />
-      <TopBar onOpenSidebar={() => setSidebarOpen((v) => !v)} />
+      <TopBar sidebarOpen={sidebarOpen} onOpenSidebar={() => setSidebarOpen((v) => !v)} />
       <div className="flex flex-1 min-h-0">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main className="flex-1 overflow-y-auto bg-grid-faint [background-size:32px_32px] p-4 md:p-8 print:overflow-visible print:bg-none print:p-0">
-          <div key={location.pathname} className="max-w-[1440px] mx-auto animate-fade-in-up">
-            <Outlet />
+        <main id="content" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto bg-ground p-4 md:p-8 print:overflow-visible print:p-0">
+          <div className="mx-auto grid max-w-[1440px] grid-cols-12 gap-6">
+            <div className="col-span-12 min-w-0">
+              <Suspense fallback={<RouteSkeleton />}>
+                <Outlet />
+              </Suspense>
+            </div>
           </div>
         </main>
       </div>

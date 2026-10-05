@@ -29,7 +29,6 @@ export function Dashboard() {
   return (
     <div>
       <PageHeader
-        eyebrow="Portfolio Overview"
         title="Dashboard"
         subtitle="Realtime overview of your solar rooftop portfolio"
       />

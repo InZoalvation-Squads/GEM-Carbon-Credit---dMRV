@@ -1,7 +1,7 @@
-import type { ComponentType } from 'react';
+import { lazy, type ComponentType } from 'react';
 import type { DocumentTemplate } from '../types';
-import { TverSF001Pdd } from './TverSF001Pdd';
-import { EvidentSF02 } from './EvidentSF02';
+const TverSF001Pdd = lazy(() => import('./TverSF001Pdd').then((module) => ({ default: module.TverSF001Pdd })));
+const EvidentSF02 = lazy(() => import('./EvidentSF02').then((module) => ({ default: module.EvidentSF02 })));
 
 export interface OfficialFormMeta {
   component: ComponentType<{ pddId?: string }>;

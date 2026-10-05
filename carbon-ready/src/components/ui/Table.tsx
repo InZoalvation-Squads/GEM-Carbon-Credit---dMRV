@@ -1,39 +1,18 @@
 import { ReactNode } from 'react';
 import clsx from 'clsx';
-
 export function Table({ children, className }: { children: ReactNode; className?: string }) {
-  return (
-    <div className={clsx('overflow-x-auto', className)}>
-      <table className="w-full text-sm border-separate border-spacing-0">{children}</table>
-    </div>
-  );
+  return <div className={clsx('max-h-[70vh] overflow-auto', className)}><table className="w-full border-separate border-spacing-0 text-sm tnum">{children}</table></div>;
 }
 export function THead({ children }: { children: ReactNode }) {
-  return (
-    <thead className="bg-ink-50/70 text-[11px] uppercase tracking-wider text-ink-500">
-      {children}
-    </thead>
-  );
+  return <thead className="sticky top-0 z-10 bg-surface-sunk text-sm text-ink-secondary">{children}</thead>;
 }
-export function TBody({ children }: { children: ReactNode }) {
-  return <tbody>{children}</tbody>;
-}
+export function TBody({ children }: { children: ReactNode }) { return <tbody>{children}</tbody>; }
 export function TR({ children, className, hover }: { children: ReactNode; className?: string; hover?: boolean }) {
-  return (
-    <tr
-      className={clsx(
-        '[&>td]:border-b [&>td]:border-ink-100 [&>th]:border-b [&>th]:border-ink-200',
-        hover && 'transition-colors hover:bg-brand-50/40',
-        className,
-      )}
-    >
-      {children}
-    </tr>
-  );
+  return <tr className={clsx('[&>td]:h-11 [&>td]:border-b [&>td]:border-rule [&>th]:border-b [&>th]:border-rule', hover && 'transition-colors hover:bg-petrol-50', className)}>{children}</tr>;
 }
 export function TH({ children, className }: { children: ReactNode; className?: string }) {
-  return <th className={clsx('px-5 py-3 text-left font-semibold', className)}>{children}</th>;
+  return <th className={clsx('bg-surface-sunk px-5 py-3 text-left font-medium', className)}>{children}</th>;
 }
 export function TD({ children, className }: { children: ReactNode; className?: string }) {
-  return <td className={clsx('px-5 py-3 text-ink-700', className)}>{children}</td>;
+  return <td className={clsx('px-5 py-3 text-ink-secondary', className)}>{children}</td>;
 }

@@ -1,109 +1,55 @@
 import type { Config } from 'tailwindcss';
 
+// RGB companions retain Tailwind opacity modifiers for existing page classes.
+const token = (name: string) => `rgb(var(--${name}-rgb) / <alpha-value>)`;
+const petrol = {
+  50: token('petrol-50'), 100: token('petrol-100'),
+  600: token('petrol-600'), 700: token('petrol-700'),
+  800: token('petrol-800'), 900: token('petrol-900'), 950: token('petrol-950'),
+};
+
 export default {
   content: ['./index.html', './src/**/*.{ts,tsx}'],
   theme: {
     extend: {
       colors: {
-        brand: {
-          50:  '#ecfdf5',
-          100: '#d1fae5',
-          200: '#a7f3d0',
-          300: '#6ee7b7',
-          400: '#34d399',
-          500: '#10b981',
-          600: '#059669',
-          700: '#047857',
-          800: '#065f46',
-          900: '#064e3b',
-        },
+        petrol: { ...petrol, 400: petrol[600], 500: petrol[600] },
+        lime: { 300: token('lime-300'), 400: token('lime-400'), 500: token('lime-ink'), ink: token('lime-ink') },
+        ground: token('ground'), surface: { DEFAULT: token('surface'), sunk: token('surface-sunk') },
+        rule: { DEFAULT: token('rule'), strong: token('rule-strong') },
+        'on-petrol': { DEFAULT: token('on-petrol'), 2: token('on-petrol-2') },
+        state: { review: token('state-review'), revision: token('state-revision'), rejected: token('state-rejected') },
+        // Compatibility aliases until the phase 2 page migration.
+        brand: { ...petrol, 200: petrol[100], 300: petrol[100], 400: petrol[600], 500: petrol[600] },
         ink: {
-          50:  '#f8fafc',
-          100: '#f1f5f9',
-          200: '#e2e8f0',
-          300: '#cbd5e1',
-          400: '#94a3b8',
-          500: '#64748b',
-          600: '#475569',
-          700: '#334155',
-          800: '#1e293b',
-          900: '#0f172a',
-          950: '#020617',
-        },
-        accent: {
-          50:  '#f0fdfa',
-          100: '#ccfbf1',
-          400: '#2dd4bf',
-          500: '#14b8a6',
-          600: '#0d9488',
-          700: '#0f766e',
-        },
-        // GEM Carbon Credit brand teal (extracted from BRAND.ai)
-        petrol: {
-          400: '#16586a',
-          500: '#11485a',
-          600: '#0e3e4e', // brand teal
-          700: '#0b3340',
-          800: '#082833',
-          900: '#061e26',
-        },
-        // GEM brand pastel lime (extracted from BRAND.ai)
-        lime: {
-          300: '#e2ffc4',
-          400: '#d0ffa0', // brand lime
-          500: '#b6f07e',
+          DEFAULT: token('ink'), 50: token('ground'), 100: token('surface-sunk'), 200: token('rule'),
+          300: token('ink-3'), 400: token('ink-3'), 500: token('ink-3'),
+          600: token('ink-2'), 700: token('ink-2'), 800: token('ink'), 900: token('ink'), 950: token('ink'),
+          secondary: token('ink-2'), meta: token('ink-3'),
         },
       },
       fontFamily: {
-        sans: ['Inter', 'Anuphan', 'system-ui', '-apple-system', 'Segoe UI', 'Roboto', 'sans-serif'],
+        sans: ['Inter', 'Anuphan', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],
         mono: ['"JetBrains Mono"', 'ui-monospace', 'SFMono-Regular', 'Menlo', 'monospace'],
       },
-      borderRadius: {
-        xl: '0.875rem',
-        '2xl': '1.125rem',
+      fontSize: {
+        xs: ['0.75rem', '1.5'], sm: ['0.875rem', '1.5'], base: ['1rem', '1.5'],
+        lg: ['1.25rem', '1.4'], xl: ['1.5rem', '1.35'], '2xl': ['1.875rem', '1.3'],
+        '3xl': ['1.875rem', '1.3'],
       },
-      boxShadow: {
-        xs:    '0 1px 2px 0 rgba(15,23,42,0.04)',
-        card:  '0 1px 2px 0 rgba(15,23,42,0.04), 0 1px 3px 0 rgba(15,23,42,0.05)',
-        md:    '0 4px 12px -2px rgba(15,23,42,0.08), 0 2px 4px -2px rgba(15,23,42,0.05)',
-        lg:    '0 12px 28px -6px rgba(15,23,42,0.12), 0 4px 10px -4px rgba(15,23,42,0.06)',
-        xl:    '0 24px 48px -12px rgba(15,23,42,0.22)',
-        glow:  '0 0 0 1px rgba(16,185,129,0.12), 0 8px 24px -8px rgba(16,185,129,0.35)',
-      },
-      backgroundImage: {
-        'brand-gradient': 'linear-gradient(135deg, #10b981 0%, #059669 55%, #0d9488 100%)',
-        'ink-gradient': 'linear-gradient(165deg, #0f172a 0%, #1e293b 100%)',
-        'header-gradient': 'linear-gradient(90deg, #0e3e4e 0%, #0c3744 60%, #0b3340 100%)',
-        'grid-faint':
-          'linear-gradient(to right, rgba(15,23,42,0.035) 1px, transparent 1px), linear-gradient(to bottom, rgba(15,23,42,0.035) 1px, transparent 1px)',
-      },
+      borderRadius: { sheet: '6px' },
+      boxShadow: { xs: 'none', card: 'none' },
       keyframes: {
-        'fade-in': {
-          '0%': { opacity: '0' },
-          '100%': { opacity: '1' },
-        },
-        'fade-in-up': {
-          '0%': { opacity: '0', transform: 'translateY(8px)' },
-          '100%': { opacity: '1', transform: 'translateY(0)' },
-        },
-        'scale-in': {
-          '0%': { opacity: '0', transform: 'scale(0.96)' },
-          '100%': { opacity: '1', transform: 'scale(1)' },
-        },
-        'slide-in-right': {
-          '0%': { transform: 'translateX(100%)' },
-          '100%': { transform: 'translateX(0)' },
-        },
-        shimmer: {
-          '100%': { transform: 'translateX(100%)' },
-        },
+        'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
+        'fade-in-up': { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
+        'scale-in': { '0%': { opacity: '0', transform: 'scale(0.98)' }, '100%': { opacity: '1', transform: 'scale(1)' } },
+        'slide-in-right': { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } },
       },
       animation: {
-        'fade-in': 'fade-in 0.3s ease-out both',
-        'fade-in-up': 'fade-in-up 0.45s cubic-bezier(0.22,1,0.36,1) both',
+        'fade-in': 'fade-in 0.2s ease-out both',
+        'fade-in-up': 'fade-in-up 0.25s cubic-bezier(0.22,1,0.36,1) both',
         'scale-in': 'scale-in 0.2s cubic-bezier(0.22,1,0.36,1) both',
-        'slide-in-right': 'slide-in-right 0.32s cubic-bezier(0.22,1,0.36,1) both',
-        shimmer: 'shimmer 1.6s infinite',
+        'slide-in-right': 'slide-in-right 0.25s cubic-bezier(0.22,1,0.36,1) both',
       },
     },
   },

@@ -129,6 +129,8 @@ export function Login() {
   const [loading, setLoading] = useState(false);
   const [slide, setSlide] = useState(0);
 
+  useEffect(() => { document.documentElement.lang = lang; }, [lang]);
+
   const t = STRINGS[lang];
   const active = SLIDES[slide];
   const demoMatch = DEMO_ACCOUNTS.find((a) => a.email.toLowerCase() === email.trim().toLowerCase());

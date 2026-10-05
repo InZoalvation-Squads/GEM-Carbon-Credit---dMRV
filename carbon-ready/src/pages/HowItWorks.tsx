@@ -254,7 +254,6 @@ export function HowItWorks() {
   return (
     <div className="max-w-5xl">
       <PageHeader
-        eyebrow="System Guide"
         title="ระบบทำงานอย่างไร"
         subtitle="เส้นทางของข้อมูลตั้งแต่ร่างโครงการจนเป็นคาร์บอนเครดิตบน Hedera — และวิธีที่คนนอกตรวจสอบเราได้โดยไม่ต้องเชื่อใจ"
       />

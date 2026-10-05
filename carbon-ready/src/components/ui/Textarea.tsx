@@ -1,25 +1,11 @@
-import { TextareaHTMLAttributes, forwardRef } from 'react';
+import { TextareaHTMLAttributes, forwardRef, useId } from 'react';
 import clsx from 'clsx';
-
-interface Props extends TextareaHTMLAttributes<HTMLTextAreaElement> {
-  label?: string;
-}
-export const Textarea = forwardRef<HTMLTextAreaElement, Props>(function Textarea(
-  { label, className, id, ...rest }, ref
-) {
-  return (
-    <label className="block">
-      {label && <span className="block mb-1.5 text-[13px] font-medium text-ink-700">{label}</span>}
-      <textarea
-        ref={ref} id={id ?? rest.name}
-        className={clsx(
-          'block w-full rounded-lg border border-ink-200 bg-white px-3 py-2 text-sm shadow-xs placeholder:text-ink-400',
-          'transition-colors duration-150 hover:border-ink-300',
-          'focus:outline-none focus:border-brand-500 focus:ring-4 focus:ring-brand-500/15',
-          className,
-        )}
-        {...rest}
-      />
-    </label>
-  );
+interface Props extends TextareaHTMLAttributes<HTMLTextAreaElement> { label?: string; }
+export const Textarea = forwardRef<HTMLTextAreaElement, Props>(function Textarea({ label, className, id, ...rest }, ref) {
+  const generatedId = useId();
+  const inputId = id ?? rest.name ?? generatedId;
+  return <div className="block">
+    {label && <label htmlFor={inputId} className="mb-1.5 block text-sm font-medium text-ink-secondary">{label}</label>}
+    <textarea ref={ref} id={inputId} className={clsx('block min-h-10 w-full rounded-sheet border border-rule-strong bg-surface px-3 py-2 text-sm text-ink placeholder:text-ink-meta focus:border-petrol-600 focus:outline focus:outline-2 focus:outline-offset-2 focus:outline-petrol-600', className)} {...rest} />
+  </div>;
 });

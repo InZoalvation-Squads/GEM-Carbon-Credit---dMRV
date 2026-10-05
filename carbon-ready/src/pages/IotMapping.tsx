@@ -55,7 +55,7 @@ export function IotMapping() {
   if (!serverMode()) {
     return (
       <div>
-        <PageHeader eyebrow="Measure & Report" title="IoT Mapping" />
+        <PageHeader title="IoT Mapping" />
         <Card><CardBody className="p-0">
           <EmptyState icon={<PlugZap size={32} />} title="ต้องใช้โหมด server"
             hint="หน้านี้ทำงานเมื่อ SPA เชื่อมกับ backend (ตั้งค่า VITE_API_BASE_URL)" />
@@ -147,7 +147,6 @@ export function IotMapping() {
   return (
     <div>
       <PageHeader
-        eyebrow="Measure & Report"
         title="IoT Mapping"
         subtitle="จับคู่ plant/มิเตอร์จากฐานข้อมูล IoT เข้ากับโปรเจกต์ แล้วระบบจะดึงยอดผลิตรายวันให้อัตโนมัติ"
         action={status?.enabled && (

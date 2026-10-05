@@ -57,9 +57,9 @@ describe('Evident SF-04 official form', () => {
 });
 
 describe('RecIssueOfficialForm guard', () => {
-  it('renders the form for a known id and an empty state for an unknown one', () => {
+  it('renders the form for a known id and an empty state for an unknown one', async () => {
     render(<MemoryRouter><RecIssueOfficialForm recIssueId="RIR-1000" /></MemoryRouter>);
-    expect(screen.getByText('EC-IRE-SF04')).toBeInTheDocument();
+    expect(await screen.findByText('EC-IRE-SF04')).toBeInTheDocument();
     render(<MemoryRouter><RecIssueOfficialForm recIssueId="RIR-nope" /></MemoryRouter>);
     expect(screen.getByText(/not found|ไม่พบ/i)).toBeInTheDocument();
   });

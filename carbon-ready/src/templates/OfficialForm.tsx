@@ -1,3 +1,5 @@
+import { Suspense } from 'react';
+import { RouteSkeleton } from '../components/ui/RouteSkeleton';
 import { useParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -17,5 +19,5 @@ export function OfficialForm() {
     return <EmptyState title="No official form / ไม่มีฟอร์มทางการ" hint="Methodology นี้ยังไม่มี template ฟอร์มทางการ" />;
   }
   const Renderer = OFFICIAL_FORMS[methodology.document_template].component;
-  return <Renderer pddId={pdd.id} />;
+  return <Suspense fallback={<RouteSkeleton />}><Renderer pddId={pdd.id} /></Suspense>;
 }

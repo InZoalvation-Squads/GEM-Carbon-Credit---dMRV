@@ -23,6 +23,7 @@ function renderLogin() {
 describe('Login page — GEM Carbon Credit layout', () => {
   it('renders the Thai sign-in layout by default', () => {
     renderLogin();
+    expect(document.documentElement.lang).toBe('th');
     expect(screen.getByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
     expect(screen.getByText('The Chain of Trust for Digital Carbon')).toBeInTheDocument();
     expect(screen.getByLabelText('รหัสผ่าน')).toBeInTheDocument();
@@ -34,8 +35,10 @@ describe('Login page — GEM Carbon Credit layout', () => {
   it('switches to English and back via the language pill', () => {
     renderLogin();
     fireEvent.click(screen.getByRole('button', { name: 'EN' }));
+    expect(document.documentElement.lang).toBe('en');
     expect(screen.getByRole('heading', { name: 'Sign in' })).toBeInTheDocument();
     fireEvent.click(screen.getByRole('button', { name: 'ไทย' }));
+    expect(document.documentElement.lang).toBe('th');
     expect(screen.getByRole('heading', { name: 'เข้าสู่ระบบ' })).toBeInTheDocument();
   });
 
