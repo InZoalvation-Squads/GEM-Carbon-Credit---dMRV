@@ -22,6 +22,8 @@ const ReviewDetail = lazy(routeLoaders.ReviewDetail);
 const RecIssuance = lazy(routeLoaders.RecIssuance);
 const RecIssueOfficialForm = lazy(routeLoaders.RecIssueOfficialForm);
 const RecRoi = lazy(routeLoaders.RecRoi);
+const InvestorPortfolioReport = lazy(routeLoaders.InvestorPortfolioReport);
+const InvestorProjectReport = lazy(routeLoaders.InvestorProjectReport);
 const Guardian = lazy(routeLoaders.Guardian);
 const Methodologies = lazy(routeLoaders.Methodologies);
 const Registration = lazy(routeLoaders.Registration);
@@ -73,6 +75,8 @@ export default function App() {
             <Route path="/rec-issuance" element={<RecIssuance />} />
             <Route path="/rec-issuance/:id/official" element={<RecIssueOfficialForm />} />
             <Route path="/rec-roi" element={<RecRoi />} />
+            <Route path="/reports/investor" element={<InvestorPortfolioReport />} />
+            <Route path="/reports/investor/:projectId" element={<InvestorProjectReport />} />
             <Route path="/guardian" element={<Guardian />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
             <Route path="*" element={<div className="p-8 text-ink-meta">Page not found</div>} />

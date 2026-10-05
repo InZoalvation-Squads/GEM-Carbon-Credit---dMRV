@@ -10,6 +10,8 @@ export function pageTitle(path: string): string {
   if (/^\/projects\/[^/]+$/.test(path)) return 'Project Detail';
   if (/^\/verifications\/[^/]+$/.test(path)) return 'Review Detail';
   if (/^\/validation\/[^/]+$/.test(path)) return 'Validation Detail';
+  if (path === '/reports/investor') return 'Investor Report';
+  if (/^\/reports\/investor\/[^/]+$/.test(path)) return 'Investor Report';
   const titles: Record<string, string> = {
     dashboard: 'Dashboard', 'how-it-works': 'How it works', methodologies: 'Methodologies',
     registration: 'Register Project', validation: 'Validation Queue', projects: 'Projects',

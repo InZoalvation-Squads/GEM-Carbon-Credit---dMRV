@@ -19,6 +19,8 @@ export const routeLoaders = {
   RecIssuance: once(() => import('./pages/RecIssuance').then((module) => ({ default: module.RecIssuance }))),
   RecIssueOfficialForm: once(() => import('./templates/RecIssueOfficialForm').then((module) => ({ default: module.RecIssueOfficialForm }))),
   RecRoi: once(() => import('./pages/RecRoi').then((module) => ({ default: module.RecRoi }))),
+  InvestorPortfolioReport: once(() => import('./templates/InvestorReport').then((module) => ({ default: module.InvestorPortfolioReport }))),
+  InvestorProjectReport: once(() => import('./templates/InvestorReport').then((module) => ({ default: module.InvestorProjectReport }))),
   Guardian: once(() => import('./pages/Guardian').then((module) => ({ default: module.Guardian }))),
   Methodologies: once(() => import('./pages/Methodologies').then((module) => ({ default: module.Methodologies }))),
   Registration: once(() => import('./pages/Registration').then((module) => ({ default: module.Registration }))),
