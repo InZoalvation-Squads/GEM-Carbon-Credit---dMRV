@@ -176,7 +176,15 @@ describe('hydrateFromServer', () => {
   });
 
   it('skips REC ROI slices for the verifier role (server answers 403)', async () => {
-    useStore.setState((st) => ({ currentUser: { ...st.currentUser, role: 'verifier' } }));
+    useStore.setState((st) => ({
+      currentUser: { ...st.currentUser, role: 'verifier' },
+      // stale values persisted from an earlier non-verifier session
+      recRoiSettings: { ...EMPTY_REC_ROI_SETTINGS, price_mid_thb: 25, price_source: 'quote' },
+      recRoiProjectSettings: [{
+        project_id: 'prj-0001', issuance_type: 'Normal', digital_meter_exempt: false, investment_mthb: 5,
+        updated_by: 'x', updated_at: '2026-01-01T00:00:00Z',
+      }],
+    }));
     const fetchMock = stubRoutes(HAPPY_ROUTES);
 
     await useStore.getState().hydrateFromServer();
@@ -184,5 +192,8 @@ describe('hydrateFromServer', () => {
     const urls = fetchMock.mock.calls.map(([url]) => String(url));
     expect(urls.some((u) => u.includes('/rec-roi'))).toBe(false);
     expect(useStore.getState().hydration_errors).toEqual([]);
+    // commercial data must not linger in the verifier's store
+    expect(useStore.getState().recRoiSettings).toEqual(EMPTY_REC_ROI_SETTINGS);
+    expect(useStore.getState().recRoiProjectSettings).toEqual([]);
   });
 });

@@ -318,12 +318,15 @@ export const useStore = create<AppState>()(
           ['tokens', tokensApi.list().then((tokens) => set({ tokens }))],
           ['recIssues', recIssuesApi.list().then((recIssues) => set({ recIssues }))],
         ];
-        // REC ROI endpoints 403 for the verifier role — skip them there.
+        // REC ROI endpoints 403 for the verifier role — skip them there, and drop
+        // any commercial values persisted from an earlier non-verifier session.
         if (get().currentUser.role !== 'verifier') {
           slices.push(
             ['recRoiSettings', recRoiApi.getSettings().then((recRoiSettings) => set({ recRoiSettings }))],
             ['recRoiProjectSettings', recRoiApi.listProjectSettings().then((recRoiProjectSettings) => set({ recRoiProjectSettings }))],
           );
+        } else {
+          set({ recRoiSettings: EMPTY_REC_ROI_SETTINGS, recRoiProjectSettings: [] });
         }
         if (projects) {
           const ids = projects.map((p) => p.id);

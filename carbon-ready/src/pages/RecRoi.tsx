@@ -22,6 +22,8 @@ export function RecRoi() {
   const settings = useStore((s) => s.recRoiSettings);
   const projectSettings = useStore((s) => s.recRoiProjectSettings);
 
+  const role = useStore((s) => s.currentUser.role);
+
   const rows = useMemo(() => projects
     .map((project) => evaluateProjectRecRoi({
       project, records, pdds, methodologies, factors, assumptions: settings,
@@ -30,6 +32,20 @@ export function RecRoi() {
     }))
     .filter((r) => r.eligible),
   [projects, records, pdds, methodologies, factors, settings, projectSettings, recIssues]);
+
+  // Spec §2.2: verifiers never see REC commercial data. (Hooks above run unconditionally.)
+  if (role === 'verifier') {
+    return (
+      <div>
+        <PageHeader title="REC ROI" subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) ผ่านแพลตฟอร์ม — ต่อโปรเจกต์" />
+        <Card>
+          <CardBody>
+            <p className="text-sm text-ink-secondary">หน้านี้สำหรับผู้พัฒนาโครงการและผู้ดูแลองค์กร — ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC</p>
+          </CardBody>
+        </Card>
+      </div>
+    );
+  }
 
   const totalRecs = rows.reduce((s, r) => s + (r.annual.status === 'ok' ? r.annual.annual_mwh : 0), 0);
 

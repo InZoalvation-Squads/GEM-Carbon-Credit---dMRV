@@ -98,6 +98,19 @@ describe('/rec-roi portfolio page', () => {
     expect(screen.queryByRole('row', { name: /Nan Watershed Reforestation/ })).toBeNull();
   });
 
+  it('verifier sees only a no-access message — no prices, no assumptions, no table', () => {
+    useStore.setState((s) => ({
+      currentUser: { ...s.currentUser, role: 'verifier' },
+      recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25, price_source: 'quote' },
+    }));
+    renderPage();
+    expect(screen.getByText(/ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC/)).toBeInTheDocument();
+    expect(screen.queryByRole('row', { name: /Pune Rooftop Phase 1/ })).toBeNull();
+    expect(screen.queryByLabelText(/ราคากลาง/)).toBeNull();
+    expect(screen.queryByRole('button', { name: /บันทึกสมมติฐาน/ })).toBeNull();
+    expect(screen.queryByDisplayValue('25')).toBeNull();
+  });
+
   it('saves assumptions from the form (demo mode)', async () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/ราคากลาง/), { target: { value: '25' } });
