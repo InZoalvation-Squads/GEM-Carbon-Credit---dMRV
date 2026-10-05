@@ -300,22 +300,13 @@ describe('TverSF001Pdd — reference-completeness additions', () => {
     expect(t.textContent).toContain('952,425');
   });
 
-  it('renders the PEA financial appendix with IRR and payback', () => {
-    seedOfficialData();
-    renderDoc();
-    const fin = screen.getByTestId('financial-table');
-    expect(fin).toBeInTheDocument();
-    expect(fin.textContent).toContain('30,000,000');           // investment outlay
-    expect(screen.getByTestId('financial-summary').textContent).toMatch(/ผลตอบแทน.*%/);
-    expect(screen.getByTestId('financial-summary').textContent).toMatch(/คุ้มทุน/);
-  });
-
-  it('omits the financial appendix when no investment figure exists', () => {
-    const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
-    seedOfficialData();
-    delete pdd.section_data.investment_mthb;
+  it('has no financial appendix — its inputs would be PEA assumptions, not project data', () => {
+    seedOfficialData(); // investment_mthb: 30 is set, which used to trigger the table
     renderDoc();
     expect(screen.queryByTestId('financial-table')).toBeNull();
+    expect(screen.queryByTestId('financial-summary')).toBeNull();
+    expect(screen.queryByText(/การประเมินทางด้านการเงิน/)).toBeNull();
+    expect(document.body.textContent).not.toContain('IRR');
   });
 });
 
@@ -945,8 +936,16 @@ describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
     return Array.from(list.children).map((li) => (li.firstChild?.textContent ?? '').trim());
   }
 
-  it('lists all nine numbered topics with their bullet sub-items (single mode)', () => {
+  it('single mode has no maintenance plan — the MCRU reference §4.1 carries none', () => {
     seedOfficialData();
+    renderDoc();
+    expect(screen.queryByTestId('maintenance-detail')).toBeNull();
+    expect(screen.queryByText('รายละเอียดแผนการบำรุงรักษาประจำปี')).toBeNull();
+    expect(document.body.textContent).not.toContain('ตามแผนบำรุงรักษาประจำปี');
+  });
+
+  it('lists all nine numbered topics with their bullet sub-items (aggregated mode)', () => {
+    seedBundleDetail();
     renderDoc();
     expect(screen.getByTestId('maintenance-detail').tagName).toBe('OL');
     expect(topicTexts()).toEqual(TOPICS);
@@ -957,10 +956,10 @@ describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
     expect(within(weather).getAllByRole('listitem')).toHaveLength(3);
   });
 
-  it('renders the same nine topics in aggregated mode', () => {
+  it('aggregated §4.1 narrative still points at the maintenance table', () => {
     seedBundleDetail();
     renderDoc();
-    expect(topicTexts()).toEqual(TOPICS);
+    expect(screen.getByText(/ตามแผนบำรุงรักษาประจำปี/).textContent).toMatch(/ดังตารางที่ \d/);
   });
 });
 
