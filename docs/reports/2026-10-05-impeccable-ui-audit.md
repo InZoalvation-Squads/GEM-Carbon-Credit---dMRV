@@ -62,3 +62,47 @@ The app does not express one coherent, product-specific system. The GEM brand (p
 ## Recommended next step
 
 The user chose a **full redesign** (2026-10-05). It replaces the visual world and fixes the P1/P2 items as part of the rebuild. After that: re-run `/impeccable audit`, then `/impeccable polish`.
+
+---
+
+## Re-audit after the redesign (2026-10-06, `feat/sprint-1-mvp` @ `76b956a`)
+
+The same method as the first audit: live probes across 15 authenticated routes (including the new /rec-roi), a code sweep of `carbon-ready/src`, plus the Impeccable finish review.
+
+**Visual identity.** It is the original one again. The user asked for the original fonts, colours and sidebar, so the redesign kept those from `21bf26e`. What it changed is structure, loading, accessibility and the illustrations.
+
+| # | Dimension | Before | After | What changed |
+|---|-----------|--------|-------|--------------|
+| 1 | Accessibility | 2 | 3 | Text contrast failures went from roughly 120 to 54. The remaining 54 are mostly the original emerald `brand-600` link/code text at 3.77:1. |
+| 2 | Performance | 2 | 3 | The entry chunk went from 1.2 MB to 482 kB. Routes, charts and official templates are lazy-loaded, and route chunks are prefetched on hover. |
+| 3 | Responsive | 3 | 4 | 0 overflow on 14 routes at 1920/1366/1280/390/360. Phones get compact 3-line Projects rows and a 2×2 head block with the chart in the first viewport. |
+| 4 | Theming | 1 | 3 | One palette (the original Tailwind theme). No stray emerald/teal/cyan/violet classes and a single StatusBadge map. No dark mode, but no dead toggle either. |
+| 5 | Implementation integrity | 2 | 3 | Dead controls removed and duplicated tab/chip/status code consolidated. Emoji replaced by lucide icons. The finish review resolved all 7 material fixes. |
+| **Total** | | **10/20** | **16/20** | **Acceptable → Good** |
+
+### Accessibility in detail
+
+- **Fixed:**
+  - Focus trap, initial focus and focus return in all dialogs and drawers.
+  - `aria-labelledby` on dialogs.
+  - A skip link, a per-route `document.title`, and `lang` following the Thai/English toggle.
+  - Real tabs (`tablist`/`tab`/`aria-selected`) and `aria-pressed` filters.
+  - Labels on the 6 placeholder-only controls.
+  - Persistent toast live regions and `role="alert"` errors.
+  - A pausable Login carousel that respects reduced motion.
+  - Queue rows that are links.
+  - No `ink-400`/`300` text anywhere; the remaining `ink-400` is icons only.
+- **Open:**
+  - Emerald `brand-600` (#059669) small text on white is 3.77:1, below AA. Using the in-palette `brand-700` (#047857, 5.48:1) for text only, with buttons unchanged, would fix it.
+  - The `ink-500` page subtitle on the `#f6f8fb` ground is 4.47:1.
+  - The 10/11px text kept in the original sidebar, header and table headers (21 places, down from 84).
+
+### Finish review (Impeccable)
+
+The first verdict was **fix** with 7 material items. After the batch, fixes 1 and 3–7 were resolved and fix 2 was partial. After a follow-up, fix 2 was resolved; that verdict also found one new regression (a value split from its unit at 1280px). That regression was then fixed (`76b956a`) and verified by measurement (0 of 20 figures split). It was not sent back for another review round.
+
+### Recommended next
+
+1. The `brand-700` text-only contrast tweak, which needs the user's OK because it touches the original colours.
+2. A server-mode hydration flag in the store, so data skeletons can cover first load (out of scope here because the store logic was off-limits).
+3. `/impeccable polish`.
