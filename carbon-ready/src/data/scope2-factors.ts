@@ -7,6 +7,7 @@
 export interface Scope2Factor {
   country: string;            // ISO code as locationToCountryCode returns it
   source: string;             // publishing authority
+  source_label: string;       // how the report cites it (authority + where we read the value)
   value_kg_per_kwh: number;   // kgCO2e/kWh (= tCO2e/MWh)
   effective_date: string;     // ISO date the factor applies from
   source_url: string;
@@ -15,7 +16,7 @@ export interface Scope2Factor {
 
 export const SCOPE2_FACTORS: Scope2Factor[] = [
   {
-    country: 'TH', source: 'TGO', value_kg_per_kwh: 0.475, effective_date: '2026-01-01',
+    country: 'TH', source: 'TGO', source_label: 'TGO (ข่าว Nation Thailand 2025-11-30)', value_kg_per_kwh: 0.475, effective_date: '2026-01-01',
     source_url: 'https://www.nationthailand.com/news/policy/40059019',
     note: 'TGO Scope 2 factor for purchased electricity incl. T&D losses; previous factors allowed until 2026-03-31.',
   },

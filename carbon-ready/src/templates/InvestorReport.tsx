@@ -22,8 +22,6 @@ import type { RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
 
 const SF04_QUOTE = 'warrants that the energy for which I-REC(E) certificates are being sought has not and will not be submitted for any other energy attribute tracking methodology, emissions reduction certificate, or carbon offset.';
 const NO_ACCESS = 'หน้านี้สำหรับผู้พัฒนาโครงการและผู้ดูแลองค์กร — ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC';
-/** TGO's factor is cited from the news report the factor file links to. */
-const TGO_SOURCE_LABEL = 'TGO (ข่าว Nation Thailand 2025-11-30)';
 const RESIDUAL_MIX_URL = 'https://greencalculus.com/glossary/residual-mix/';
 const GEM_GREEN = '#059669'; // brand-600, for chart fills
 const WARN = '#b45309';      // amber-700, for the reference line
@@ -118,7 +116,7 @@ const KpiStrip = ({ children }: { children: ReactNode }) => (
 );
 
 const SectionTitle = ({ children }: { children: ReactNode }) => (
-  <h2 className="mb-1.5 text-[13px] font-semibold text-ink">{children}</h2>
+  <h3 className="mb-1.5 text-[13px] font-semibold text-ink">{children}</h3>
 );
 
 const TH = ({ children, right }: { children: ReactNode; right?: boolean }) => (
@@ -292,7 +290,6 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
   const partialNote = annual.status === 'ok' && annual.partial ? ` · ข้อมูล ${annual.coverage_days} วัน ประมาณเป็นรายปี` : '';
   const net = recNetTotal(roi);
   const recPath = recommendedPath(roi);
-  const sourceLabel = factor ? (factor.source === 'TGO' ? TGO_SOURCE_LABEL : factor.source) : '';
   return (
     <section className="inv-page">
       <PageHeader title={`Scope 2 ช่วยอะไร · ${project.name}`} subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp${partialNote}`} generatedAt={generated_at} />
@@ -307,7 +304,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
               <p className="mt-1 text-ink">
                 ลด Scope 2 แบบ location-based (สมมติใช้ไฟที่ผลิตเองทั้งหมด) · {formatNumber(scope2.annual_mwh, 1)} MWh × {factor.source} {factor.value_kg_per_kwh} kgCO₂e/kWh (มีผล {factor.effective_date})
               </p>
-              <p className="text-[11px] text-ink-500">{sourceLabel} · {factor.source_url}</p>
+              <p className="text-[11px] text-ink-500">{factor.source_label} · {factor.source_url}</p>
             </>
           ) : (
             <p className="text-ink">ไม่มีค่า EF Scope 2 สำหรับช่วงข้อมูลนี้</p>
@@ -362,8 +359,8 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
           <ul className="space-y-0.5 text-[11px] text-ink-600">
             <li>Fee Structure I-REC(E) 2026 — FN-01 {REC_FEES.version}</li>
             <li>Evident SF-04 Issue Request v1.2.1</li>
-            <li>{factor ? `${sourceLabel} · ${factor.source_url}` : 'ค่า EF Scope 2 ของ TGO — ไม่มีค่าสำหรับโครงการนี้'}</li>
-            <li>Residual mix — {RESIDUAL_MIX_URL}</li>
+            {factor && <li>{factor.source_label} · {factor.source_url}</li>}
+            <li>Residual mix — ตัวอย่างว่าตลาด I-REC ในเอเชียมักไม่เผยแพร่ค่า — {RESIDUAL_MIX_URL}</li>
             <li>GHG Protocol Scope 2 Guidance (market-based method)</li>
           </ul>
         </div>
