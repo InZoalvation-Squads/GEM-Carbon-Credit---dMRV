@@ -56,11 +56,13 @@ describe('fetchEurThb', () => {
 
 describe('fetchEurThb robustness', () => {
   it('passes an abort signal and maps a timeout to an unreachable error', async () => {
+    let seenSignal: AbortSignal | null | undefined;
     const f = vi.fn(async (_u: string, init?: RequestInit) => {
-      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      seenSignal = init?.signal; // asserted below, outside fetchEurThb's try/catch
       throw new DOMException('The operation timed out.', 'TimeoutError');
     });
     const r = await fetchEurThb('tok', f as unknown as typeof fetch);
+    expect(seenSignal).toBeInstanceOf(AbortSignal);
     expect(r).toMatchObject({ available: true, rate: null });
     expect((r as { error: string }).error.startsWith('BOT API unreachable')).toBe(true);
   });
