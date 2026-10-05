@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { fetchEurThb, parseBotDailyAvg } from './bot-fx.js';
+import { botTokenFromConfig, fetchEurThb, parseBotDailyAvg } from './bot-fx.js';
+import { config as appConfig, loadConfig } from '../config.js';
 
 const BOT_FIXTURE = {
   result: {
@@ -50,5 +51,56 @@ describe('fetchEurThb', () => {
     expect(await fetchEurThb('tok', down as unknown as typeof fetch)).toEqual({
       available: true, rate: null, error: 'BOT API unreachable: ECONNREFUSED',
     });
+  });
+});
+
+describe('fetchEurThb robustness', () => {
+  it('passes an abort signal and maps a timeout to an unreachable error', async () => {
+    const f = vi.fn(async (_u: string, init?: RequestInit) => {
+      expect(init?.signal).toBeInstanceOf(AbortSignal);
+      throw new DOMException('The operation timed out.', 'TimeoutError');
+    });
+    const r = await fetchEurThb('tok', f as unknown as typeof fetch);
+    expect(r).toMatchObject({ available: true, rate: null });
+    expect((r as { error: string }).error.startsWith('BOT API unreachable')).toBe(true);
+  });
+
+  it('reports a non-JSON 200 as an unreadable response', async () => {
+    const f = vi.fn(async () => new Response('<html>gateway</html>', { status: 200 }));
+    expect(await fetchEurThb('tok', f as unknown as typeof fetch)).toEqual({
+      available: true, rate: null, error: 'BOT API returned an unreadable response',
+    });
+  });
+
+  it('reports a 200 with an unexpected shape as no EUR rate', async () => {
+    const f = vi.fn(async () => new Response(JSON.stringify({ foo: 1 }), { status: 200 }));
+    const r = await fetchEurThb('tok', f as unknown as typeof fetch);
+    expect(r).toMatchObject({ available: true, rate: null });
+    expect((r as { error: string }).error).toContain('no EUR rate');
+  });
+});
+
+describe('botTokenFromConfig', () => {
+  const base = {
+    DATABASE_URL: 'postgresql://x', JWT_SECRET: 'x'.repeat(32), BOT_API_TOKEN: 'dummy-token',
+  } as NodeJS.ProcessEnv;
+  const cfg = loadConfig(base);
+
+  it('returns the explicit config token outside tests', () => {
+    expect(botTokenFromConfig(cfg, { NODE_ENV: 'production' })).toBe('dummy-token');
+  });
+  it('is undefined for the real app config under NODE_ENV=test, even if a token is set', () => {
+    const prev = appConfig.BOT_API_TOKEN;
+    appConfig.BOT_API_TOKEN = 'dummy-token';
+    try {
+      expect(botTokenFromConfig(undefined, { NODE_ENV: 'test' })).toBeUndefined();
+      expect(botTokenFromConfig(undefined, { NODE_ENV: 'production' })).toBe('dummy-token');
+    } finally {
+      appConfig.BOT_API_TOKEN = prev;
+    }
+  });
+  it('is undefined when no token is configured', () => {
+    const noTok = loadConfig({ DATABASE_URL: 'postgresql://x', JWT_SECRET: 'x'.repeat(32) } as NodeJS.ProcessEnv);
+    expect(botTokenFromConfig(noTok, { NODE_ENV: 'production' })).toBeUndefined();
   });
 });

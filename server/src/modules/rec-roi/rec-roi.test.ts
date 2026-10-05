@@ -2,7 +2,7 @@ import { describe, it, expect, beforeAll, afterAll } from 'vitest';
 import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
-import { auth, createAdmin, createOrg, registerUser, expectValidChainTail, latestAudit } from '../../test/fixtures.js';
+import { TEST_ORG_ID, auth, createAdmin, createOrg, registerUser, expectValidChainTail, latestAudit } from '../../test/fixtures.js';
 import { seed } from '../../../prisma/seed.js';
 import { buildApp } from '../../app.js';
 
@@ -89,6 +89,19 @@ describe('rec-roi module', () => {
     expect(await prisma.recRoiSettings.count()).toBe(1);
   });
 
+  it('audit rows carry previous/new values: null then the prior serialized settings', async () => {
+    const rows = await prisma.auditLog.findMany({
+      where: { action: 'REC_ROI_SETTINGS_UPDATED', entity_id: TEST_ORG_ID },
+      orderBy: { seq: 'asc' },
+    });
+    expect(rows.length).toBeGreaterThanOrEqual(2);
+    const [first, second] = rows;
+    expect(first!.previous_value).toBeNull();
+    expect(first!.new_value).toMatchObject(VALID);
+    expect(second!.previous_value).toEqual(first!.new_value);
+    expect(second!.new_value).toMatchObject({ ...VALID, price_mid_thb: 26 });
+  });
+
   it('rejects mis-ordered prices', async () => {
     const res = await app.inject({
       method: 'PUT', url: '/api/v1/rec-roi/settings', headers: auth(esg.token),
@@ -153,6 +166,44 @@ describe('rec-roi module', () => {
       payload: { issuance_type: 'Bulk', digital_meter_exempt: false, investment_mthb: null },
     });
     expect(res.statusCode).toBe(400);
+  });
+
+  it('rejects out-of-range or malformed bodies and writes no audit row', async () => {
+    const before = await latestAudit(prisma);
+    const bad: Array<[string, string, unknown]> = [
+      ['PUT', '/api/v1/rec-roi/settings', { ...VALID, platform_fee_pct: 100 }],
+      ['PUT', '/api/v1/rec-roi/settings', { ...VALID, horizon_years: 1.5 }],
+      ['PUT', '/api/v1/rec-roi/settings', { ...VALID, surprise: 1 }],
+      ['PUT', `/api/v1/projects/${projectId}/rec-roi-setting`, { issuance_type: 'Normal', digital_meter_exempt: false, investment_mthb: 0 }],
+    ];
+    for (const [method, url, payload] of bad) {
+      const token = url.includes('/projects/') ? owner.token : esg.token;
+      const res = await app.inject({ method: method as 'PUT', url, headers: auth(token), payload: payload as object });
+      expect(res.statusCode, `${url} ${JSON.stringify(payload)}`).toBe(400);
+    }
+    const after = await latestAudit(prisma);
+    expect(after.seq).toBe(before.seq);
+  });
+
+  it("lists and reads are scoped to the caller's org", async () => {
+    await prisma.recRoiSettings.create({
+      data: { organization_id: 'org-0002', price_mid_thb: 99, price_source: 'foreign', updated_by: 'x' },
+    });
+    await prisma.recRoiProjectSetting.create({
+      data: { project_id: otherOrgProjectId, issuance_type: 'Normal', updated_by: 'x' },
+    });
+
+    const list = await app.inject({ method: 'GET', url: '/api/v1/rec-roi/project-settings', headers: auth(esg.token) });
+    expect(list.json().project_settings.map((p: { project_id: string }) => p.project_id)).toEqual([projectId]);
+
+    const settings = await app.inject({ method: 'GET', url: '/api/v1/rec-roi/settings', headers: auth(esg.token) });
+    expect(settings.json().settings.price_mid_thb).toBe(26);
+    expect(settings.json().settings.price_source).not.toBe('foreign');
+  });
+
+  it('project_owner cannot call the FX endpoint', async () => {
+    const res = await app.inject({ method: 'GET', url: '/api/v1/fx/eur-thb', headers: auth(owner.token) });
+    expect(res.statusCode).toBe(403);
   });
 
   it('FX endpoint is dormant without BOT_API_TOKEN', async () => {

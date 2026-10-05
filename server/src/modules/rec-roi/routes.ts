@@ -2,9 +2,8 @@
 // /rec-roi/…, /projects/:id/rec-roi-setting and /fx/eur-thb.
 import type { FastifyInstance } from 'fastify';
 import { z } from 'zod';
-import { config } from '../../config.js';
 import { actorFromRequest } from '../../lib/audit.js';
-import { fetchEurThb } from '../../lib/bot-fx.js';
+import { botTokenFromConfig, fetchEurThb } from '../../lib/bot-fx.js';
 import { idParams } from '../../lib/validation.js';
 import { getSettings, listProjectSettings, putProjectSetting, putSettings } from './service.js';
 
@@ -68,5 +67,5 @@ export async function recRoiRoutes(app: FastifyInstance): Promise<void> {
     return { project_setting: await putProjectSetting(app.prisma, actorFromRequest(req), id, body) };
   });
 
-  app.get('/fx/eur-thb', { preHandler: orgEditors }, async () => fetchEurThb(config.BOT_API_TOKEN));
+  app.get('/fx/eur-thb', { preHandler: orgEditors }, async () => fetchEurThb(botTokenFromConfig()));
 }
