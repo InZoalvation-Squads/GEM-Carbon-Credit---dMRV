@@ -7,6 +7,8 @@ import {
   buildPortfolioReport, buildProjectReport, monthlyProduction, projectCountry, recNetTotal, tverEstimate,
 } from './investor-report';
 import { evaluateProjectRecRoi } from './rec-roi-project';
+import { computeYearlyTable } from './pdd';
+import { buildRecRoiSummary } from '../components/rec-roi/summary';
 
 // Synthetic arithmetic inputs, not market data — never copy into fixtures or seeds.
 const TH: Project = {
@@ -63,6 +65,17 @@ describe('tverEstimate', () => {
     expect(t.methodology_code).toBe(TVER_SOLAR_METHODOLOGY.code);
     expect(t.tco2e_year).toBeGreaterThan(0);
   });
+  it('is YEAR 1 of the crediting period, run with exactly the measured annual kWh', () => {
+    const sectionData = { degradation_pct: 5 };   // with degradation year 1 ≠ the average
+    const t = tverEstimate(TH, [pdd('prj-th', { section_data: sectionData })], METHODS, seedFactors, 36.5)!;
+    const table = computeYearlyTable({ project: TH, factors: seedFactors, sectionData: { ...sectionData, year1_generation_kwh: 36_500 } })!;
+    expect(table.rows[0].generation_kwh).toBe(36_500);
+    expect(table.rows[0].er).not.toBe(table.avg.er);
+    expect(t.tco2e_year).toBe(table.rows[0].er);
+  });
+  it('null unless the governing PDD is registered', () => {
+    expect(tverEstimate(TH, [pdd('prj-th', { state: 'draft' })], METHODS, seedFactors, 36.5)).toBeNull();
+  });
   it('null without a T-VER PDD, or for a bundle PDD', () => {
     expect(tverEstimate(TH, [], METHODS, seedFactors, 36.5)).toBeNull();
     expect(tverEstimate(TH, [pdd('prj-th', { section_data: { sites: [{ name: 'a', kwp: 1 }] } })], METHODS, seedFactors, 36.5)).toBeNull();
@@ -86,6 +99,24 @@ describe('buildProjectReport', () => {
     expect(r.scope2.tco2e_location_year).toBeNull();
     expect(r.scope2.tver).toBeNull();
   });
+  it('independent hand value: exactly 100 MWh/yr × 0.475 = 47.5 tCO2e', () => {
+    // 73 days totalling 20,000 kWh → 20,000 / 73 × 365 = 100,000 kWh/yr.
+    const recs = [...daily('prj-th', '2026-01-01', 72, 200), ...daily('prj-th', '2026-03-14', 1, 5_600)]
+      .map((r, i) => ({ ...r, id: `h-${i}` }));
+    const r = buildProjectReport({ ...base, records: recs, projectId: 'prj-th' })!;
+    expect(r.roi.annual.status === 'ok' && r.roi.annual.annual_mwh).toBeCloseTo(100, 6);
+    expect(r.scope2.tco2e_location_year).toBeCloseTo(47.5, 6);
+  });
+  it('no factor when the data window ends before the factor takes effect', () => {
+    const r = buildProjectReport({ ...base, records: daily('prj-th', '2025-01-01', 90, 100), projectId: 'prj-th' })!;
+    expect(r.scope2.factor).toBeNull();
+    expect(r.scope2.tco2e_location_year).toBeNull();
+  });
+  it('monthly sum equals the window total kWh', () => {
+    const r = buildProjectReport({ ...base, projectId: 'prj-th' })!;
+    const total = r.roi.annual.status === 'ok' ? r.roi.annual.total_kwh : -1;
+    expect(r.monthly.reduce((s, m) => s + m.kwh, 0)).toBe(total);
+  });
   it('null for an ineligible project or one without data', () => {
     expect(buildProjectReport({ ...base, projectId: 'prj-f' })).toBeNull();
     expect(buildProjectReport({ ...base, records: [], projectId: 'prj-th' })).toBeNull();
@@ -99,6 +130,10 @@ describe('recNetTotal', () => {
     const noPrice = evaluateProjectRecRoi({ project: TH, records: RECORDS, pdds: [], methodologies: METHODS, factors: [], assumptions: { ...ASSUME, price_mid_thb: null } });
     expect(recNetTotal(noPrice)).toBeNull();
   });
+  it('is the same number the REC ROI summary shows (one source)', () => {
+    const r = evaluateProjectRecRoi({ project: TH, records: RECORDS, pdds: [], methodologies: METHODS, factors: [], assumptions: ASSUME });
+    expect(recNetTotal(r)).toBe(buildRecRoiSummary(r, ASSUME)!.money.rec_total);
+  });
 });
 
 describe('buildPortfolioReport', () => {
@@ -110,7 +145,14 @@ describe('buildPortfolioReport', () => {
     expect(p.totals.tco2e_location_year).toBeCloseTo(p.projects[1].scope2.tco2e_location_year!, 9); // only TH has a factor
     expect(p.totals.rec_net_total).not.toBeNull();
   });
+  it('coverage counts say how many projects each sum covers', () => {
+    const t = buildPortfolioReport(base).totals;
+    expect(t.projects).toBe(2);
+    expect(t.tco2e_projects).toBe(1);   // only the Thai project has a Scope 2 factor
+    expect(t.rec_net_projects).toBe(2);
+  });
   it('no price anywhere → rec_net_total null', () => {
     expect(buildPortfolioReport({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } }).totals.rec_net_total).toBeNull();
+    expect(buildPortfolioReport({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } }).totals.rec_net_projects).toBe(0);
   });
 });

@@ -33,7 +33,11 @@ export interface ProjectReportData {
 export interface PortfolioReportData {
   generated_at: string;
   projects: ProjectReportData[];
-  totals: { mwh_year: number; recs_year: number; rec_net_total: number | null; tco2e_location_year: number | null };
+  totals: {
+    mwh_year: number; recs_year: number; rec_net_total: number | null; tco2e_location_year: number | null;
+    /** Projects reported, and how many each nullable sum actually covers ("N จาก M โครงการ"). */
+    projects: number; tco2e_projects: number; rec_net_projects: number;
+  };
 }
 
 export interface ReportSources {
@@ -70,7 +74,7 @@ export function monthlyProduction(
   return [...byMonth.entries()].sort(([a], [b]) => a.localeCompare(b)).map(([month, kwh]) => ({ month, kwh }));
 }
 
-/** Average yearly ER of the registered T-VER PDD, re-run with the measured annual generation. */
+/** Year 1 of the crediting period of the registered T-VER PDD, with the measured annual generation. */
 export function tverEstimate(
   project: Project, pdds: ProjectDesignDocument[], methodologies: Methodology[],
   factors: EmissionFactor[], annualMwh: number,
@@ -78,11 +82,11 @@ export function tverEstimate(
   const pdd = governingPdd(project.id, pdds);
   const m = pdd && methodologies.find((x) => x.id === pdd.methodology_id);
   // A bundle PDD sums its sites' generation and ignores a year-1 override — not this project's MWh.
-  if (!pdd || !m || m.standard !== 'T-VER' || isBundle(pdd.section_data ?? {})) return null;
+  if (!pdd || pdd.state !== 'registered' || !m || m.standard !== 'T-VER' || isBundle(pdd.section_data ?? {})) return null;
   const table = computeYearlyTable({
     project, factors, sectionData: { ...pdd.section_data, year1_generation_kwh: annualMwh * 1000 },
   });
-  return table ? { tco2e_year: table.avg.er, methodology_code: m.code } : null;
+  return table ? { tco2e_year: table.rows[0].er, methodology_code: m.code } : null;
 }
 
 /** Net REC baht over the horizon on the recommended path at the mid price; null without one. */
@@ -121,7 +125,7 @@ export function buildPortfolioReport(args: ReportSources): PortfolioReportData {
   const projects = args.projects
     .map((p) => buildProjectReport({ ...args, projectId: p.id }))
     .filter((r): r is ProjectReportData => r !== null)
-    .sort((a, b) => a.project.name.localeCompare(b.project.name));
+    .sort((a, b) => a.project.name.localeCompare(b.project.name, 'th'));
   const nets = projects.map((p) => recNetTotal(p.roi)).filter((n): n is number => n !== null);
   const tco2 = projects.map((p) => p.scope2.tco2e_location_year).filter((n): n is number => n !== null);
   const mwh = projects.reduce((s, p) => s + p.scope2.annual_mwh, 0);
@@ -131,6 +135,7 @@ export function buildPortfolioReport(args: ReportSources): PortfolioReportData {
       mwh_year: mwh, recs_year: mwh,
       rec_net_total: nets.length ? nets.reduce((s, n) => s + n, 0) : null,
       tco2e_location_year: tco2.length ? tco2.reduce((s, n) => s + n, 0) : null,
+      projects: projects.length, tco2e_projects: tco2.length, rec_net_projects: nets.length,
     },
   };
 }

@@ -6,6 +6,7 @@ import { REC_FEES } from '../../data/rec-fees';
 import type { RecPathOk, RecRoiAssumptions } from '../../lib/rec-roi';
 import type { FinancialValue, ProjectRecRoi } from '../../lib/rec-roi-project';
 import type { Tone } from '../ui/Badge';
+import { recNetTotal } from '../../lib/investor-report';
 import { PATH_SHORT, pct, pricePerMwh, thb } from './format';
 
 /**
@@ -71,7 +72,7 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
   const withoutYear = annual.annual_mwh * 1000 * tariff.value;
   const best = roi.recommended ? ok.find((p) => p.path === roi.recommended) : undefined;
   const mid = best?.scenarios.find((s) => s.scenario === 'mid');
-  const recTotal = mid ? mid.net_thb : null;
+  const recTotal = recNetTotal(r);   // one source for the REC net, shared with the investor report
   const money: RecMoneyComparison = {
     tariff, years: H,
     without_year: withoutYear,
