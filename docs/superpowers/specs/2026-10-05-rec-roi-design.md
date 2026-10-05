@@ -128,9 +128,12 @@ Outputs per path:
 - `break_even_price` = `(fixed_cost_thb + H × M × i) / (H × M × (1 − fee%))`
   (fee% = 0 for ก). Always computed when the path's inputs exist.
 - For each entered price scenario: `revenue`, `cost`, `net = revenue − cost`,
-  `roi_pct = net / cost × 100`, `payback_months` — the month at which
-  cumulative cash flow (year-1 upfront costs at month 0, then annual net
-  spread evenly per month) crosses zero; `null` → "ไม่คืนทุนในระยะประเมิน".
+  `roi_pct = net / cost × 100`, `payback_months` — cash is modelled with
+  each year's lump costs (registration/renewal, account opening, annual
+  account fee) at the start of that year and the per-MWh margin spread evenly
+  per month; payback is the first month after which cumulative cash stays
+  ≥ 0 through the end of the horizon (a later renewal can pull it back
+  below zero). `null` → "ไม่คืนทุนในระยะประเมิน".
 - Recommended path: higher `net` at the mid price; with no mid price, the
   lower `break_even_price`; if neither path is computable → none, with the
   list of missing inputs.
