@@ -99,7 +99,7 @@ export function Dashboard() {
         <h2 className="mb-3 text-lg font-semibold">Latest blocks</h2>
         {latest.length ? <ChainList>{latest.map(({ project, record, calculation, verification, factor }) => <BlockRow key={project.id}
           blockId={calculation?.id ?? record!.id} to={`/projects/${project.id}`} state={verification?.credential_id ? 'anchored' : verification ? 'approved' : project.status} hash={verification?.hash_value ?? undefined}
-          figure={<span>{project.name} · {calculation ? `${formatNumber(calculation.reduction_kgco2e / 1000, 2)} tCO₂e` : formatKwh(record!.generation_kwh)}</span>}
+          figure={<span>{project.name} · <span className="whitespace-nowrap">{calculation ? `${formatNumber(calculation.reduction_kgco2e / 1000, 2)} tCO₂e` : formatKwh(record!.generation_kwh)}</span></span>}
           source={calculation ? `${factor ? `EF ${factor.country}/${factor.source} v${factor.version}` : calculation.emission_factor_id} · ${fmtDateTime(calculation.calculated_at)}` : <>{sourceLabel(record!.source)} · {fmtDate(record!.record_date)}</>}
           magnitude={calculation ? { value: calculation.reduction_kgco2e, visibleValues: latest.flatMap((r) => r.calculation ? [r.calculation.reduction_kgco2e] : []) } : undefined}>
           {verification?.hash_value && <Link to={`/verifications/${verification.id}`} className="mt-2 inline-block text-sm text-brand-600 underline">{verification.id} · {verification.credential_id ? 'Anchored' : 'Approved'}</Link>}
