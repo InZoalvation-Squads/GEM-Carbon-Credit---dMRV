@@ -6,7 +6,9 @@ import { REC_FEES } from '../../data/rec-fees';
 import type { RecPathOk, RecRoiAssumptions } from '../../lib/rec-roi';
 import type { FinancialValue, ProjectRecRoi } from '../../lib/rec-roi-project';
 import type { Tone } from '../ui/Badge';
-import { cheapestPath, recNetTotal, recommendedMid, recommendedPath } from '../../lib/investor-report';
+import {
+  cheapestPath, REC_PRICE_SCALE_THB_PER_MWH, REC_SHARE_LOW_PCT, recNetTotal, recShareOfElectricity, recommendedMid, recommendedPath,
+} from '../../lib/investor-report';
 import { PATH_SHORT, pct, pricePerMwh, thb } from './format';
 
 /**
@@ -98,4 +100,53 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
   const where = ok.length === 2 ? 'ขาดทุนทั้งสองทาง' : `ขาดทุน (${PATH_SHORT[best.path]})`;
   return { tone: 'amber', label: 'ยังไม่คุ้ม', points, money,
     headline: `ที่ราคา ${pricePerMwh(mid.price_thb)} ฿/MWh ${where} — ${target}` };
+}
+
+const unsignedPct = (n: number) => `${formatNumber(Math.abs(n), 2)}%`;
+
+const NEEDS_PRICE_AND_FEES = 'ต้องมีราคา REC และค่าธรรมเนียมครบ จึงบอกได้ว่า REC คิดเป็นกี่ % ของมูลค่าไฟ — ส่วนสิทธิ์ claim ไฟสะอาดดูหน้าถัดไป';
+
+/**
+ * The investor report's three executive-summary bullets, from the same
+ * evaluation as everything else on the page. Bullet 2 has four distinct states
+ * (net >= 0, net < 0, price but no computable path, no mid price); bullet 3
+ * judges the size of REC income only when there is a real share to judge.
+ * Null when there is nothing to summarise.
+ */
+export function buildExecutiveSummary(r: ProjectRecRoi, a: RecRoiAssumptions): [string, string, string] | null {
+  const summary = buildRecRoiSummary(r, a);
+  if (!summary || r.annual.status !== 'ok') return null;
+  const { money } = summary;
+  const mwh = r.annual.annual_mwh;
+  const share = recShareOfElectricity(money, mwh);
+  const cheapest = cheapestPath(r);
+  const mid = recommendedMid(r);
+  const path = recommendedPath(r);
+
+  const first = `โครงการผลิตไฟ ${formatNumber(mwh, 1)} MWh/ปี คิดเป็นมูลค่าไฟประมาณ ${thb(money.without_year)}/ปี `
+    + `(ค่าไฟ ${formatNumber(money.tariff.value, 2)} ฿/kWh · ${money.tariff.source === 'pdd' ? 'จาก PDD' : 'ค่าเริ่มต้น PEA'})`;
+
+  if (a.price_mid_thb === null) {
+    return [first,
+      `ยังไม่มีราคากลาง REC — ทุก +${REC_PRICE_SCALE_THB_PER_MWH} ฿/MWh ของราคาขาย (หน่วยเทียบขนาด ไม่ใช่ราคาตลาด) `
+        + `เพิ่มรายได้ ${thb(share.per10_thb)}/ปี ก่อนหักค่าธรรมเนียม`
+        + (cheapest ? ` · ต้องขายได้อย่างน้อย ${pricePerMwh(cheapest.break_even_price_thb)} ฿/MWh จึงคุ้มค่าธรรมเนียม` : ''),
+      NEEDS_PRICE_AND_FEES];
+  }
+  if (!mid || !path || money.rec_year === null) {
+    return [first, 'มีราคา REC แล้ว แต่ยังคำนวณไม่ได้ — ขาดค่าบริการ GEM หรืออัตรา EUR→THB', NEEDS_PRICE_AND_FEES];
+  }
+  if (money.rec_year < 0) {
+    return [first,
+      `ที่ราคากลาง ${pricePerMwh(mid.price_thb)} ฿/MWh REC ขาดทุนสุทธิ ${thb(Math.abs(money.rec_year))}/ปี `
+        + `(${share.share_pct === null ? '—' : unsignedPct(share.share_pct)} ของมูลค่าไฟ) — ยังไม่คุ้มค่าธรรมเนียม`
+        + (cheapest ? ` · ต้องขายได้อย่างน้อย ${pricePerMwh(cheapest.break_even_price_thb)} ฿/MWh` : ''),
+      NEEDS_PRICE_AND_FEES];
+  }
+  const second = `ถ้าขาย REC ${formatNumber(mwh, 0)} ใบ/ปี ที่ราคากลาง ${pricePerMwh(mid.price_thb)} ฿/MWh (${PATH_SHORT[path.path]}) `
+    + `ได้เพิ่มสุทธิ ${thb(money.rec_year)}/ปี = ${share.share_pct === null ? '—' : unsignedPct(share.share_pct)} ของมูลค่าไฟ`;
+  if (share.share_pct === null) return [first, second, NEEDS_PRICE_AND_FEES];
+  return [first, second, share.share_pct < REC_SHARE_LOW_PCT
+    ? 'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด ซึ่งเป็นของผู้ที่ถือหรือ redeem REC (ถ้าขาย REC ไป สิทธิ์นี้เป็นของผู้ซื้อ) — ดูหน้าถัดไป'
+    : `REC เพิ่มรายได้ ${unsignedPct(share.share_pct)} ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง จะได้สิทธิ์ claim ไฟสะอาดแทนรายได้ (ดูหน้าถัดไป)`];
 }

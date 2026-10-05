@@ -214,45 +214,34 @@ describe('executive summary (page 1)', () => {
     expect(body.firstElementChild).toBe(box);
   });
 
-  it('with a REC price: electricity value, REC net and its share of that value, low-share note', () => {
+  it('with a REC price: electricity value, unsigned REC net and share, and the small-share note', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
     // 36.5 MWh × 1,000 × 4.18 = ฿152,570/yr; net REC ฿26.575/yr on platform at ฿25 → 0.02%.
     expect(summaryOf(container).bullets).toEqual([
       'โครงการผลิตไฟ 36.5 MWh/ปี คิดเป็นมูลค่าไฟประมาณ ฿152,570/ปี (ค่าไฟ 4.18 ฿/kWh · ค่าเริ่มต้น PEA)',
-      'ถ้าขาย REC 37 ใบ/ปี ที่ 25.00 ฿/MWh (ขายผ่าน GEM) ได้เพิ่มสุทธิ +฿27/ปี = 0.02% ของมูลค่าไฟ',
-      'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด (Scope 2 / RE100) ดูหน้าถัดไป',
+      'ถ้าขาย REC 37 ใบ/ปี ที่ราคากลาง 25.00 ฿/MWh (ขายผ่าน GEM) ได้เพิ่มสุทธิ ฿27/ปี = 0.02% ของมูลค่าไฟ',
+      'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด ซึ่งเป็นของผู้ที่ถือหรือ redeem REC (ถ้าขาย REC ไป สิทธิ์นี้เป็นของผู้ซื้อ) — ดูหน้าถัดไป',
     ]);
   });
 
-  it('a negative REC net shows a negative share and still the low-share note', () => {
+  it('a loss reads as a loss with the price it needs, and never calls REC income small', () => {
     useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 1 } }));
     const { container } = renderAt('/reports/investor/prj-0001');
     const { bullets } = summaryOf(container);
-    expect(bullets[1]).toMatch(/^ถ้าขาย REC 37 ใบ\/ปี ที่ 1\.00 ฿\/MWh \(ขายผ่าน GEM\) ได้เพิ่มสุทธิ \u2212฿[\d,]+\/ปี = \u2212\d+\.\d{2}% ของมูลค่าไฟ$/);
-    expect(bullets[2]).toMatch(/^รายได้จาก REC น้อย/);
+    expect(bullets[1]).toMatch(/^ที่ราคากลาง 1\.00 ฿\/MWh REC ขาดทุนสุทธิ ฿[\d,]+\/ปี \(\d+\.\d{2}% ของมูลค่าไฟ\) — ยังไม่คุ้มค่าธรรมเนียม · ต้องขายได้อย่างน้อย 24\.19 ฿\/MWh$/);
+    expect(bullets[2]).toMatch(/^ต้องมีราคา REC และค่าธรรมเนียมครบ/);
   });
 
-  it('a share of 5% or more says REC adds income and still points to the claim', () => {
-    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 1000 } }));
+  it('a price but no fee or FX says it cannot be computed', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: null, eur_thb: null } }));
     const { container } = renderAt('/reports/investor/prj-0001');
-    const { bullets } = summaryOf(container);
-    expect(bullets[2]).toMatch(/^REC เพิ่มรายได้ \d+\.\d{2}% ของมูลค่าไฟ — และให้สิทธิ์ claim ไฟสะอาด \(ดูหน้าถัดไป\)$/);
-    expect(Number(bullets[2]?.match(/(\d+\.\d{2})%/)?.[1])).toBeGreaterThanOrEqual(5);
+    expect(summaryOf(container).bullets[1]).toBe('มีราคา REC แล้ว แต่ยังคำนวณไม่ได้ — ขาดค่าบริการ GEM หรืออัตรา EUR→THB');
   });
 
-  it('without a REC price: the per-10-฿/MWh scale (not a price), its share, and the break-even', () => {
+  it('without a mid price: the per-10 scale (labelled as a scale) and the break-even', () => {
     useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
     const { container } = renderAt('/reports/investor/prj-0001');
-    const { bullets } = summaryOf(container);
-    // 36.5 MWh × 10 = ฿365/yr = 0.24% of ฿152,570; break-even 24.19.
-    expect(bullets[1]).toBe('ยังไม่มีราคา REC — ทุก 10 ฿/MWh ที่ขายได้ = ฿365/ปี ก่อนหักค่าธรรมเนียม (0.24% ของมูลค่าไฟ) · ต้องขายได้อย่างน้อย 24.19 ฿/MWh จึงคุ้มค่าธรรมเนียม');
-    expect(bullets[2]).toMatch(/^รายได้จาก REC น้อย/);
-  });
-
-  it('without a price and without a computable path: no break-even clause', () => {
-    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '', platform_fee_pct: null, eur_thb: null } }));
-    const { container } = renderAt('/reports/investor/prj-0001');
-    expect(summaryOf(container).bullets[1]).toBe('ยังไม่มีราคา REC — ทุก 10 ฿/MWh ที่ขายได้ = ฿365/ปี ก่อนหักค่าธรรมเนียม (0.24% ของมูลค่าไฟ)');
+    expect(summaryOf(container).bullets[1]).toBe('ยังไม่มีราคากลาง REC — ทุก +10 ฿/MWh ของราคาขาย (หน่วยเทียบขนาด ไม่ใช่ราคาตลาด) เพิ่มรายได้ ฿365/ปี ก่อนหักค่าธรรมเนียม · ต้องขายได้อย่างน้อย 24.19 ฿/MWh จึงคุ้มค่าธรรมเนียม');
   });
 });
 
@@ -274,7 +263,11 @@ describe('glossary (page 1)', () => {
     const money = pages(container)[0] as HTMLElement;
     const box = within(money).getByRole('region', { name: 'อธิบายศัพท์' });
     const terms = [...box.querySelectorAll('dt')].map((d) => d.textContent);
-    expect(terms).toEqual(['REC', 'T-VER', 'Scope 2', 'Location-based', 'Market-based', 'ราคาคุ้มทุน']);
+    expect(terms).toEqual(['REC', 'T-VER', 'Scope 2', 'Location-based', 'Market-based', 'ราคาคุ้มทุน', 'RE100', 'Redeem', 'PPA']);
+    expect(within(box).getByText('คาร์บอนเครดิตของไทย (อบก.) นับเป็น tCO₂e ที่ลดได้')).toBeInTheDocument();
+    expect(within(box).getByText('เป้าหมายใช้ไฟหมุนเวียน 100% ขององค์กร')).toBeInTheDocument();
+    expect(within(box).getByText('ใช้สิทธิ์ REC เพื่ออ้างว่าใช้ไฟสะอาด — ใช้แล้วขายต่อไม่ได้')).toBeInTheDocument();
+    expect(within(box).getByText('สัญญาซื้อขายไฟระหว่างเจ้าของระบบกับผู้ใช้ไฟ')).toBeInTheDocument();
     expect(within(box).getByText('ใบรับรองว่าไฟ 1 MWh ผลิตจากพลังงานหมุนเวียน ขายหรือเก็บไว้อ้างสิทธิ์ได้')).toBeInTheDocument();
     expect(within(box).getByText('ราคา REC ต่ำสุดที่รายได้พอจ่ายค่าธรรมเนียมทั้งหมด')).toBeInTheDocument();
     const irr = within(money).getByText('IRR โครงการโซลาร์');
@@ -287,7 +280,7 @@ describe('Scope 2 page clarity', () => {
 
   it('says whose Scope 2 the big number is, and where the PPA decides', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
-    expect(within(scope2Of(container)).getByText('ตัวเลขนี้เป็น Scope 2 ของผู้ใช้ไฟ (เจ้าของอาคาร) — ถ้าคุณเป็นเจ้าของระบบที่ขายไฟให้ผู้ใช้ สิทธิ์ใน Scope 2 และ REC เป็นไปตามสัญญาซื้อขายไฟ (PPA)')).toBeInTheDocument();
+    expect(within(scope2Of(container)).getByText('ตัวเลขนี้เป็น Scope 2 ของผู้ใช้ไฟ (เจ้าของอาคาร) — ถ้าคุณเป็นเจ้าของระบบที่ขายไฟให้ผู้ใช้ สิทธิ์อ้างผลลด Scope 2 และสิทธิ์ใน REC เป็นของฝ่ายที่สัญญาซื้อขายไฟ (PPA) กำหนดให้ถือคุณลักษณะด้านสิ่งแวดล้อม')).toBeInTheDocument();
   });
 
   it('"ช่วยอะไรคุณ" becomes "ใช้ประโยชน์อย่างไร" with the three uses', () => {
@@ -306,7 +299,8 @@ describe('Scope 2 page clarity', () => {
   it('the warning box carries the double-claim caution and the SF-04 wording in Thai first, English below', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
     const s2 = scope2Of(container);
-    const thai = within(s2).getByText(/ผู้ยื่นขอ I-REC\(E\) รับรองว่าไฟฟ้าส่วนที่ขอใบรับรอง ไม่เคยและจะไม่ถูกนำไปขอสิทธิ์ในระบบติดตามคุณลักษณะพลังงานอื่น ใบรับรองการลดการปล่อยก๊าซ หรือคาร์บอนออฟเซ็ตใดๆ/);
+    const thai = within(s2).getByText(/^คำแปล \(ไม่เป็นทางการ\): รับรองว่าไฟฟ้าส่วนที่ขอใบรับรอง I-REC\(E\) ไม่เคยและจะไม่ถูกยื่นเข้าระบบติดตามคุณลักษณะพลังงานอื่น ใบรับรองการลดการปล่อยก๊าซ หรือคาร์บอนออฟเซ็ตใดๆ$/);
+    expect(thai.textContent).not.toMatch(/[“”"]/);
     const english = within(s2).getByText(/has not and will not be submitted for any other energy attribute tracking methodology/);
     const box = thai.closest('div') as HTMLElement;
     expect(box).toContainElement(english);

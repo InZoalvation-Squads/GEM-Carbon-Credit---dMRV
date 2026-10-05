@@ -2,7 +2,8 @@ import { describe, it, expect } from 'vitest';
 import type { MonitoringRecord, Project } from '../../types';
 import { EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions } from '../../lib/rec-roi';
 import { evaluateProjectRecRoi, defaultProjectSetting } from '../../lib/rec-roi-project';
-import { buildRecRoiSummary } from './summary';
+import { REC_SHARE_LOW_PCT } from '../../lib/investor-report';
+import { buildExecutiveSummary, buildRecRoiSummary } from './summary';
 
 // Synthetic arithmetic inputs, not market data — never copy into fixtures or seeds.
 const PROJECT: Project = {
@@ -110,5 +111,68 @@ describe('buildRecRoiSummary — one plain-language verdict per project', () => 
     const assumptions = { ...EMPTY_REC_ROI_SETTINGS };
     const r = evaluateProjectRecRoi({ project: PROJECT, records: [], pdds: [], methodologies: [], factors: [], assumptions });
     expect(buildRecRoiSummary(r, assumptions)).toBeNull();
+  });
+});
+
+describe('buildExecutiveSummary — three bullets that never overstate', () => {
+  // 700 MWh/yr × 1,000 × 4.18 ฿/kWh (PEA default) = ฿2,926,000/yr of electricity.
+  const exec = (a: Partial<RecRoiAssumptions>) => {
+    const assumptions = { ...EMPTY_REC_ROI_SETTINGS, ...a };
+    const r = evaluateProjectRecRoi({
+      project: PROJECT, records: yearOf(700_000 / 365), pdds: [], methodologies: [], factors: [], assumptions,
+      setting: defaultProjectSetting('prj-s'),
+    });
+    return buildExecutiveSummary(r, assumptions)!;
+  };
+  const NEUTRAL = 'ต้องมีราคา REC และค่าธรรมเนียมครบ จึงบอกได้ว่า REC คิดเป็นกี่ % ของมูลค่าไฟ — ส่วนสิทธิ์ claim ไฟสะอาดดูหน้าถัดไป';
+
+  it('is null when there is nothing to summarise', () => {
+    const assumptions = { ...EMPTY_REC_ROI_SETTINGS };
+    const r = evaluateProjectRecRoi({
+      project: PROJECT, records: [], pdds: [], methodologies: [], factors: [], assumptions, setting: defaultProjectSetting('prj-s'),
+    });
+    expect(buildExecutiveSummary(r, assumptions)).toBeNull();
+  });
+
+  it('bullet 1 is the same in every state: production and electricity value', () => {
+    expect(exec({})[0]).toBe('โครงการผลิตไฟ 700.0 MWh/ปี คิดเป็นมูลค่าไฟประมาณ ฿2,926,000/ปี (ค่าไฟ 4.18 ฿/kWh · ค่าเริ่มต้น PEA)');
+  });
+
+  it('(a) price + path + net >= 0: unsigned net and share; small share says so, pointing at who holds the claim', () => {
+    // platform at ฿25, fee 10%: net ฿71,625 over 5 y = ฿14,325/y = 0.49% of ฿2,926,000.
+    const b = exec({ price_mid_thb: 25, platform_fee_pct: 10, eur_thb: 40 });
+    expect(b[1]).toBe('ถ้าขาย REC 700 ใบ/ปี ที่ราคากลาง 25.00 ฿/MWh (ขายผ่าน GEM) ได้เพิ่มสุทธิ ฿14,325/ปี = 0.49% ของมูลค่าไฟ');
+    expect(b[2]).toBe('รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด ซึ่งเป็นของผู้ที่ถือหรือ redeem REC (ถ้าขาย REC ไป สิทธิ์นี้เป็นของผู้ซื้อ) — ดูหน้าถัดไป');
+  });
+
+  it('(a) a share at or above the threshold says REC adds income, and that keeping the REC trades income for the claim', () => {
+    const b = exec({ price_mid_thb: 400, platform_fee_pct: 10, eur_thb: 40 });
+    expect(b[1]).toMatch(/^ถ้าขาย REC 700 ใบ\/ปี ที่ราคากลาง 400\.00 ฿\/MWh \(ขายผ่าน GEM\) ได้เพิ่มสุทธิ ฿[\d,]+\/ปี = \d+\.\d{2}% ของมูลค่าไฟ$/);
+    const share = Number(b[1].match(/= (\d+\.\d{2})%/)![1]);
+    expect(share).toBeGreaterThanOrEqual(REC_SHARE_LOW_PCT);
+    expect(b[2]).toBe(`REC เพิ่มรายได้ ${share.toFixed(2)}% ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง จะได้สิทธิ์ claim ไฟสะอาดแทนรายได้ (ดูหน้าถัดไป)`);
+  });
+
+  it('(b) price + path + net < 0: a loss, its share unsigned, and the price it needs; bullet 3 is neutral', () => {
+    const b = exec({ price_mid_thb: 1, platform_fee_pct: 10, eur_thb: 40 });
+    expect(b[1]).toMatch(/^ที่ราคากลาง 1\.00 ฿\/MWh REC ขาดทุนสุทธิ ฿[\d,]+\/ปี \(\d+\.\d{2}% ของมูลค่าไฟ\) — ยังไม่คุ้มค่าธรรมเนียม · ต้องขายได้อย่างน้อย 2\.26 ฿\/MWh$/);
+    expect(b[1]).not.toMatch(/[+\u2212-]฿|\(-/);
+    expect(b[2]).toBe(NEUTRAL);
+  });
+
+  it('(c) a price but no computable path: says what is missing, bullet 3 neutral', () => {
+    const b = exec({ price_mid_thb: 25 });
+    expect(b[1]).toBe('มีราคา REC แล้ว แต่ยังคำนวณไม่ได้ — ขาดค่าบริการ GEM หรืออัตรา EUR→THB');
+    expect(b[2]).toBe(NEUTRAL);
+  });
+
+  it('(d) no mid price (low/high may exist): the per-10 ฿/MWh scale and the break-even, bullet 3 neutral', () => {
+    const b = exec({ price_low_thb: 10, price_high_thb: 40, platform_fee_pct: 10, eur_thb: 40 });
+    expect(b[1]).toBe('ยังไม่มีราคากลาง REC — ทุก +10 ฿/MWh ของราคาขาย (หน่วยเทียบขนาด ไม่ใช่ราคาตลาด) เพิ่มรายได้ ฿7,000/ปี ก่อนหักค่าธรรมเนียม · ต้องขายได้อย่างน้อย 2.26 ฿/MWh จึงคุ้มค่าธรรมเนียม');
+    expect(b[2]).toBe(NEUTRAL);
+  });
+
+  it('(d) with no computable path there is no break-even clause', () => {
+    expect(exec({})[1]).toBe('ยังไม่มีราคากลาง REC — ทุก +10 ฿/MWh ของราคาขาย (หน่วยเทียบขนาด ไม่ใช่ราคาตลาด) เพิ่มรายได้ ฿7,000/ปี ก่อนหักค่าธรรมเนียม');
   });
 });
