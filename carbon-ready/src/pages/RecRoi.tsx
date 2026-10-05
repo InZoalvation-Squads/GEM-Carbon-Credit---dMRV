@@ -5,7 +5,7 @@ import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Table, THead, TBody, TR, TH, TD } from '../components/ui/Table';
 import { Badge } from '../components/ui/Badge';
 import { RecRoiAssumptions } from '../components/rec-roi/RecRoiAssumptions';
-import { PATH_SHORT, breakEvenText, pct } from '../components/rec-roi/format';
+import { breakEvenText, pct, recommendationBadge } from '../components/rec-roi/format';
 import { useStore } from '../store';
 import { evaluateProjectRecRoi } from '../lib/rec-roi-project';
 import { REC_FEES } from '../data/rec-fees';
@@ -56,13 +56,14 @@ export function RecRoi() {
                 const roi = r.roi;
                 const best = roi?.recommended ? roi[roi.recommended] : null;
                 const mid = best?.status === 'ok' ? best.scenarios.find((s) => s.scenario === 'mid') : undefined;
+                const rec = roi ? recommendationBadge(roi) : null;
                 return (
                   <TR key={r.project.id} hover>
                     <TD className="font-medium">
                       <Link to={`/projects/${r.project.id}?tab=rec-roi`} className="text-petrol-700 hover:underline">{r.project.name}</Link>
                     </TD>
                     {r.annual.status !== 'ok' ? (
-                      <TD className="text-ink-meta" colSpan={5}>ไม่มีข้อมูล kWh — อัปโหลดข้อมูลการผลิตก่อน</TD>
+                      <TD className="text-ink-meta" colSpan={5}>ไม่มีข้อมูล kWh — <Link to="/upload" className="text-petrol-700 hover:underline">อัปโหลดข้อมูลการผลิต</Link>ก่อน</TD>
                     ) : (
                       <>
                         <TD className="text-right">
@@ -73,9 +74,7 @@ export function RecRoi() {
                         <TD className="text-right">{roi ? breakEvenText(roi.platform) : '—'}</TD>
                         <TD className={`text-right ${mid && mid.net_thb < 0 ? 'text-state-rejected' : ''}`}>{mid ? pct(mid.roi_pct) : '—'}</TD>
                         <TD>
-                          {!roi?.recommended ? '—'
-                            : mid && mid.net_thb < 0 ? <Badge tone="amber">ไม่คุ้มทั้งสองทาง</Badge>
-                            : <Badge tone="green">{PATH_SHORT[roi.recommended]}</Badge>}
+                          {rec ? <Badge tone={rec.tone}>{rec.text}</Badge> : '—'}
                         </TD>
                       </>
                     )}
@@ -85,7 +84,7 @@ export function RecRoi() {
             </TBody>
           </Table>
           <div className="border-t border-rule px-5 py-3 text-xs text-ink-meta">
-            แสดงเฉพาะโปรเจกต์ผลิตไฟฟ้า (kWh) · ค่าธรรมเนียมตาม {REC_FEES.version} ({REC_FEES.source_pdf}) ·
+            แสดงเฉพาะโปรเจกต์ผลิตไฟฟ้า (kWh) · ค่าธรรมเนียมตาม I-REC(E) Fee Structure {REC_FEES.version} (EGAT / Evident) ·
             MWh/ปี จากข้อมูลวัดจริง 365 วันล่าสุด
           </div>
         </CardBody>
