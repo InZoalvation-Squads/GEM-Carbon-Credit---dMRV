@@ -4,7 +4,8 @@ import { calculateCarbon } from './calc';
 import { locationToCountryCode } from './geo';
 import { toast } from '../components/layout/Toast';
 import { formatNumber } from './format';
-import { serverMode, pddsApi, credentialsApi, verificationsApi, recIssuesApi } from './server-api';
+import { serverMode, pddsApi, credentialsApi, verificationsApi, recIssuesApi, recRoiApi, type EurThbResult } from './server-api';
+import { validateRecRoiSettings } from './rec-roi';
 import { issueCredential, buildPddSubject, buildApprovalSubject, mintGuardianToken, projectTopicId } from './guardian';
 import { PDD_REGISTRATION_SCHEMA_V1, MRV_APPROVAL_SCHEMA_V1 } from './guardian-schema';
 import { issuerIdentity } from './identity';
@@ -12,7 +13,7 @@ import type {
   Project, EmissionFactor, MonitoringRecord, CsvValidationResult, UUID,
   EvidenceFile, VerificationRequest, EvidenceCategory,
   Methodology, ProjectDesignDocument, GuardianToken, RecIssueRequest,
-  RecIssueDraftPatch,
+  RecIssueDraftPatch, RecRoiSettingsInput, RecRoiProjectSettingInput,
 } from '../types';
 
 const tick = <T>(value: T, ms = 120): Promise<T> =>
@@ -285,6 +286,58 @@ export const api = {
     useStore.getState().deleteRecIssue(id);
     toast.info('Issue request deleted');
     return tick(undefined);
+  },
+
+  // ---------------- REC ROI (assumptions only — ROI itself is computed client-side) ----------------
+  /** Resolves true when saved; false when validation or the server refused (toast shown). */
+  async saveRecRoiSettings(input: RecRoiSettingsInput): Promise<boolean> {
+    const problem = validateRecRoiSettings(input);
+    if (problem) {
+      toast.error('บันทึกไม่ได้', problem);
+      return tick(false, 0);
+    }
+    try {
+      if (serverMode()) {
+        useStore.setState({ recRoiSettings: await recRoiApi.putSettings(input) });
+      } else {
+        useStore.getState().saveRecRoiSettings(input);
+      }
+    } catch (e) {
+      toast.error('บันทึกไม่ได้', e instanceof Error ? e.message : String(e));
+      return false;
+    }
+    toast.success('บันทึกสมมติฐานแล้ว', 'คำนวณ REC ROI ใหม่ทุกโปรเจกต์');
+    return true;
+  },
+  async saveRecRoiProjectSetting(projectId: UUID, input: RecRoiProjectSettingInput): Promise<boolean> {
+    if (input.investment_mthb !== null && !(input.investment_mthb > 0)) {
+      toast.error('บันทึกไม่ได้', 'เงินลงทุนต้องมากกว่า 0');
+      return tick(false, 0);
+    }
+    try {
+      if (serverMode()) {
+        const row = await recRoiApi.putProjectSetting(projectId, input);
+        useStore.setState((s) => ({
+          recRoiProjectSettings: [...s.recRoiProjectSettings.filter((r) => r.project_id !== projectId), row],
+        }));
+      } else {
+        useStore.getState().saveRecRoiProjectSetting(projectId, input);
+      }
+    } catch (e) {
+      toast.error('บันทึกไม่ได้', e instanceof Error ? e.message : String(e));
+      return false;
+    }
+    toast.success('บันทึกค่าของโปรเจกต์แล้ว');
+    return true;
+  },
+  /** BOT EUR→THB; demo mode has no server → always unavailable. */
+  async fetchEurThb(): Promise<EurThbResult> {
+    if (!serverMode()) return { available: false };
+    try {
+      return await recRoiApi.eurThb();
+    } catch {
+      return { available: false };
+    }
   },
 
   // ---------------- Sprint 3: Guardian anchoring ----------------

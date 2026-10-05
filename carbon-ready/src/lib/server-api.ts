@@ -2,7 +2,7 @@ import type {
   UserRole, Project, EmissionFactor, MonitoringRecord, Methodology, PddState,
   ProjectDesignDocument, VerificationRequest, VerificationState, EvidenceFile,
   VerifiableCredential, GuardianToken, VerificationComment, RecIssueRequest,
-  RecIssueDraftPatch,
+  RecIssueDraftPatch, RecRoiSettings, RecRoiSettingsInput, RecRoiProjectSetting, RecRoiProjectSettingInput,
 } from '../types';
 import type { DisclosureSplit } from './pdd';
 
@@ -535,6 +535,32 @@ export const recIssuesApi = {
   /** DELETE /rec-issues/:id — draft-only removal. */
   async remove(id: string): Promise<void> {
     await apiFetch<void>(`/rec-issues/${id}`, { method: 'DELETE' });
+  },
+};
+
+/** GET /fx/eur-thb — Bank of Thailand EUR mid rate; dormant server → available:false. */
+export type EurThbResult =
+  | { available: false }
+  | { available: true; rate: number; period: string; source: string }
+  | { available: true; rate: null; error: string };
+
+export const recRoiApi = {
+  async getSettings(): Promise<RecRoiSettings> {
+    return (await apiFetch<{ settings: RecRoiSettings }>('/rec-roi/settings')).settings;
+  },
+  async putSettings(input: RecRoiSettingsInput): Promise<RecRoiSettings> {
+    return (await apiFetch<{ settings: RecRoiSettings }>('/rec-roi/settings', { method: 'PUT', body: input })).settings;
+  },
+  async listProjectSettings(): Promise<RecRoiProjectSetting[]> {
+    return (await apiFetch<{ project_settings: RecRoiProjectSetting[] }>('/rec-roi/project-settings')).project_settings;
+  },
+  async putProjectSetting(projectId: string, input: RecRoiProjectSettingInput): Promise<RecRoiProjectSetting> {
+    return (await apiFetch<{ project_setting: RecRoiProjectSetting }>(`/projects/${projectId}/rec-roi-setting`, {
+      method: 'PUT', body: input,
+    })).project_setting;
+  },
+  async eurThb(): Promise<EurThbResult> {
+    return apiFetch<EurThbResult>('/fx/eur-thb');
   },
 };
 

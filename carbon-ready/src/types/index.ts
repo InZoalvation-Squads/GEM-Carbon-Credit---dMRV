@@ -33,11 +33,13 @@ export type AuditAction =
   | 'REC_ISSUE_SUBMITTED'
   | 'REC_ISSUE_ISSUED'
   | 'REC_ISSUE_REJECTED'
-  | 'REC_ISSUE_DELETED';
+  | 'REC_ISSUE_DELETED'
+  | 'REC_ROI_SETTINGS_UPDATED'
+  | 'REC_ROI_PROJECT_UPDATED';
 
 export type EntityType =
   | 'project' | 'monitoring' | 'factor' | 'calculation'
-  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue';
+  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue' | 'rec_roi';
 export type PeriodType = 'daily' | 'monthly' | 'total';
 
 export interface Organization {
@@ -463,3 +465,28 @@ export interface ProjectDesignDocument {
   disclosure_salts?: Record<string, string>; // hex salt per sensitive field, private side of selective disclosure
   rejection_reason?: string;
 }
+
+// ---------------- REC ROI (assumptions only; results computed in lib/rec-roi.ts) ----------------
+export interface RecRoiSettings {
+  price_low_thb: number | null;
+  price_mid_thb: number | null;
+  price_high_thb: number | null;
+  price_source: string;
+  platform_fee_pct: number | null;
+  eur_thb: number | null;
+  eur_thb_source: string;
+  horizon_years: number;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+export type RecRoiSettingsInput = Omit<RecRoiSettings, 'updated_by' | 'updated_at'>;
+
+export interface RecRoiProjectSetting {
+  project_id: UUID;
+  issuance_type: 'Normal' | 'Self consumption';
+  digital_meter_exempt: boolean;
+  investment_mthb: number | null;
+  updated_by: string | null;
+  updated_at: string | null;
+}
+export type RecRoiProjectSettingInput = Pick<RecRoiProjectSetting, 'issuance_type' | 'digital_meter_exempt' | 'investment_mthb'>;
