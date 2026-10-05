@@ -150,14 +150,14 @@ describe('buildExecutiveSummary — three bullets that never overstate', () => {
     expect(b[1]).toMatch(/^ถ้าขาย REC 700 ใบ\/ปี ที่ราคากลาง 400\.00 ฿\/MWh \(ขายผ่าน GEM\) ได้เพิ่มสุทธิ ฿[\d,]+\/ปี = \d+\.\d{2}% ของมูลค่าไฟ$/);
     const share = Number(b[1].match(/= (\d+\.\d{2})%/)![1]);
     expect(share).toBeGreaterThanOrEqual(REC_SHARE_LOW_PCT);
-    expect(b[2]).toBe(`REC เพิ่มรายได้ ${share.toFixed(2)}% ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง จะได้สิทธิ์ claim ไฟสะอาดแทนรายได้ (ดูหน้าถัดไป)`);
+    expect(b[2]).toBe(`REC เพิ่มรายได้ ${share.toFixed(2)}% ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง อ้างสิทธิ์ claim ไฟสะอาดได้แทนรายได้ ตามเกณฑ์ market-based / RE100 ของผู้ใช้ (ดูหน้าถัดไป)`);
   });
 
-  it('(b) price + path + net < 0: a loss, its share unsigned, and the price it needs; bullet 3 is neutral', () => {
+  it('(b) price + path + net < 0: a loss, its share unsigned, and the price it needs; bullet 3 offers redeeming instead', () => {
     const b = exec({ price_mid_thb: 1, platform_fee_pct: 10, eur_thb: 40 });
     expect(b[1]).toMatch(/^ที่ราคากลาง 1\.00 ฿\/MWh REC ขาดทุนสุทธิ ฿[\d,]+\/ปี \(\d+\.\d{2}% ของมูลค่าไฟ\) — ยังไม่คุ้มค่าธรรมเนียม · ต้องขายได้อย่างน้อย 2\.26 ฿\/MWh$/);
     expect(b[1]).not.toMatch(/[+\u2212-]฿|\(-/);
-    expect(b[2]).toBe(NEUTRAL);
+    expect(b[2]).toBe('REC ขาดทุนที่ราคานี้ — ถ้าเก็บ REC ไว้ redeem เอง อ้างสิทธิ์ claim ไฟสะอาดได้แทนรายได้ ตามเกณฑ์ market-based / RE100 ของผู้ใช้ (ดูหน้าถัดไป)');
   });
 
   it('(c) a price but no computable path: says what is missing, bullet 3 neutral', () => {

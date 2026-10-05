@@ -229,7 +229,8 @@ describe('executive summary (page 1)', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
     const { bullets } = summaryOf(container);
     expect(bullets[1]).toMatch(/^ที่ราคากลาง 1\.00 ฿\/MWh REC ขาดทุนสุทธิ ฿[\d,]+\/ปี \(\d+\.\d{2}% ของมูลค่าไฟ\) — ยังไม่คุ้มค่าธรรมเนียม · ต้องขายได้อย่างน้อย 24\.19 ฿\/MWh$/);
-    expect(bullets[2]).toMatch(/^ต้องมีราคา REC และค่าธรรมเนียมครบ/);
+    expect(bullets[2]).toMatch(/^REC ขาดทุนที่ราคานี้ — ถ้าเก็บ REC ไว้ redeem เอง/);
+    expect(bullets[2]).not.toMatch(/น้อย/);
   });
 
   it('a price but no fee or FX says it cannot be computed', () => {

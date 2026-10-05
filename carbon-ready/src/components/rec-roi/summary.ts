@@ -105,6 +105,8 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
 const unsignedPct = (n: number) => `${formatNumber(Math.abs(n), 2)}%`;
 
 const NEEDS_PRICE_AND_FEES = 'ต้องมีราคา REC และค่าธรรมเนียมครบ จึงบอกได้ว่า REC คิดเป็นกี่ % ของมูลค่าไฟ — ส่วนสิทธิ์ claim ไฟสะอาดดูหน้าถัดไป';
+// Inputs are complete but REC loses money at this price: the alternative is keeping the claim.
+const LOSS_REDEEM_INSTEAD = 'REC ขาดทุนที่ราคานี้ — ถ้าเก็บ REC ไว้ redeem เอง อ้างสิทธิ์ claim ไฟสะอาดได้แทนรายได้ ตามเกณฑ์ market-based / RE100 ของผู้ใช้ (ดูหน้าถัดไป)';
 
 /**
  * The investor report's three executive-summary bullets, from the same
@@ -141,12 +143,12 @@ export function buildExecutiveSummary(r: ProjectRecRoi, a: RecRoiAssumptions): [
       `ที่ราคากลาง ${pricePerMwh(mid.price_thb)} ฿/MWh REC ขาดทุนสุทธิ ${thb(Math.abs(money.rec_year))}/ปี `
         + `(${share.share_pct === null ? '—' : unsignedPct(share.share_pct)} ของมูลค่าไฟ) — ยังไม่คุ้มค่าธรรมเนียม`
         + (cheapest ? ` · ต้องขายได้อย่างน้อย ${pricePerMwh(cheapest.break_even_price_thb)} ฿/MWh` : ''),
-      NEEDS_PRICE_AND_FEES];
+      LOSS_REDEEM_INSTEAD];
   }
   const second = `ถ้าขาย REC ${formatNumber(mwh, 0)} ใบ/ปี ที่ราคากลาง ${pricePerMwh(mid.price_thb)} ฿/MWh (${PATH_SHORT[path.path]}) `
     + `ได้เพิ่มสุทธิ ${thb(money.rec_year)}/ปี = ${share.share_pct === null ? '—' : unsignedPct(share.share_pct)} ของมูลค่าไฟ`;
   if (share.share_pct === null) return [first, second, NEEDS_PRICE_AND_FEES];
   return [first, second, share.share_pct < REC_SHARE_LOW_PCT
     ? 'รายได้จาก REC น้อยเมื่อเทียบกับมูลค่าไฟ — คุณค่าหลักของ REC คือสิทธิ์ claim ว่าใช้ไฟสะอาด ซึ่งเป็นของผู้ที่ถือหรือ redeem REC (ถ้าขาย REC ไป สิทธิ์นี้เป็นของผู้ซื้อ) — ดูหน้าถัดไป'
-    : `REC เพิ่มรายได้ ${unsignedPct(share.share_pct)} ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง จะได้สิทธิ์ claim ไฟสะอาดแทนรายได้ (ดูหน้าถัดไป)`];
+    : `REC เพิ่มรายได้ ${unsignedPct(share.share_pct)} ของมูลค่าไฟ — ถ้าเก็บ REC ไว้ redeem เอง อ้างสิทธิ์ claim ไฟสะอาดได้แทนรายได้ ตามเกณฑ์ market-based / RE100 ของผู้ใช้ (ดูหน้าถัดไป)`];
 }
