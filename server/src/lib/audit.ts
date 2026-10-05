@@ -41,6 +41,9 @@ export type AuditAction =
   | 'REC_ISSUE_ISSUED'
   | 'REC_ISSUE_REJECTED'
   | 'REC_ISSUE_DELETED'
+  // REC ROI assumptions — verbatim from the SPA union.
+  | 'REC_ROI_SETTINGS_UPDATED'
+  | 'REC_ROI_PROJECT_UPDATED'
   // Server-side extension (NOT in the SPA union): the SPA registers + signs
   // the PDD credential in one browser action and folds the credential fields
   // into its PROJECT_REGISTERED entry; the server splits them because the
@@ -54,7 +57,7 @@ export type AuditAction =
 /** Verbatim from carbon-ready/src/types/index.ts `EntityType`. */
 export type EntityType =
   | 'project' | 'monitoring' | 'factor' | 'calculation'
-  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue';
+  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue' | 'rec_roi';
 
 /** The authenticated caller, as every mutating service needs it. */
 export interface AuditActor {
