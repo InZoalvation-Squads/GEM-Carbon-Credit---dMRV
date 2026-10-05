@@ -55,6 +55,7 @@ describe('annualMwh — measured data only', () => {
   });
 });
 
+// Synthetic arithmetic inputs for hand-checkable math — not market data; never copy into fixtures or seeds.
 const INPUTS: RecProjectInputs = {
   capacity_kwp: 500, annual_mwh: 700, issuance_type: 'Normal', digital_meter_exempt: false,
 };
@@ -174,5 +175,47 @@ describe('validateRecRoiSettings — mirrors the server zod schema', () => {
   });
   it('rejects a horizon outside 1–25 years', () => {
     expect(validateRecRoiSettings({ ...base, horizon_years: 0 })).toMatch(/1–25/);
+  });
+});
+
+describe('payback — only once cumulative cash stays non-negative', () => {
+  const BIG: RecProjectInputs = { capacity_kwp: 4_000, annual_mwh: 1_000, issuance_type: 'Normal', digital_meter_exempt: false };
+  const A = { ...ASSUME, price_low_thb: null, price_mid_thb: 9.2, price_high_thb: null, platform_fee_pct: 0, eur_thb: null };
+  const midOf = (r: ReturnType<typeof computeRecRoi>) => {
+    if (r.platform.status !== 'ok') throw new Error('platform not ok');
+    return r.platform.scenarios.find((s) => s.scenario === 'mid')!;
+  };
+
+  it('a renewal at the start of year 6 can undo an earlier break-even → null with negative net', () => {
+    const mid = midOf(computeRecRoi(BIG, { ...A, horizon_years: 6 }));
+    expect(mid.net_thb).toBeLessThan(0);
+    expect(mid.payback_months).toBeNull();
+  });
+
+  it('same project over 5 years (no renewal) pays back in month 56', () => {
+    const mid = midOf(computeRecRoi(BIG, { ...A, horizon_years: 5 }));
+    expect(mid.net_thb).toBeGreaterThan(0);
+    expect(mid.payback_months).toBe(56); // ceil(38,000 ÷ 687.5)
+  });
+
+  it('price below break-even → null and negative net', () => {
+    const mid = midOf(computeRecRoi(INPUTS, { ...ASSUME, price_mid_thb: 2 }));
+    expect(mid.net_thb).toBeLessThan(0);
+    expect(mid.payback_months).toBeNull();
+  });
+});
+
+describe('validateRecRoiSettings — finite numbers and a fully valid object', () => {
+  const base = { ...EMPTY_REC_ROI_SETTINGS, price_source: '' };
+  it('rejects Infinity / NaN', () => {
+    expect(validateRecRoiSettings({ ...base, price_mid_thb: Infinity, price_source: 'quote' })).not.toBeNull();
+    expect(validateRecRoiSettings({ ...base, platform_fee_pct: NaN })).not.toBeNull();
+    expect(validateRecRoiSettings({ ...base, eur_thb: Infinity })).not.toBeNull();
+  });
+  it('accepts a fully valid settings object', () => {
+    expect(validateRecRoiSettings({
+      ...base, price_low_thb: 20, price_mid_thb: 25, price_high_thb: 30, price_source: 'quote',
+      platform_fee_pct: 10, eur_thb: 40, eur_thb_source: 'BOT', horizon_years: 5,
+    })).toBeNull();
   });
 });

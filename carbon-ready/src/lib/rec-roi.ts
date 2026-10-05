@@ -146,22 +146,29 @@ export function yearFixedCostThb(path: RecPath, y: number, inputs: RecProjectInp
   return cost;
 }
 
-/** Month-by-month: lumps at the start of each year, the yearly margin spread evenly. */
+/**
+ * Month-by-month cumulative cash: lumps at the start of each year, the yearly
+ * margin spread evenly. Payback = the first month after which cumulative cash
+ * stays ≥ 0 through the end of the horizon (a later renewal or account fee can
+ * undo an earlier break-even); null when the margin is ≤ 0 or cash is still
+ * negative at the end of the horizon. 0 = no upfront cost and a positive margin.
+ */
 function paybackMonths(path: RecPath, inputs: RecProjectInputs, a: RecRoiAssumptions, price: number): number | null {
   const fee = feeFraction(path, a);
   const issuance = REC_FEES.issuance_thb_per_mwh[inputs.issuance_type];
   const monthly = (inputs.annual_mwh * (price * (1 - fee) - issuance)) / 12;
   if (!(monthly > 0)) return null;
-  let cum = 0;
-  for (let y = 1; y <= a.horizon_years; y++) {
-    cum -= yearFixedCostThb(path, y, inputs, a);
-    if (y === 1 && cum >= 0) return 0;
-    for (let m = 1; m <= 12; m++) {
-      cum += monthly;
-      if (cum >= 0) return (y - 1) * 12 + m;
-    }
+  const months = a.horizon_years * 12;
+  let cum = -yearFixedCostThb(path, 1, inputs, a);
+  let lastNegative = cum < 0 ? 0 : -1;
+  for (let t = 1; t <= months; t++) {
+    cum += monthly;
+    // A new year's lump lands at the same instant as the end of month t.
+    if (t % 12 === 0 && t < months) cum -= yearFixedCostThb(path, t / 12 + 1, inputs, a);
+    if (cum < 0) lastNegative = t;
   }
-  return null;
+  if (lastNegative === months) return null;
+  return lastNegative + 1;
 }
 
 function evaluatePath(path: RecPath, inputs: RecProjectInputs, a: RecRoiAssumptions): RecPathResult {
@@ -227,16 +234,16 @@ export function computeRecRoi(inputs: RecProjectInputs, a: RecRoiAssumptions): R
  */
 export function validateRecRoiSettings(s: RecRoiSettingsShape): string | null {
   const prices = [s.price_low_thb, s.price_mid_thb, s.price_high_thb];
-  if (prices.some((p) => p !== null && !(p > 0))) return 'ราคา REC ต้องมากกว่า 0';
+  if (prices.some((p) => p !== null && !(Number.isFinite(p) && p > 0))) return 'ราคา REC ต้องมากกว่า 0';
   const entered = prices.filter((p): p is number => p !== null);
   for (let i = 1; i < entered.length; i++) {
     if (entered[i] < entered[i - 1]) return 'ราคาต้องเรียง ต่ำ ≤ กลาง ≤ สูง';
   }
   if (entered.length > 0 && s.price_source.trim() === '') return 'กรุณาระบุที่มาของราคา (เช่น ใบเสนอซื้อจริง)';
-  if (s.platform_fee_pct !== null && !(s.platform_fee_pct >= 0 && s.platform_fee_pct < 100)) {
+  if (s.platform_fee_pct !== null && !(Number.isFinite(s.platform_fee_pct) && s.platform_fee_pct >= 0 && s.platform_fee_pct < 100)) {
     return 'ค่าบริการแพลตฟอร์มต้องอยู่ระหว่าง 0 ถึงน้อยกว่า 100%';
   }
-  if (s.eur_thb !== null && !(s.eur_thb > 0)) return 'อัตราแลกเปลี่ยนต้องมากกว่า 0';
+  if (s.eur_thb !== null && !(Number.isFinite(s.eur_thb) && s.eur_thb > 0)) return 'อัตราแลกเปลี่ยนต้องมากกว่า 0';
   if (!Number.isInteger(s.horizon_years) || s.horizon_years < 1 || s.horizon_years > 25) {
     return 'ระยะประเมินต้องเป็นจำนวนเต็ม 1–25 ปี';
   }
