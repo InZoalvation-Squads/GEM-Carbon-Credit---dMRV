@@ -39,7 +39,7 @@ export function RecRoi() {
   if (role === 'verifier') {
     return (
       <div>
-        <PageHeader title="REC ROI" subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) ผ่านแพลตฟอร์ม — ต่อโปรเจกต์" />
+        <PageHeader title="REC ROI" subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) — ต่อโปรเจกต์" />
         <Card>
           <CardBody>
             <p className="text-sm text-ink-secondary">หน้านี้สำหรับผู้พัฒนาโครงการและผู้ดูแลองค์กร — ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC</p>
@@ -55,7 +55,7 @@ export function RecRoi() {
     <div>
       <PageHeader
         title="REC ROI"
-        subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) ผ่านแพลตฟอร์ม — ต่อโปรเจกต์"
+        subtitle="ความคุ้มค่าของการลงทะเบียน I-REC(E) — ต่อโปรเจกต์"
         action={<LinkButton to="/reports/investor" variant="secondary"><FileDown size={16} aria-hidden /> ดาวน์โหลดรายงานนักลงทุน</LinkButton>}
       />
       <RecRoiAssumptions />
@@ -67,8 +67,8 @@ export function RecRoi() {
               <TR>
                 <TH>โปรเจกต์</TH>
                 <TH className="text-right">MWh/ปี</TH>
-                <TH className="text-right">คุ้มทุน ก (฿/MWh)</TH>
-                <TH className="text-right">คุ้มทุน ข (฿/MWh)</TH>
+                <TH className="text-right">คุ้มทุน · เปิดบัญชีเอง (฿/MWh)</TH>
+                <TH className="text-right">คุ้มทุน · ขายผ่าน GEM (฿/MWh)</TH>
                 <TH className="text-right">ROI @ราคากลาง</TH>
                 <TH>แนะนำ</TH>
               </TR>

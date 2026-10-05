@@ -4,15 +4,15 @@ import type { Tone } from '../ui/Badge';
 import { recommendedMid, recommendedPath } from '../../lib/investor-report';
 
 export const PATH_LABEL: Record<RecPath, string> = {
-  own: 'ก · เปิดบัญชี Evident เอง',
-  platform: 'ข · ผ่านแพลตฟอร์ม',
+  own: 'เปิดบัญชี Evident เอง',
+  platform: 'ขายผ่าน GEM',
 };
-export const PATH_SHORT: Record<RecPath, string> = { own: 'บัญชีเอง', platform: 'ผ่านแพลตฟอร์ม' };
+export const PATH_SHORT: Record<RecPath, string> = { own: 'เปิดบัญชีเอง', platform: 'ขายผ่าน GEM' };
 
 export const MISSING_LABEL: Record<RecRoiMissing, string> = {
   price: 'ยังไม่กรอกราคา REC (กลาง)',
-  platform_fee: 'ยังไม่กรอกค่าบริการแพลตฟอร์ม → เส้นทาง ข คำนวณไม่ได้',
-  fx: 'ยังไม่กรอกอัตรา EUR→THB → เส้นทาง ก คำนวณไม่ได้',
+  platform_fee: 'ยังไม่กรอกค่าบริการ GEM → ทางขายผ่าน GEM คำนวณไม่ได้',
+  fx: 'ยังไม่กรอกอัตรา EUR→THB → ทางเปิดบัญชีเองคำนวณไม่ได้',
 };
 
 /** Baht amount; negatives get a typographic minus before the symbol ("−฿392,481"). */

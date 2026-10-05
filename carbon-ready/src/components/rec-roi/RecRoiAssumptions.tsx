@@ -31,7 +31,7 @@ type Key = keyof Draft;
 const NUMBER_KEYS: Key[] = ['price_low_thb', 'price_mid_thb', 'price_high_thb', 'platform_fee_pct', 'eur_thb', 'horizon_years'];
 const FIELD_LABEL: Record<Key, string> = {
   price_low_thb: 'ราคาต่ำ', price_mid_thb: 'ราคากลาง', price_high_thb: 'ราคาสูง',
-  platform_fee_pct: 'ค่าบริการแพลตฟอร์ม', eur_thb: 'อัตรา EUR→THB', horizon_years: 'ระยะประเมิน',
+  platform_fee_pct: 'ค่าบริการ GEM', eur_thb: 'อัตรา EUR→THB', horizon_years: 'ระยะประเมิน',
   price_source: 'ที่มาของราคา', eur_thb_source: 'ที่มา FX',
 };
 
@@ -125,7 +125,7 @@ export function RecRoiAssumptions() {
           <div className="md:col-span-4"><Input label="ราคากลาง (฿/MWh)" type="number" min="0" step="any" {...field('price_mid_thb')} /></div>
           <div className="md:col-span-4"><Input label="ราคาสูง (฿/MWh)" type="number" min="0" step="any" {...field('price_high_thb')} /></div>
           <div className="md:col-span-12"><Input label="ที่มาของราคา" placeholder="เช่น ใบเสนอซื้อ บริษัท X ลงวันที่ …" {...field('price_source')} /></div>
-          <div className="md:col-span-4"><Input label="ค่าบริการแพลตฟอร์ม (% ของรายได้)" type="number" min="0" max="99.99" step="any" {...field('platform_fee_pct')} /></div>
+          <div className="md:col-span-4"><Input label="ค่าบริการ GEM (% ของรายได้)" type="number" min="0" max="99.99" step="any" {...field('platform_fee_pct')} /></div>
           <div className="md:col-span-4"><Input label="อัตรา EUR→THB" type="number" min="0" step="any" {...field('eur_thb')} /></div>
           <div className="md:col-span-4"><Input label="ระยะประเมิน (ปี)" type="number" min="1" max="25" step="1" {...field('horizon_years')} /></div>
         </div>

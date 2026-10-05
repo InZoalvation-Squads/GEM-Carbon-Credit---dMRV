@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
 import { computeRecRoi, type RecRoiAssumptions } from '../../lib/rec-roi';
-import { recommendationBadge, thb } from './format';
+import { MISSING_LABEL, PATH_LABEL, PATH_SHORT, recommendationBadge, thb } from './format';
 
 const inputs = { capacity_kwp: 250, annual_mwh: 36.5, issuance_type: 'Normal' as const, digital_meter_exempt: false };
 const A = (o: Partial<RecRoiAssumptions>): RecRoiAssumptions => ({
@@ -14,23 +14,23 @@ describe('recommendationBadge', () => {
     expect(badge({ price_mid_thb: 25 })).toBeNull();
   });
   it('both paths ok, mid price, net >= 0 → green path', () => {
-    expect(badge({ price_mid_thb: 25, platform_fee_pct: 10, eur_thb: 40 })).toEqual({ tone: 'green', text: 'ผ่านแพลตฟอร์ม' });
+    expect(badge({ price_mid_thb: 25, platform_fee_pct: 10, eur_thb: 40 })).toEqual({ tone: 'green', text: 'ขายผ่าน GEM' });
   });
   it('both paths ok, mid price, net < 0 → amber "neither pays"', () => {
     expect(badge({ price_mid_thb: 1, platform_fee_pct: 10, eur_thb: 40 })).toEqual({ tone: 'amber', text: 'ไม่คุ้มทั้งสองทาง' });
   });
   it('one path ok, mid price, net >= 0 → green with single-path caveat', () => {
-    expect(badge({ price_mid_thb: 25, platform_fee_pct: 10 })).toEqual({ tone: 'green', text: 'ผ่านแพลตฟอร์ม (คำนวณได้ทางเดียว)' });
+    expect(badge({ price_mid_thb: 25, platform_fee_pct: 10 })).toEqual({ tone: 'green', text: 'ขายผ่าน GEM (คำนวณได้ทางเดียว)' });
   });
   it('one path ok, mid price, net < 0 → amber, names the path, not "both"', () => {
-    expect(badge({ price_mid_thb: 1, platform_fee_pct: 10 })).toEqual({ tone: 'amber', text: 'ไม่คุ้ม (ผ่านแพลตฟอร์ม)' });
+    expect(badge({ price_mid_thb: 1, platform_fee_pct: 10 })).toEqual({ tone: 'amber', text: 'ไม่คุ้ม (ขายผ่าน GEM)' });
   });
   it('no mid price, both ok → gray "lower break-even"', () => {
-    expect(badge({ platform_fee_pct: 10, eur_thb: 40 })).toEqual({ tone: 'gray', text: 'ผ่านแพลตฟอร์ม · คุ้มทุนต่ำกว่า' });
+    expect(badge({ platform_fee_pct: 10, eur_thb: 40 })).toEqual({ tone: 'gray', text: 'ขายผ่าน GEM · คุ้มทุนต่ำกว่า' });
   });
   it('no mid price, one ok → gray single-path caveat', () => {
-    expect(badge({ platform_fee_pct: 10 })).toEqual({ tone: 'gray', text: 'ผ่านแพลตฟอร์ม (คำนวณได้ทางเดียว)' });
-    expect(badge({ eur_thb: 40 })).toEqual({ tone: 'gray', text: 'บัญชีเอง (คำนวณได้ทางเดียว)' });
+    expect(badge({ platform_fee_pct: 10 })).toEqual({ tone: 'gray', text: 'ขายผ่าน GEM (คำนวณได้ทางเดียว)' });
+    expect(badge({ eur_thb: 40 })).toEqual({ tone: 'gray', text: 'เปิดบัญชีเอง (คำนวณได้ทางเดียว)' });
   });
 });
 
@@ -46,5 +46,16 @@ describe('thb', () => {
   it('negative: typographic minus before the symbol', () => {
     expect(thb(-392481)).toBe('\u2212฿392,481');
     expect(thb(-1234.5, 1)).toBe('\u2212฿1,234.5');
+  });
+});
+
+describe('plain path names (no ก / ข letters)', () => {
+  it('names the two paths by what they are', () => {
+    expect(PATH_LABEL).toEqual({ own: 'เปิดบัญชี Evident เอง', platform: 'ขายผ่าน GEM' });
+    expect(PATH_SHORT).toEqual({ own: 'เปิดบัญชีเอง', platform: 'ขายผ่าน GEM' });
+  });
+  it('missing-input messages name the path instead of a letter', () => {
+    expect(MISSING_LABEL.platform_fee).toBe('ยังไม่กรอกค่าบริการ GEM → ทางขายผ่าน GEM คำนวณไม่ได้');
+    expect(MISSING_LABEL.fx).toBe('ยังไม่กรอกอัตรา EUR→THB → ทางเปิดบัญชีเองคำนวณไม่ได้');
   });
 });

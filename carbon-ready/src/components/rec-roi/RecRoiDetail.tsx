@@ -101,7 +101,7 @@ const yearsText = (v: number | null) => (v === null ? '—' : `${formatNumber(v,
 const UPLIFT_MESSAGE: Record<Exclude<RecIrrUplift['status'], 'ok'>, string> = {
   missing_investment: 'ยังไม่มีข้อมูลเงินลงทุน — ใส่ใน PDD (investment_mthb) หรือกรอกด้านล่าง',
   missing_price: MISSING_LABEL.price,
-  no_path: 'ยังคำนวณไม่ได้ — เส้นทางที่แนะนำยังขาดค่าบริการแพลตฟอร์มหรืออัตรา EUR→THB',
+  no_path: 'ยังคำนวณไม่ได้ — ทางที่แนะนำยังขาดค่าบริการ GEM หรืออัตรา EUR→THB',
   missing_generation: 'ยังไม่มีข้อมูลการผลิตที่วัดได้',
 };
 

@@ -35,8 +35,8 @@ export interface RecRoiSummary {
   money: RecMoneyComparison;
 }
 
-/** How each path reads inside a sentence ("ขาย REC <via>ที่ราคา …"). */
-const SELL_VIA: Record<RecPathOk['path'], string> = { own: 'โดยเปิดบัญชี Evident เอง', platform: 'ผ่านแพลตฟอร์ม' };
+/** How each path reads inside a sentence ("ขาย REC <via>ที่ราคา …"); Thai runs on, so a path ending in Latin carries its own space. */
+const SELL_VIA: Record<RecPathOk['path'], string> = { own: 'โดยเปิดบัญชี Evident เอง', platform: 'ผ่าน GEM ' };
 
 const paybackPhrase =(months: number | null) =>
   months === null ? 'ไม่คืนทุนในระยะประเมิน' : months === 0 ? 'คืนทุนทันที' : `คืนทุนใน ${months} เดือน`;
@@ -57,7 +57,7 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
   if (roi.own.status === 'ok' && roi.platform.status === 'ok' && a.eur_thb !== null
       && roi.own.break_even_price_thb > roi.platform.break_even_price_thb) {
     points.push(`เปิดบัญชี Evident เองต้องขายได้อย่างน้อย ${pricePerMwh(roi.own.break_even_price_thb)} ฿/MWh `
-      + `เทียบกับผ่านแพลตฟอร์ม ${pricePerMwh(roi.platform.break_even_price_thb)} ฿/MWh — `
+      + `เทียบกับ${PATH_SHORT.platform} ${pricePerMwh(roi.platform.break_even_price_thb)} ฿/MWh — `
       + `ค่าบัญชี €${formatNumber(REC_FEES.account_annual_eur, 0)}/ปี (≈ ${thb(REC_FEES.account_annual_eur * a.eur_thb)}) กินรายได้เกือบทั้งหมด`);
   }
   const u = r.uplift;
@@ -84,7 +84,7 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
 
   if (!cheapest || !best) {
     return { tone: 'gray', label: 'ประเมินไม่ได้', points, money,
-      headline: 'ยังประเมินไม่ได้ — ต้องมีค่าบริการแพลตฟอร์มหรืออัตรา EUR→THB อย่างน้อยหนึ่งค่า' };
+      headline: 'ยังประเมินไม่ได้ — ต้องมีค่าบริการ GEM หรืออัตรา EUR→THB อย่างน้อยหนึ่งค่า' };
   }
   const target = `ต้องขายได้อย่างน้อย ${pricePerMwh(cheapest.break_even_price_thb)} ฿/MWh (${PATH_SHORT[cheapest.path]}) จึงจะคุ้มทุนใน ${H} ปี`;
   if (!mid) {

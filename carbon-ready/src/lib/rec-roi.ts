@@ -60,7 +60,7 @@ export function annualMwh(records: MonitoringRecord[], driverParam?: string): An
 }
 
 // ---------------------------------------------------------------------------
-// Standalone REC ROI — own Evident trade account (ก) vs via platform (ข)
+// Standalone REC ROI — own Evident trade account vs selling via GEM
 // ---------------------------------------------------------------------------
 
 /** Org-level assumptions (null = not entered; there are NO defaults). */
@@ -244,7 +244,7 @@ export function validateRecRoiSettings(s: RecRoiSettingsShape): string | null {
   if (s.price_source.length > 500) return 'ที่มาของราคายาวเกิน 500 ตัวอักษร';
   if (s.eur_thb_source.length > 200) return 'ที่มาของอัตรา FX ยาวเกิน 200 ตัวอักษร';
   if (s.platform_fee_pct !== null && !(Number.isFinite(s.platform_fee_pct) && s.platform_fee_pct >= 0 && s.platform_fee_pct < 100)) {
-    return 'ค่าบริการแพลตฟอร์มต้องอยู่ระหว่าง 0 ถึงน้อยกว่า 100%';
+    return 'ค่าบริการ GEM ต้องอยู่ระหว่าง 0 ถึงน้อยกว่า 100%';
   }
   if (s.eur_thb !== null && !(Number.isFinite(s.eur_thb) && s.eur_thb > 0)) return 'อัตราแลกเปลี่ยนต้องมากกว่า 0';
   if (!Number.isInteger(s.horizon_years) || s.horizon_years < 1 || s.horizon_years > 25) {

@@ -43,7 +43,7 @@ describe('single-project investor report', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
     expect(pages(container)).toHaveLength(2);
     const [money, scope2] = [...pages(container)] as HTMLElement[];
-    expect(within(money).getByText(/^ขาย REC ผ่านแพลตฟอร์มที่ราคา 25\.00 ฿\/MWh/)).toBeInTheDocument();
+    expect(within(money).getByText(/^ขาย REC ผ่าน GEM ที่ราคา 25\.00 ฿\/MWh/)).toBeInTheDocument();
     expect(within(money).getByText('ไม่มี REC')).toBeInTheDocument();
     // 36.5 MWh/yr × 0.475 = 17.34 tCO2e/yr
     expect(within(scope2).getByText('17.34')).toBeInTheDocument();
@@ -126,7 +126,7 @@ describe('honest copy, structure and states', () => {
 
   it('the REC-sold row names the path it is computed on', () => {
     const { container } = renderAt('/reports/investor/prj-0001');
-    expect(within(pages(container)[1] as HTMLElement).getByText(/ใน 5 ปี · ผ่านแพลตฟอร์ม$/)).toBeInTheDocument();
+    expect(within(pages(container)[1] as HTMLElement).getByText(/ใน 5 ปี · ขายผ่าน GEM$/)).toBeInTheDocument();
   });
 
   it('shows no unit after a dash when there is no break-even', () => {
@@ -195,7 +195,21 @@ describe('honest copy, structure and states', () => {
 
   it('the overview chart caption says it is the platform path', () => {
     const { container } = renderAt('/reports/investor');
-    expect(pages(container)[0]).toHaveTextContent(/เส้นทาง ข \(ผ่านแพลตฟอร์ม\)/);
+    expect(pages(container)[0]).toHaveTextContent(/ทางขายผ่าน GEM/);
+  });
+});
+
+describe('plain path names in the report', () => {
+  it('money page KPI and overview column name the path, not a letter', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const money = pages(container)[0] as HTMLElement;
+    expect(within(money).getByText('คุ้มทุน · ขายผ่าน GEM')).toBeInTheDocument();
+    expect(within(money).getByText('เปิดบัญชี Evident เอง')).toBeInTheDocument();
+    expect(money).not.toHaveTextContent(/ทาง ข|เส้นทาง|คุ้มทุน ข/);
+  });
+  it('overview table header carries the path name', () => {
+    const { container } = renderAt('/reports/investor');
+    expect(within(pages(container)[0] as HTMLElement).getByRole('columnheader', { name: 'คุ้มทุน · ขายผ่าน GEM (฿/MWh)' })).toBeInTheDocument();
   });
 });
 

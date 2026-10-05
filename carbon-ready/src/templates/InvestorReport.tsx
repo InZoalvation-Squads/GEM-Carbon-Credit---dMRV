@@ -29,7 +29,7 @@ const TICK = { fontSize: 10, fill: '#64748b' }; // ink-500
 
 const MISSING_PATH: Record<'missing_fx' | 'missing_fee', string> = {
   missing_fx: 'ยังไม่มีอัตรา EUR→THB',
-  missing_fee: 'ยังไม่มีค่าบริการแพลตฟอร์ม',
+  missing_fee: 'ยังไม่มีค่าบริการ GEM',
 };
 
 function useReportSources(): ReportSources {
@@ -217,7 +217,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
         <KpiStrip>
           <Kpi label="MWh/ปี" value={formatNumber(annual.annual_mwh, 1)} />
           <Kpi label="REC/ปี" value={formatNumber(annual.annual_mwh, 0)} />
-          <Kpi label="ราคาคุ้มทุน ข" value={breakEvenText(roi.platform)} unit="฿/MWh" />
+          <Kpi label="คุ้มทุน · ขายผ่าน GEM" value={breakEvenText(roi.platform)} unit="฿/MWh" />
           <Kpi label="ROI @ราคากลาง" value={pct(midRoi)} />
         </KpiStrip>
 
@@ -258,7 +258,7 @@ function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; as
         </div>
 
         <div>
-          <SectionTitle>เทียบเส้นทาง</SectionTitle>
+          <SectionTitle>เทียบสองทาง</SectionTitle>
           <div className="grid grid-cols-2 gap-3">
             <PathColumn result={roi.own} />
             <PathColumn result={roi.platform} />
@@ -389,7 +389,7 @@ function RankingTable({ rows }: { rows: OverviewRow[] }) {
   return (
     <table className="w-full border-collapse">
       <thead>
-        <tr className="whitespace-nowrap"><TH>โครงการ</TH><TH right>MWh/ปี</TH><TH right>คุ้มทุน ข (฿/MWh)</TH><TH right>ROI @กลาง</TH><TH>ผล</TH></tr>
+        <tr className="whitespace-nowrap"><TH>โครงการ</TH><TH right>MWh/ปี</TH><TH right>คุ้มทุน · ขายผ่าน GEM (฿/MWh)</TH><TH right>ROI @กลาง</TH><TH>ผล</TH></tr>
       </thead>
       <tbody>
         {rows.map((r) => (
@@ -410,13 +410,13 @@ function RankingTable({ rows }: { rows: OverviewRow[] }) {
 function breakEvenLabel(chart: Array<{ name: string; be: number }>): string {
   const lo = chart.reduce((m, x) => (x.be < m.be ? x : m), chart[0]);
   const hi = chart.reduce((m, x) => (x.be > m.be ? x : m), chart[0]);
-  return `ราคาคุ้มทุนเส้นทาง ข (ผ่านแพลตฟอร์ม) ของ ${chart.length} โครงการ ต่ำสุด ${pricePerMwh(lo.be)} ฿/MWh (${lo.name}) สูงสุด ${pricePerMwh(hi.be)} ฿/MWh (${hi.name})`;
+  return `ราคาคุ้มทุนทางขายผ่าน GEM ของ ${chart.length} โครงการ ต่ำสุด ${pricePerMwh(lo.be)} ฿/MWh (${lo.name}) สูงสุด ${pricePerMwh(hi.be)} ฿/MWh (${hi.name})`;
 }
 
 function BreakEvenChart({ chart, mid }: { chart: Array<{ name: string; be: number }>; mid: number | null }) {
   return (
     <div>
-      <SectionTitle>ราคาคุ้มทุนผ่านแพลตฟอร์ม (฿/MWh)</SectionTitle>
+      <SectionTitle>ราคาคุ้มทุน · ขายผ่าน GEM (฿/MWh)</SectionTitle>
       <div role="img" aria-label={breakEvenLabel(chart)}>
       <BarChart layout="vertical" width={680} height={Math.min(CHART_MAX_HEIGHT, Math.max(160, 22 * chart.length + 40))} data={chart}
         margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
@@ -429,7 +429,7 @@ function BreakEvenChart({ chart, mid }: { chart: Array<{ name: string; be: numbe
       </BarChart>
       </div>
       <p className="text-[11px] text-ink-500">
-        แท่งแสดงราคาคุ้มทุนของเส้นทาง ข (ผ่านแพลตฟอร์ม) ของแต่ละโครงการ — คอลัมน์ ROI และผลในตารางใช้เส้นทางที่แนะนำ ·
+        แท่งแสดงราคาคุ้มทุนของทางขายผ่าน GEM ของแต่ละโครงการ — คอลัมน์ ROI และผลในตารางใช้ทางที่แนะนำ ·
         แท่งที่สั้นกว่าเส้นราคากลางคือโครงการที่คุ้มทุนที่ราคากลาง
       </p>
     </div>

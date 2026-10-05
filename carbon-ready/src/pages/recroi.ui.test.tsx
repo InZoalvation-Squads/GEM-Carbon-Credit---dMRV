@@ -43,6 +43,14 @@ describe('/rec-roi portfolio page', () => {
     expect(screen.getByRole('link', { name: /ดาวน์โหลดรายงานนักลงทุน/ })).toHaveAttribute('href', '/reports/investor');
   });
 
+  it('names the break-even columns by path, not by a letter', () => {
+    renderPage();
+    expect(screen.getByRole('columnheader', { name: 'คุ้มทุน · เปิดบัญชีเอง (฿/MWh)' })).toBeInTheDocument();
+    expect(screen.getByRole('columnheader', { name: 'คุ้มทุน · ขายผ่าน GEM (฿/MWh)' })).toBeInTheDocument();
+    expect(screen.queryByLabelText('ค่าบริการแพลตฟอร์ม (% ของรายได้)')).toBeNull();
+    expect(screen.getByLabelText('ค่าบริการ GEM (% ของรายได้)')).toBeInTheDocument();
+  });
+
   it('explains there is no reference price and leaves ROI blank until prices are entered', () => {
     renderPage();
     expect(screen.getByText(/ไม่มีราคากลาง REC/)).toBeInTheDocument();
@@ -62,7 +70,7 @@ describe('/rec-roi portfolio page', () => {
     }));
     renderPage();
     expect(within(puneRow()).getByText('+3.0%')).toBeInTheDocument();
-    expect(within(puneRow()).getByText(/ผ่านแพลตฟอร์ม/)).toBeInTheDocument();
+    expect(within(puneRow()).getByText(/ขายผ่าน GEM/)).toBeInTheDocument();
   });
 
   it('does not endorse a path whose mid-price net is negative', () => {
@@ -71,14 +79,14 @@ describe('/rec-roi portfolio page', () => {
     }));
     renderPage();
     expect(within(puneRow()).getByText('ไม่คุ้มทั้งสองทาง')).toBeInTheDocument();
-    expect(within(puneRow()).queryByText('ผ่านแพลตฟอร์ม')).toBeNull();
-    expect(within(puneRow()).queryByText('บัญชีเอง')).toBeNull();
+    expect(within(puneRow()).queryByText('ขายผ่าน GEM')).toBeNull();
+    expect(within(puneRow()).queryByText('เปิดบัญชีเอง')).toBeNull();
   });
 
   it('shows a gray "lower break-even" badge when there is no price yet', () => {
     useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, eur_thb: 40 } }));
     renderPage();
-    expect(within(puneRow()).getByText('ผ่านแพลตฟอร์ม · คุ้มทุนต่ำกว่า')).toBeInTheDocument();
+    expect(within(puneRow()).getByText('ขายผ่าน GEM · คุ้มทุนต่ำกว่า')).toBeInTheDocument();
   });
 
   it('single computable path with a losing mid price never says "neither pays"', () => {
@@ -86,7 +94,7 @@ describe('/rec-roi portfolio page', () => {
       recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, price_mid_thb: 1, price_source: 'quote' },
     }));
     renderPage();
-    expect(within(puneRow()).getByText('ไม่คุ้ม (ผ่านแพลตฟอร์ม)')).toBeInTheDocument();
+    expect(within(puneRow()).getByText('ไม่คุ้ม (ขายผ่าน GEM)')).toBeInTheDocument();
     expect(within(puneRow()).queryByText('ไม่คุ้มทั้งสองทาง')).toBeNull();
   });
 
@@ -121,7 +129,7 @@ describe('/rec-roi portfolio page', () => {
     renderPage();
     fireEvent.change(screen.getByLabelText(/ราคากลาง/), { target: { value: '25' } });
     fireEvent.change(screen.getByLabelText(/ที่มาของราคา/), { target: { value: 'ใบเสนอซื้อ 2026-09' } });
-    fireEvent.change(screen.getByLabelText(/ค่าบริการแพลตฟอร์ม/), { target: { value: '10' } });
+    fireEvent.change(screen.getByLabelText(/ค่าบริการ GEM/), { target: { value: '10' } });
     fireEvent.click(screen.getByRole('button', { name: /บันทึกสมมติฐาน/ }));
     await waitFor(() => expect(useStore.getState().recRoiSettings.price_mid_thb).toBe(25));
     expect(useStore.getState().recRoiSettings.platform_fee_pct).toBe(10);
@@ -242,7 +250,7 @@ describe('ProjectDetail — REC ROI tab', () => {
     renderProject('prj-0001', '?tab=rec-roi');
     const summary = screen.getByRole('region', { name: 'สรุป' });
     expect(within(summary).getByText('คุ้ม')).toBeInTheDocument();
-    expect(within(summary).getByText(/^ขาย REC ผ่านแพลตฟอร์มที่ราคา 25\.00 ฿\/MWh ได้กำไรสุทธิ/)).toBeInTheDocument();
+    expect(within(summary).getByText(/^ขาย REC ผ่าน GEM ที่ราคา 25\.00 ฿\/MWh ได้กำไรสุทธิ/)).toBeInTheDocument();
     expect(within(summary).getByText(/= 37 REC\/ปี \(จากข้อมูลวัดจริง 92 วัน ประมาณเป็นรายปี\)/)).toBeInTheDocument();
   });
 
@@ -275,13 +283,13 @@ describe('ProjectDetail — REC ROI tab', () => {
     renderProject('prj-0001', '?tab=rec-roi');
     const summary = screen.getByRole('region', { name: 'สรุป' });
     expect(within(summary).getByText('รอราคา')).toBeInTheDocument();
-    expect(within(summary).getByText(/^ยังไม่มีราคา REC — ต้องขายได้อย่างน้อย 24\.19 ฿\/MWh \(ผ่านแพลตฟอร์ม\)/)).toBeInTheDocument();
+    expect(within(summary).getByText(/^ยังไม่มีราคา REC — ต้องขายได้อย่างน้อย 24\.19 ฿\/MWh \(ขายผ่าน GEM\)/)).toBeInTheDocument();
   });
 
   it('opens from ?tab=rec-roi and shows both paths side by side', () => {
     renderProject('prj-0001', '?tab=rec-roi');
-    expect(screen.getByText('ก · เปิดบัญชี Evident เอง')).toBeInTheDocument();
-    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+    expect(screen.getByText('เปิดบัญชี Evident เอง')).toBeInTheDocument();
+    expect(screen.getByText('ขายผ่าน GEM')).toBeInTheDocument();
     expect(screen.getByText('24.19')).toBeInTheDocument();
     expect(screen.getByText(/ข้อมูล 92 วัน/)).toBeInTheDocument();
   });
@@ -295,7 +303,7 @@ describe('ProjectDetail — REC ROI tab', () => {
     useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
     renderProject('prj-0001', '?tab=rec-roi');
     expect(screen.queryByText('แนะนำ')).toBeNull();
-    expect(screen.getByText('ผ่านแพลตฟอร์ม · คุ้มทุนต่ำกว่า')).toBeInTheDocument();
+    expect(screen.getByText('ขายผ่าน GEM · คุ้มทุนต่ำกว่า')).toBeInTheDocument();
   });
 
   it('never shows "แนะนำ" when the mid price loses money', () => {
@@ -381,14 +389,14 @@ describe('ProjectDetail — REC ROI tab', () => {
   it('is reachable by clicking the tab', () => {
     renderProject('prj-0001');
     fireEvent.click(screen.getByRole('tab', { name: 'REC ROI' }));
-    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+    expect(screen.getByText('ขายผ่าน GEM')).toBeInTheDocument();
   });
 
   it('drops a verifier off the REC ROI tab when the role switches while it is open', () => {
     renderProject('prj-0001', '?tab=rec-roi');
-    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+    expect(screen.getByText('ขายผ่าน GEM')).toBeInTheDocument();
     act(() => { useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } })); });
-    expect(screen.queryByText('ข · ผ่านแพลตฟอร์ม')).toBeNull();
+    expect(screen.queryByText('ขายผ่าน GEM')).toBeNull();
     expect(screen.queryByRole('tab', { name: 'REC ROI' })).toBeNull();
     expect(screen.getByRole('tab', { name: 'Monitoring' })).toHaveAttribute('aria-selected', 'true');
   });
@@ -461,6 +469,6 @@ describe('ProjectDetail — REC ROI tab', () => {
     useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } }));
     renderProject('prj-0001', '?tab=rec-roi');
     expect(screen.queryByRole('tab', { name: 'REC ROI' })).toBeNull();
-    expect(screen.queryByText('ข · ผ่านแพลตฟอร์ม')).toBeNull();
+    expect(screen.queryByText('ขายผ่าน GEM')).toBeNull();
   });
 });

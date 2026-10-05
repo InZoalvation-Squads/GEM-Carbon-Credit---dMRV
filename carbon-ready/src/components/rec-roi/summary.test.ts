@@ -34,12 +34,12 @@ describe('buildRecRoiSummary — one plain-language verdict per project', () => 
     const s = evalWith({ price_mid_thb: 25, platform_fee_pct: 10, eur_thb: 40 })!;
     expect(s.tone).toBe('green');
     expect(s.label).toBe('คุ้ม');
-    expect(s.headline).toBe('ขาย REC ผ่านแพลตฟอร์มที่ราคา 25.00 ฿/MWh ได้กำไรสุทธิ ฿71,625 ใน 5 ปี (ROI +451.2%) คืนทุนใน 4 เดือน');
+    expect(s.headline).toBe('ขาย REC ผ่าน GEM ที่ราคา 25.00 ฿/MWh ได้กำไรสุทธิ ฿71,625 ใน 5 ปี (ROI +451.2%) คืนทุนใน 4 เดือน');
   });
 
   it('explains why the own Evident account costs more', () => {
     const s = evalWith({ price_mid_thb: 25, platform_fee_pct: 10, eur_thb: 40 })!;
-    expect(s.points).toContain('เปิดบัญชี Evident เองต้องขายได้อย่างน้อย 122.04 ฿/MWh เทียบกับผ่านแพลตฟอร์ม 2.26 ฿/MWh — ค่าบัญชี €2,000/ปี (≈ ฿80,000) กินรายได้เกือบทั้งหมด');
+    expect(s.points).toContain('เปิดบัญชี Evident เองต้องขายได้อย่างน้อย 122.04 ฿/MWh เทียบกับขายผ่าน GEM 2.26 ฿/MWh — ค่าบัญชี €2,000/ปี (≈ ฿80,000) กินรายได้เกือบทั้งหมด');
   });
 
   it('states the measured production basis', () => {
@@ -57,21 +57,21 @@ describe('buildRecRoiSummary — one plain-language verdict per project', () => 
     const s = evalWith({ price_mid_thb: 1, platform_fee_pct: 10, eur_thb: 40 })!;
     expect(s.tone).toBe('amber');
     expect(s.label).toBe('ยังไม่คุ้ม');
-    expect(s.headline).toBe('ที่ราคา 1.00 ฿/MWh ขาดทุนทั้งสองทาง — ต้องขายได้อย่างน้อย 2.26 ฿/MWh (ผ่านแพลตฟอร์ม) จึงจะคุ้มทุนใน 5 ปี');
+    expect(s.headline).toBe('ที่ราคา 1.00 ฿/MWh ขาดทุนทั้งสองทาง — ต้องขายได้อย่างน้อย 2.26 ฿/MWh (ขายผ่าน GEM) จึงจะคุ้มทุนใน 5 ปี');
   });
 
   it('no price yet: neutral, gives the break-even to aim for', () => {
     const s = evalWith({ platform_fee_pct: 10, eur_thb: 40 })!;
     expect(s.tone).toBe('gray');
     expect(s.label).toBe('รอราคา');
-    expect(s.headline).toBe('ยังไม่มีราคา REC — ต้องขายได้อย่างน้อย 2.26 ฿/MWh (ผ่านแพลตฟอร์ม) จึงจะคุ้มทุนใน 5 ปี');
+    expect(s.headline).toBe('ยังไม่มีราคา REC — ต้องขายได้อย่างน้อย 2.26 ฿/MWh (ขายผ่าน GEM) จึงจะคุ้มทุนใน 5 ปี');
   });
 
   it('nothing computable: says which inputs unlock it', () => {
     const s = evalWith({})!;
     expect(s.tone).toBe('gray');
     expect(s.label).toBe('ประเมินไม่ได้');
-    expect(s.headline).toBe('ยังประเมินไม่ได้ — ต้องมีค่าบริการแพลตฟอร์มหรืออัตรา EUR→THB อย่างน้อยหนึ่งค่า');
+    expect(s.headline).toBe('ยังประเมินไม่ได้ — ต้องมีค่าบริการ GEM หรืออัตรา EUR→THB อย่างน้อยหนึ่งค่า');
   });
 
   it('reports the IRR uplift when investment is known, and the gap when not', () => {
