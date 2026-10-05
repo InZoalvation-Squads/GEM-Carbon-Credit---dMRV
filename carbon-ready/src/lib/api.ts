@@ -290,7 +290,8 @@ export const api = {
 
   // ---------------- REC ROI (assumptions only — ROI itself is computed client-side) ----------------
   /** Resolves true when saved; false when validation or the server refused (toast shown). */
-  async saveRecRoiSettings(input: RecRoiSettingsInput): Promise<boolean> {
+  async saveRecRoiSettings(raw: RecRoiSettingsInput): Promise<boolean> {
+    const input = { ...raw, price_source: raw.price_source.trim(), eur_thb_source: raw.eur_thb_source.trim() };
     const problem = validateRecRoiSettings(input);
     if (problem) {
       toast.error('บันทึกไม่ได้', problem);

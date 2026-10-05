@@ -753,7 +753,7 @@ export const useStore = create<AppState>()(
         set({ recRoiSettings: next });
         get().audit_write('REC_ROI_SETTINGS_UPDATED', 'rec_roi', get().organization.id,
           { horizon_years: input.horizon_years },
-          { previous_value: { ...previous }, new_value: { ...next } });
+          { previous_value: previous.updated_at === null ? null : { ...previous }, new_value: { ...next } });
       },
 
       saveRecRoiProjectSetting: (project_id, input) => {
