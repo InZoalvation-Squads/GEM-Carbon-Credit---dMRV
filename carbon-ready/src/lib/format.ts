@@ -16,7 +16,7 @@ export function formatBytes(bytes: number): string {
 }
 
 /** YYYY-MM-DD of an instant in the viewer's local time zone (the report date a reader expects, not UTC's). */
-export function localIsoDate(iso: string): string {
-  const d = new Date(iso);
+export function localIsoDate(when: string | Date): string {
+  const d = new Date(when);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }

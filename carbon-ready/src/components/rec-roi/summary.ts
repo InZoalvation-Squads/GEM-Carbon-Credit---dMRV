@@ -6,7 +6,7 @@ import { REC_FEES } from '../../data/rec-fees';
 import type { RecPathOk, RecRoiAssumptions } from '../../lib/rec-roi';
 import type { FinancialValue, ProjectRecRoi } from '../../lib/rec-roi-project';
 import type { Tone } from '../ui/Badge';
-import { recNetTotal } from '../../lib/investor-report';
+import { cheapestPath, recNetTotal, recommendedMid, recommendedPath } from '../../lib/investor-report';
 import { PATH_SHORT, pct, pricePerMwh, thb } from './format';
 
 /**
@@ -48,8 +48,7 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
   const H = a.horizon_years;
   const ok = [roi.own, roi.platform].filter((p): p is RecPathOk => p.status === 'ok');
   // The path needing the lowest price is the one to aim for when nothing pays yet.
-  const cheapest = ok.reduce<RecPathOk | null>(
-    (m, p) => (m === null || p.break_even_price_thb < m.break_even_price_thb ? p : m), null);
+  const cheapest = cheapestPath(roi);
 
   const points: string[] = [
     `ผลิตได้ประมาณ ${formatNumber(annual.annual_mwh, 1)} MWh/ปี = ${formatNumber(annual.annual_mwh, 0)} REC/ปี `
@@ -70,8 +69,8 @@ export function buildRecRoiSummary(r: ProjectRecRoi, a: RecRoiAssumptions): RecR
 
   const tariff = r.financial_basis.elec_price_thb_kwh;
   const withoutYear = annual.annual_mwh * 1000 * tariff.value;
-  const best = roi.recommended ? ok.find((p) => p.path === roi.recommended) : undefined;
-  const mid = best?.scenarios.find((s) => s.scenario === 'mid');
+  const best = recommendedPath(roi);
+  const mid = recommendedMid(roi);
   const recTotal = recNetTotal(r);   // one source for the REC net, shared with the investor report
   const money: RecMoneyComparison = {
     tariff, years: H,

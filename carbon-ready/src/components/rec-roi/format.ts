@@ -1,6 +1,7 @@
 import { formatNumber } from '../../lib/format';
 import type { RecPath, RecPathOk, RecPathResult, RecRoiMissing, RecRoiResult } from '../../lib/rec-roi';
 import type { Tone } from '../ui/Badge';
+import { recommendedMid, recommendedPath } from '../../lib/investor-report';
 
 export const PATH_LABEL: Record<RecPath, string> = {
   own: 'ก · เปิดบัญชี Evident เอง',
@@ -44,12 +45,11 @@ export function paybackText(months: number | null): string {
  */
 export function recommendationBadge(roi: RecRoiResult): { tone: Tone; text: string } | null {
   const ok = [roi.own, roi.platform].filter((p): p is RecPathOk => p.status === 'ok');
-  if (ok.length === 0 || !roi.recommended) return null;
-  const path = roi.recommended;
-  const best = ok.find((p) => p.path === path) ?? ok[0];
+  const best = recommendedPath(roi);
+  if (!best) return null;
   const name = PATH_SHORT[best.path];
   const single = ok.length === 1;
-  const mid = best.scenarios.find((s) => s.scenario === 'mid');
+  const mid = recommendedMid(roi);
   if (!mid) {
     return { tone: 'gray', text: single ? `${name} (คำนวณได้ทางเดียว)` : `${name} · คุ้มทุนต่ำกว่า` };
   }

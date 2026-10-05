@@ -2,9 +2,10 @@ import { describe, it, expect } from 'vitest';
 import type { Methodology, MonitoringRecord, Project, ProjectDesignDocument } from '../types';
 import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
 import { seedFactors } from '../data/seed';
-import { EMPTY_REC_ROI_SETTINGS } from './rec-roi';
+import { EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions } from './rec-roi';
 import {
-  buildPortfolioReport, buildProjectReport, monthlyProduction, projectCountry, recNetTotal, tverEstimate,
+  buildPortfolioReport, buildProjectReport, cheapestPath, monthlyProduction, projectCountry, recNetTotal, recommendedMid, recommendedPath,
+  tverEstimate, type ProjectReportData, type ReportSources,
 } from './investor-report';
 import { evaluateProjectRecRoi } from './rec-roi-project';
 import { computeYearlyTable } from './pdd';
@@ -42,6 +43,13 @@ const base = {
   projects: [TH, IN, FOREST], records: RECORDS, pdds: [pdd('prj-th')], methodologies: METHODS,
   factors: seedFactors, recIssues: [], projectSettings: [], assumptions: ASSUME, now: '2026-10-06T08:00:00Z',
 };
+
+/** Test helper: the report data of a project that must be reportable. */
+function report(args: ReportSources & { projectId: string }): ProjectReportData {
+  const r = buildProjectReport(args);
+  if (r.status !== 'ok') throw new Error(`expected an ok report, got ${r.status}`);
+  return r.data;
+}
 
 describe('projectCountry', () => {
   it('reads the last comma segment like gridFactor', () => {
@@ -84,7 +92,7 @@ describe('tverEstimate', () => {
 
 describe('buildProjectReport', () => {
   it('Thai project: Scope 2 = annual MWh × TGO 0.475 (tCO2e)', () => {
-    const r = buildProjectReport({ ...base, projectId: 'prj-th' })!;
+    const r = report({ ...base, projectId: 'prj-th' });
     expect(r.generated_at).toBe('2026-10-06T08:00:00Z');
     expect(r.roi.annual.status).toBe('ok');
     const mwh = r.roi.annual.status === 'ok' ? r.roi.annual.annual_mwh : 0;
@@ -94,7 +102,7 @@ describe('buildProjectReport', () => {
     expect(r.scope2.tver).not.toBeNull();
   });
   it('Indian project: no Scope 2 factor → null tCO2e, no T-VER PDD → null', () => {
-    const r = buildProjectReport({ ...base, projectId: 'prj-in' })!;
+    const r = report({ ...base, projectId: 'prj-in' });
     expect(r.scope2.factor).toBeNull();
     expect(r.scope2.tco2e_location_year).toBeNull();
     expect(r.scope2.tver).toBeNull();
@@ -103,23 +111,26 @@ describe('buildProjectReport', () => {
     // 73 days totalling 20,000 kWh → 20,000 / 73 × 365 = 100,000 kWh/yr.
     const recs = [...daily('prj-th', '2026-01-01', 72, 200), ...daily('prj-th', '2026-03-14', 1, 5_600)]
       .map((r, i) => ({ ...r, id: `h-${i}` }));
-    const r = buildProjectReport({ ...base, records: recs, projectId: 'prj-th' })!;
+    const r = report({ ...base, records: recs, projectId: 'prj-th' });
     expect(r.roi.annual.status === 'ok' && r.roi.annual.annual_mwh).toBeCloseTo(100, 6);
     expect(r.scope2.tco2e_location_year).toBeCloseTo(47.5, 6);
   });
   it('no factor when the data window ends before the factor takes effect', () => {
-    const r = buildProjectReport({ ...base, records: daily('prj-th', '2025-01-01', 90, 100), projectId: 'prj-th' })!;
+    const r = report({ ...base, records: daily('prj-th', '2025-01-01', 90, 100), projectId: 'prj-th' });
     expect(r.scope2.factor).toBeNull();
     expect(r.scope2.tco2e_location_year).toBeNull();
   });
   it('monthly sum equals the window total kWh', () => {
-    const r = buildProjectReport({ ...base, projectId: 'prj-th' })!;
+    const r = report({ ...base, projectId: 'prj-th' });
     const total = r.roi.annual.status === 'ok' ? r.roi.annual.total_kwh : -1;
     expect(r.monthly.reduce((s, m) => s + m.kwh, 0)).toBe(total);
   });
-  it('null for an ineligible project or one without data', () => {
-    expect(buildProjectReport({ ...base, projectId: 'prj-f' })).toBeNull();
-    expect(buildProjectReport({ ...base, records: [], projectId: 'prj-th' })).toBeNull();
+  it('a distinct status for an ineligible project and one without data', () => {
+    expect(buildProjectReport({ ...base, projectId: 'prj-f' })).toEqual({ status: 'not_eligible' });
+    expect(buildProjectReport({ ...base, records: [], projectId: 'prj-th' })).toEqual({ status: 'no_data' });
+  });
+  it('says so when the project does not exist', () => {
+    expect(buildProjectReport({ ...base, projectId: 'nope' })).toEqual({ status: 'not_found' });
   });
 });
 
@@ -154,5 +165,42 @@ describe('buildPortfolioReport', () => {
   it('no price anywhere → rec_net_total null', () => {
     expect(buildPortfolioReport({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } }).totals.rec_net_total).toBeNull();
     expect(buildPortfolioReport({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } }).totals.rec_net_projects).toBe(0);
+  });
+});
+
+describe('path selection helpers (one source)', () => {
+  const evalTh = (a: RecRoiAssumptions = ASSUME) => evaluateProjectRecRoi({ project: TH, records: RECORDS, pdds: [], methodologies: METHODS, factors: [], assumptions: a });
+
+  it('recommendedPath is the ok path the evaluation recommends', () => {
+    const r = evalTh();
+    expect(r.roi?.recommended).toBeTruthy();
+    expect(recommendedPath(r)?.path).toBe(r.roi?.recommended);
+  });
+  it('recommendedMid is that path’s mid scenario, and recNetTotal is its net', () => {
+    const r = evalTh();
+    expect(recommendedMid(r)?.scenario).toBe('mid');
+    expect(recNetTotal(r)).toBe(recommendedMid(r)!.net_thb);
+  });
+  it('without a mid price there is a path but no mid scenario', () => {
+    const r = evalTh({ ...ASSUME, price_mid_thb: null });
+    expect(recommendedPath(r)).not.toBeNull();
+    expect(recommendedMid(r)).toBeNull();
+    expect(recNetTotal(r)).toBeNull();
+  });
+  it('cheapestPath is the ok path with the lowest break-even price', () => {
+    const r = evalTh();
+    const ok = [r.roi!.own, r.roi!.platform].filter((x) => x.status === 'ok') as Array<{ path: string; break_even_price_thb: number }>;
+    expect(cheapestPath(r)?.break_even_price_thb).toBe(Math.min(...ok.map((x) => x.break_even_price_thb)));
+  });
+  it('null everywhere when nothing can be computed (no fee, no fx)', () => {
+    const r = evalTh({ ...ASSUME, platform_fee_pct: null, eur_thb: null });
+    expect(recommendedPath(r)).toBeNull();
+    expect(recommendedMid(r)).toBeNull();
+    expect(cheapestPath(r)).toBeNull();
+  });
+  it('accepts the bare RecRoiResult too (what the badge helper holds)', () => {
+    const r = evalTh();
+    expect(recommendedPath(r.roi)).toBe(recommendedPath(r));
+    expect(cheapestPath(null)).toBeNull();
   });
 });

@@ -107,6 +107,98 @@ describe('portfolio investor report', () => {
   });
 });
 
+describe('honest copy, structure and states', () => {
+  it('Scope 2 page does not overstate what a retained REC or a T-VER gives', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const scope2 = pages(container)[1] as HTMLElement;
+    expect(within(scope2).getByText('ไม่มี REC จึง claim ไฟสะอาดแบบ market-based ไม่ได้')).toBeInTheDocument();
+    expect(within(scope2).getByText(/claim ไฟสะอาดได้สูงสุด [\d.,]+ MWh\/ปี เมื่อผู้ใช้ไฟ redeem และเข้าเกณฑ์ market-based \/ RE100 ของผู้ใช้/)).toBeInTheDocument();
+    expect(within(scope2).getByText('REC ที่ redeem นำไปนับในเป้า RE100 ได้ตามเกณฑ์ของ RE100')).toBeInTheDocument();
+    expect(within(scope2).getByText(/ยังไม่พบค่า residual mix ที่เผยแพร่อย่างเป็นทางการสำหรับไทย/)).toBeInTheDocument();
+    expect(within(scope2).getByText(/https:\/\/greencalculus\.com\/glossary\/residual-mix\//)).toBeInTheDocument();
+    expect(within(scope2).getAllByText(/TGO \(ข่าว Nation Thailand 2025-11-30\)/).length).toBeGreaterThanOrEqual(1);
+  });
+
+  it('the T-VER cell says it is year 1 of the crediting period', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    expect(within(pages(container)[1] as HTMLElement).getByText(/ปีแรกของช่วงคิดเครดิต/)).toBeInTheDocument();
+  });
+
+  it('the REC-sold row names the path it is computed on', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    expect(within(pages(container)[1] as HTMLElement).getByText(/ใน 5 ปี · ผ่านแพลตฟอร์ม$/)).toBeInTheDocument();
+  });
+
+  it('shows no unit after a dash when there is no break-even', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: null, eur_thb: null } }));
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const money = pages(container)[0] as HTMLElement;
+    expect(within(money).queryByText('฿/MWh')).toBeNull();
+    expect(within(money).queryByText('฿/MWh ราคาคุ้มทุน')).toBeNull();
+  });
+
+  it('one h1 per document, other page titles are h2; tables have header scopes', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    expect(container.querySelectorAll('h1')).toHaveLength(1);
+    expect(container.querySelectorAll('.inv-page h2.inv-title')).toHaveLength(1);
+    expect(container.querySelectorAll('th:not([scope])')).toHaveLength(0);
+    expect(container.querySelectorAll('th[scope="row"]').length).toBeGreaterThan(0);
+  });
+
+  it('the portfolio document also has exactly one h1', () => {
+    const { container } = renderAt('/reports/investor');
+    expect(container.querySelectorAll('h1')).toHaveLength(1);
+    expect(pages(container)[0].querySelector('h1')).not.toBeNull();
+  });
+
+  it('each chart is a labelled image', () => {
+    const { container } = renderAt('/reports/investor/prj-0001');
+    const img = container.querySelector('[role="img"]');
+    expect(img).not.toBeNull();
+    expect(img?.getAttribute('aria-label')).toMatch(/ผลิตไฟรายเดือน 2026-01 ถึง 2026-04, สูงสุด [\d,]+ kWh/);
+  });
+
+  it('unknown project id says so', () => {
+    const { container } = renderAt('/reports/investor/prj-nope');
+    expect(pages(container)).toHaveLength(0);
+    expect(screen.getByText('ไม่พบโครงการนี้')).toBeInTheDocument();
+  });
+
+  it('verifier gets no access to the portfolio report either', () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } }));
+    const { container } = renderAt('/reports/investor');
+    expect(pages(container)).toHaveLength(0);
+    expect(screen.getByText(/ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC/)).toBeInTheDocument();
+  });
+
+  it('a portfolio with nothing reportable says so on a single overview page', () => {
+    useStore.setState({ projects: [], records: [] });
+    const { container } = renderAt('/reports/investor');
+    expect(pages(container)).toHaveLength(1);
+    expect(screen.getByText('ยังไม่มีโครงการที่มีข้อมูลการผลิต')).toBeInTheDocument();
+  });
+
+  it('overview: Scope 2 coverage says how many projects have a factor', () => {
+    useStore.setState((s) => {
+      const base = s.projects.find((p) => p.id === 'prj-0001') as Project;
+      const list = ['a', 'b', 'c'].map((k): Project => ({
+        ...base, id: `cov-${k}`, name: `Cov ${k}`, location: k === 'a' ? 'Pune, India' : base.location,
+      }));
+      return {
+        projects: list, records: list.flatMap((p) => daily(p.id, 92, 100)),
+        pdds: s.pdds.flatMap((d) => (d.project_id === 'prj-0001' ? list.map((p) => ({ ...d, id: `${d.id}-${p.id}`, project_id: p.id })) : [])),
+      };
+    });
+    const { container } = renderAt('/reports/investor');
+    expect(within(pages(container)[0] as HTMLElement).getByText('2 จาก 3 โครงการ')).toBeInTheDocument();
+  });
+
+  it('the overview chart caption says it is the platform path', () => {
+    const { container } = renderAt('/reports/investor');
+    expect(pages(container)[0]).toHaveTextContent(/เส้นทาง ข \(ผ่านแพลตฟอร์ม\)/);
+  });
+});
+
 describe('portfolio overview header and partial-year note', () => {
   it('names the organisation and the data window', () => {
     const { container } = renderAt('/reports/investor');
@@ -124,7 +216,7 @@ describe('portfolio overview header and partial-year note', () => {
   it('the plain demo portfolio overview stays on one page', () => {
     const { container } = renderAt('/reports/investor');
     const all = [...pages(container)];
-    const firstProject = all.findIndex((p) => p.querySelector('h1')?.textContent?.startsWith('การเงิน REC'));
+    const firstProject = all.findIndex((p) => p.querySelector('.inv-title')?.textContent?.startsWith('การเงิน REC'));
     expect(firstProject).toBe(1);
   });
 });
@@ -147,11 +239,11 @@ describe('portfolio overview pagination', () => {
   }
   const overviewPages = (c: HTMLElement) => {
     const all = [...pages(c)] as HTMLElement[];
-    const first = all.findIndex((p) => p.querySelector('h1')?.textContent?.startsWith('การเงิน REC'));
+    const first = all.findIndex((p) => p.querySelector('.inv-title')?.textContent?.startsWith('การเงิน REC'));
     return all.slice(0, first);
   };
   const rankedNames = (ov: HTMLElement[]) =>
-    ov.flatMap((p) => [...p.querySelectorAll('td')].map((td) => td.textContent ?? '').filter((t) => t.startsWith('Clone Solar')));
+    ov.flatMap((p) => [...p.querySelectorAll('th[scope="row"]')].map((th) => th.textContent ?? '').filter((t) => t.startsWith('Clone Solar')));
 
   it('20 projects: 12 rows, a continuation, then the chart on its own page', () => {
     clones(20);
@@ -200,5 +292,9 @@ describe('local report date', () => {
     expect(localIsoDate(iso)).toBe(local);
     // Asia/Bangkok (UTC+7): 18:30Z is already the next day.
     if (d.getTimezoneOffset() === -420) expect(localIsoDate(iso)).toBe('2026-10-06');
+  });
+  it('takes a Date too: 01:00 local on 6 Oct is 6 Oct in any time zone', () => {
+    expect(localIsoDate(new Date(2026, 9, 6, 1, 0))).toBe('2026-10-06');
+    expect(localIsoDate(new Date(2026, 0, 1, 23, 59))).toBe('2026-01-01');
   });
 });

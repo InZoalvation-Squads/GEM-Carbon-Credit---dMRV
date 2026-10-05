@@ -9,7 +9,7 @@ import { computeYearlyTable } from './pdd';
 import { isBundle } from './pdd-sites';
 import { locationToCountryCode } from './geo';
 import { evaluateProjectRecRoi, governingPdd, projectEnergyBasis, type ProjectRecRoi } from './rec-roi-project';
-import type { RecPathOk, RecRoiAssumptions } from './rec-roi';
+import type { RecPathOk, RecRoiAssumptions, RecRoiResult, RecScenarioResult } from './rec-roi';
 import { scope2FactorFor, type Scope2Factor } from '../data/scope2-factors';
 
 export interface Scope2Block {
@@ -89,42 +89,76 @@ export function tverEstimate(
   return table ? { tco2e_year: table.rows[0].er, methodology_code: m.code } : null;
 }
 
-/** Net REC baht over the horizon on the recommended path at the mid price; null without one. */
-export function recNetTotal(r: ProjectRecRoi): number | null {
-  const roi = r.roi;
+/** What the path helpers read: a project's evaluation, or the bare result inside it. */
+type RoiInput = ProjectRecRoi | RecRoiResult | null | undefined;
+const roiOf = (x: RoiInput): RecRoiResult | null => (x ? ('roi' in x ? x.roi : x) : null);
+const okPaths = (roi: RecRoiResult): RecPathOk[] =>
+  [roi.own, roi.platform].filter((p): p is RecPathOk => p.status === 'ok');
+
+/** The path the evaluation recommends, when it can be computed. One source for the REC pages, badge and report. */
+export function recommendedPath(x: RoiInput): RecPathOk | null {
+  const roi = roiOf(x);
   if (!roi?.recommended) return null;
-  const path = [roi.own, roi.platform].find((p): p is RecPathOk => p.status === 'ok' && p.path === roi.recommended);
-  return path?.scenarios.find((s) => s.scenario === 'mid')?.net_thb ?? null;
+  return okPaths(roi).find((p) => p.path === roi.recommended) ?? null;
 }
 
-export function buildProjectReport(args: ReportSources & { projectId: UUID }): ProjectReportData | null {
+/** The recommended path's mid-price scenario; null until a mid price exists. */
+export function recommendedMid(x: RoiInput): RecScenarioResult | null {
+  return recommendedPath(x)?.scenarios.find((s) => s.scenario === 'mid') ?? null;
+}
+
+/** The computable path needing the lowest price to break even (ties keep own before platform). */
+export function cheapestPath(x: RoiInput): RecPathOk | null {
+  const roi = roiOf(x);
+  if (!roi) return null;
+  return okPaths(roi).reduce<RecPathOk | null>(
+    (m, p) => (m === null || p.break_even_price_thb < m.break_even_price_thb ? p : m), null);
+}
+
+/** Net REC baht over the horizon on the recommended path at the mid price; null without one. */
+export function recNetTotal(r: ProjectRecRoi): number | null {
+  return recommendedMid(r)?.net_thb ?? null;
+}
+
+/** Why a project has no report, so the route can say the right thing. */
+export type ProjectReportResult =
+  | { status: 'ok'; data: ProjectReportData }
+  | { status: 'not_found' | 'not_eligible' | 'no_data' };
+
+export function buildProjectReport(args: ReportSources & { projectId: UUID }): ProjectReportResult {
   const project = args.projects.find((p) => p.id === args.projectId);
-  if (!project) return null;
+  if (!project) return { status: 'not_found' };
   const roi = evaluateProjectRecRoi({
     project, records: args.records, pdds: args.pdds, methodologies: args.methodologies,
     factors: args.factors, assumptions: args.assumptions,
     setting: args.projectSettings.find((s) => s.project_id === project.id),
     latestRequestType: args.recIssues.find((x) => x.project_id === project.id)?.request_type,
   });
-  if (!roi.eligible || roi.annual.status !== 'ok' || !roi.roi) return null;
+  if (!roi.eligible) return { status: 'not_eligible' };
+  if (roi.annual.status !== 'ok' || !roi.roi) return { status: 'no_data' };
   const mwh = roi.annual.annual_mwh;
   const factor = scope2FactorFor(projectCountry(project), roi.annual.window_end);
   const { driverParam } = projectEnergyBasis(project, args.pdds, args.methodologies);
   return {
-    project, generated_at: args.now, roi,
-    monthly: monthlyProduction(project, args.records, roi, driverParam),
-    scope2: {
-      factor, annual_mwh: mwh, recs_year: mwh,
-      tco2e_location_year: factor ? mwh * factor.value_kg_per_kwh : null,
-      tver: tverEstimate(project, args.pdds, args.methodologies, args.factors, mwh),
+    status: 'ok',
+    data: {
+      project, generated_at: args.now, roi,
+      monthly: monthlyProduction(project, args.records, roi, driverParam),
+      scope2: {
+        factor, annual_mwh: mwh, recs_year: mwh,
+        tco2e_location_year: factor ? mwh * factor.value_kg_per_kwh : null,
+        tver: tverEstimate(project, args.pdds, args.methodologies, args.factors, mwh),
+      },
     },
   };
 }
 
 export function buildPortfolioReport(args: ReportSources): PortfolioReportData {
   const projects = args.projects
-    .map((p) => buildProjectReport({ ...args, projectId: p.id }))
-    .filter((r): r is ProjectReportData => r !== null)
+    .flatMap((p) => {
+      const r = buildProjectReport({ ...args, projectId: p.id });
+      return r.status === 'ok' ? [r.data] : [];
+    })
     .sort((a, b) => a.project.name.localeCompare(b.project.name, 'th'));
   const nets = projects.map((p) => recNetTotal(p.roi)).filter((n): n is number => n !== null);
   const tco2 = projects.map((p) => p.scope2.tco2e_location_year).filter((n): n is number => n !== null);

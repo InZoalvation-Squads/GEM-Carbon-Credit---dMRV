@@ -4,13 +4,15 @@ import { ArrowLeft, Printer } from 'lucide-react';
 import { Bar, BarChart, CartesianGrid, ReferenceLine, XAxis, YAxis } from 'recharts';
 import { useStore } from '../store';
 import { Button, LinkButton } from '../components/ui/Button';
-import { buildPortfolioReport, buildProjectReport, recNetTotal, type ProjectReportData, type ReportSources } from '../lib/investor-report';
+import {
+  buildPortfolioReport, buildProjectReport, cheapestPath, recNetTotal, recommendedMid, recommendedPath,
+  type ProjectReportData, type ReportSources,
+} from '../lib/investor-report';
 import { buildRecRoiSummary } from '../components/rec-roi/summary';
 import { PATH_LABEL, PATH_SHORT, breakEvenText, paybackText, pct, pricePerMwh, signedThb, thb } from '../components/rec-roi/format';
 import { REC_FEES } from '../data/rec-fees';
 import { formatNumber, localIsoDate } from '../lib/format';
-import { evaluateProjectRecRoi } from '../lib/rec-roi-project';
-import type { RecPathOk, RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
+import type { RecPathResult, RecRoiAssumptions } from '../lib/rec-roi';
 
 // ============================================================
 // Investor report — printable A4 pages (window.print() → "Save as PDF").
@@ -20,6 +22,9 @@ import type { RecPathOk, RecPathResult, RecRoiAssumptions } from '../lib/rec-roi
 
 const SF04_QUOTE = 'warrants that the energy for which I-REC(E) certificates are being sought has not and will not be submitted for any other energy attribute tracking methodology, emissions reduction certificate, or carbon offset.';
 const NO_ACCESS = 'หน้านี้สำหรับผู้พัฒนาโครงการและผู้ดูแลองค์กร — ผู้ตรวจสอบไม่มีสิทธิ์ดูข้อมูลราคา REC';
+/** TGO's factor is cited from the news report the factor file links to. */
+const TGO_SOURCE_LABEL = 'TGO (ข่าว Nation Thailand 2025-11-30)';
+const RESIDUAL_MIX_URL = 'https://greencalculus.com/glossary/residual-mix/';
 const GEM_GREEN = '#059669'; // brand-600, for chart fills
 const WARN = '#b45309';      // amber-700, for the reference line
 const TICK = { fontSize: 10, fill: '#64748b' }; // ink-500
@@ -48,6 +53,8 @@ function useReportSources(): ReportSources {
 const PRINT_CSS = `
   .inv-doc { font-family: 'Inter','Anuphan',sans-serif; print-color-adjust: exact; -webkit-print-color-adjust: exact; counter-reset: invpage; }
   .inv-page { counter-increment: invpage; background: white; width: 210mm; min-height: 297mm; padding: 14mm 14mm 12mm; margin: 0 auto 1.5rem; box-shadow: 0 1px 3px rgb(15 23 42 / .12); position: relative; display: flex; flex-direction: column; }
+  .inv-page { box-decoration-break: clone; -webkit-box-decoration-break: clone; }
+  .inv-doc tr { break-inside: avoid; }
   .inv-page > .inv-grow { flex: 1 1 auto; }
   .inv-pageno::after { content: counter(invpage); }
   @media print {
@@ -71,14 +78,16 @@ function ReportShell({ backTo, children }: { backTo: string; children: ReactNode
   );
 }
 
-function PageHeader({ title, subtitle, generatedAt }: { title: string; subtitle: string; generatedAt: string }) {
+/** The document's first page carries the one <h1>; every other page title is an <h2>. */
+function PageHeader({ title, subtitle, generatedAt, primary }: { title: string; subtitle: string; generatedAt: string; primary?: boolean }) {
+  const Title = primary ? 'h1' : 'h2';
   return (
     <header className="mb-4 border-b-2 border-brand-600 pb-3">
       <div className="flex items-start justify-between gap-4">
         <span className="text-[11px] font-extrabold tracking-wide text-brand-700">GEM CARBON CREDIT</span>
         <span className="text-[11px] text-ink-500">สร้างเมื่อ {localIsoDate(generatedAt)}</span>
       </div>
-      <h1 className="mt-1 text-xl font-semibold text-ink">{title}</h1>
+      <Title className="inv-title mt-1 text-xl font-semibold text-ink">{title}</Title>
       <p className="text-[12px] text-ink-600">{subtitle}</p>
     </header>
   );
@@ -98,7 +107,7 @@ function Kpi({ label, value, unit, note }: { label: string; value: ReactNode; un
     <div className="min-w-0">
       <div className="text-[11px] uppercase text-ink-500">{label}</div>
       <div className="text-2xl font-semibold tnum text-ink">{value}</div>
-      {unit && <div className="text-xs text-ink-500">{unit}</div>}
+      {unit && value !== '—' && <div className="text-xs text-ink-500">{unit}</div>}
       {note && <div className="text-[11px] text-ink-500">{note}</div>}
     </div>
   );
@@ -113,7 +122,10 @@ const SectionTitle = ({ children }: { children: ReactNode }) => (
 );
 
 const TH = ({ children, right }: { children: ReactNode; right?: boolean }) => (
-  <th className={`border-b border-ink-300 px-2 py-1.5 text-[11px] font-semibold text-ink-600 ${right ? 'text-right' : 'text-left'}`}>{children}</th>
+  <th scope="col" className={`border-b border-ink-300 px-2 py-1.5 text-[11px] font-semibold text-ink-600 ${right ? 'text-right' : 'text-left'}`}>{children}</th>
+);
+const RowHead = ({ children }: { children: ReactNode }) => (
+  <th scope="row" className="border-b border-ink-100 px-2 py-1.5 text-left align-top font-medium text-ink">{children}</th>
 );
 const TD = ({ children, right, className = '' }: { children: ReactNode; right?: boolean; className?: string }) => (
   <td className={`border-b border-ink-100 px-2 py-1.5 align-top ${right ? 'text-right tnum' : ''} ${className}`}>{children}</td>
@@ -147,21 +159,26 @@ function PathColumn({ result }: { result: RecPathResult }) {
   );
 }
 
+/** One-sentence text alternative for the monthly chart. */
+function monthlyLabel(monthly: ProjectReportData['monthly']): string {
+  if (monthly.length === 0) return 'ผลิตไฟรายเดือน — ไม่มีข้อมูล';
+  const peak = monthly.reduce((m, x) => (x.kwh > m.kwh ? x : m), monthly[0]);
+  return `ผลิตไฟรายเดือน ${monthly[0].month} ถึง ${monthly[monthly.length - 1].month}, สูงสุด ${formatNumber(peak.kwh)} kWh (${peak.month})`;
+}
+
 const irrText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 2)}%`);
 const yearsText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 1)} ปี`);
 
 /** Page 1 of a project: how much money REC makes (or the price it needs to). */
-function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions: RecRoiAssumptions }) {
+function MoneyPage({ data, assumptions, primary }: { data: ProjectReportData; assumptions: RecRoiAssumptions; primary?: boolean }) {
   const { project, roi: r, generated_at } = data;
   const roi = r.roi;
   const annual = r.annual;
   const summary = buildRecRoiSummary(r, assumptions);
   if (!roi || annual.status !== 'ok' || !summary) return null;
   const { money } = summary;
-  const ok = [roi.own, roi.platform].filter((p): p is RecPathOk => p.status === 'ok');
-  const cheapest = ok.reduce<RecPathOk | null>((m, p) => (m === null || p.break_even_price_thb < m.break_even_price_thb ? p : m), null);
-  const best = roi.recommended ? ok.find((p) => p.path === roi.recommended) : undefined;
-  const midRoi = best?.scenarios.find((s) => s.scenario === 'mid')?.roi_pct ?? null;
+  const cheapest = cheapestPath(r);
+  const midRoi = recommendedMid(r)?.roi_pct ?? null;
   const rows: Array<[string, number, number | null, number | null]> = [
     ['ต่อปี', money.without_year, money.with_year, money.rec_year],
     [`รวม ${money.years} ปี`, money.without_total, money.with_total, money.rec_total],
@@ -173,6 +190,7 @@ function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions
   return (
     <section className="inv-page">
       <PageHeader
+        primary={primary}
         title={`การเงิน REC · ${project.name}`}
         subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp · ข้อมูล ${annual.window_start} – ${annual.window_end}${annual.partial ? ` (ข้อมูล ${annual.coverage_days} วัน ประมาณเป็นรายปี)` : ''}`}
         generatedAt={generated_at}
@@ -188,7 +206,7 @@ function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions
             ) : (
               <>
                 <div className="text-4xl font-semibold tnum text-ink">{cheapest ? pricePerMwh(cheapest.break_even_price_thb) : '—'}</div>
-                <div className="text-xs text-ink-500">฿/MWh ราคาคุ้มทุน</div>
+                <div className="text-xs text-ink-500">{cheapest ? '฿/MWh ราคาคุ้มทุน' : 'ราคาคุ้มทุน'}</div>
               </>
             )}
           </div>
@@ -207,12 +225,14 @@ function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions
 
         <div>
           <SectionTitle>ผลิตไฟรายเดือน (kWh)</SectionTitle>
-          <BarChart width={680} height={170} data={data.monthly} margin={{ top: 4, right: 8, bottom: 0, left: 8 }}>
-            <CartesianGrid vertical={false} stroke="#e2e8f0" />
-            <XAxis dataKey="month" tick={TICK} tickLine={false} />
-            <YAxis tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatNumber(v)} />
-            <Bar dataKey="kwh" fill={GEM_GREEN} isAnimationActive={false} />
-          </BarChart>
+          <div role="img" aria-label={monthlyLabel(data.monthly)}>
+            <BarChart width={680} height={170} data={data.monthly} margin={{ top: 4, right: 8, bottom: 0, left: 8 }}>
+              <CartesianGrid vertical={false} stroke="#e2e8f0" />
+              <XAxis dataKey="month" tick={TICK} tickLine={false} />
+              <YAxis tick={TICK} tickLine={false} axisLine={false} tickFormatter={(v: number) => formatNumber(v)} />
+              <Bar dataKey="kwh" fill={GEM_GREEN} isAnimationActive={false} />
+            </BarChart>
+          </div>
           <p className="text-[11px] text-ink-500">ข้อมูลวัดจริงจากมิเตอร์ (รายวัน รวมเป็นรายเดือน) — เดือนแรก/สุดท้ายอาจไม่เต็มเดือน</p>
         </div>
 
@@ -225,7 +245,7 @@ function MoneyPage({ data, assumptions }: { data: ProjectReportData; assumptions
             <tbody>
               {rows.map(([label, without, withRec, rec]) => (
                 <tr key={label}>
-                  <TD className="font-medium text-ink">{label}</TD>
+                  <RowHead>{label}</RowHead>
                   <TD right>{thb(without)}</TD>
                   <TD right className="font-medium text-ink">{withRec === null ? waiting : thb(withRec)}</TD>
                   <TD right className={negative(rec)}>{rec === null ? waiting : signedThb(rec)}</TD>
@@ -271,6 +291,8 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
   const annual = roi.annual;
   const partialNote = annual.status === 'ok' && annual.partial ? ` · ข้อมูล ${annual.coverage_days} วัน ประมาณเป็นรายปี` : '';
   const net = recNetTotal(roi);
+  const recPath = recommendedPath(roi);
+  const sourceLabel = factor ? (factor.source === 'TGO' ? TGO_SOURCE_LABEL : factor.source) : '';
   return (
     <section className="inv-page">
       <PageHeader title={`Scope 2 ช่วยอะไร · ${project.name}`} subtitle={`${project.location} · ${formatNumber(project.capacity_kwp, 0)} kWp${partialNote}`} generatedAt={generated_at} />
@@ -285,7 +307,7 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
               <p className="mt-1 text-ink">
                 ลด Scope 2 แบบ location-based (สมมติใช้ไฟที่ผลิตเองทั้งหมด) · {formatNumber(scope2.annual_mwh, 1)} MWh × {factor.source} {factor.value_kg_per_kwh} kgCO₂e/kWh (มีผล {factor.effective_date})
               </p>
-              <p className="text-[11px] text-ink-500">{factor.source_url}</p>
+              <p className="text-[11px] text-ink-500">{sourceLabel} · {factor.source_url}</p>
             </>
           ) : (
             <p className="text-ink">ไม่มีค่า EF Scope 2 สำหรับช่วงข้อมูลนี้</p>
@@ -298,21 +320,21 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
             <thead><tr><TH>ทาง</TH><TH>ได้อะไร</TH><TH>Scope 2 market-based / RE100</TH></tr></thead>
             <tbody>
               <tr>
-                <TD className="font-medium text-ink">ออก T-VER</TD>
+                <RowHead>ออก T-VER</RowHead>
                 <TD>{tver
                   ? `${formatNumber(tver.tco2e_year, 0)} tCO₂e/ปี (ปีแรกของช่วงคิดเครดิต · ตาม ${tver.methodology_code})`
                   : 'ไม่มี PDD T-VER ที่ registered'}</TD>
-                <TD>ไม่ได้สิทธิ์ claim ว่าใช้ไฟสะอาด</TD>
+                <TD>ไม่มี REC จึง claim ไฟสะอาดแบบ market-based ไม่ได้</TD>
               </tr>
               <tr>
-                <TD className="font-medium text-ink">ออก REC แล้วขาย</TD>
-                <TD className={negative(net)}>{net === null ? waiting : `${thb(net)} ใน ${years} ปี`}</TD>
+                <RowHead>ออก REC แล้วขาย</RowHead>
+                <TD className={negative(net)}>{net === null ? waiting : `${thb(net)} ใน ${years} ปี${recPath ? ` · ${PATH_SHORT[recPath.path]}` : ''}`}</TD>
                 <TD>สิทธิ์ claim ไฟสะอาดไปอยู่กับผู้ซื้อ</TD>
               </tr>
               <tr>
-                <TD className="font-medium text-ink">ออก REC แล้วเก็บไว้ redeem</TD>
+                <RowHead>ออก REC แล้วเก็บไว้ redeem</RowHead>
                 <TD>ไม่มีรายได้ — จ่ายค่าธรรมเนียม EGAT/Evident</TD>
-                <TD>claim ไฟสะอาดได้ {formatNumber(scope2.recs_year, 1)} MWh/ปี · นับใน RE100</TD>
+                <TD>claim ไฟสะอาดได้สูงสุด {formatNumber(scope2.recs_year, 1)} MWh/ปี เมื่อผู้ใช้ไฟ redeem และเข้าเกณฑ์ market-based / RE100 ของผู้ใช้</TD>
               </tr>
             </tbody>
           </table>
@@ -328,19 +350,20 @@ function Scope2Page({ data, years }: { data: ProjectReportData; years: number })
           <SectionTitle>ช่วยอะไรคุณ</SectionTitle>
           <ul className="list-disc space-y-1 pl-5">
             <li>ใช้ตัวเลขลด Scope 2 ในรายงาน ESG / CDP / SET (location-based)</li>
-            <li>เก็บ REC ไว้ redeem เพื่อ claim ไฟสะอาดแบบ market-based และนับในเป้า RE100</li>
+            <li>REC ที่ redeem นำไปนับในเป้า RE100 ได้ตามเกณฑ์ของ RE100</li>
             <li>เลือก T-VER เมื่อเป้าหมายคือคาร์บอนเครดิต ไม่ใช่การ claim ไฟสะอาด</li>
           </ul>
         </div>
 
-        <p className="text-ink-600">ไทยยังไม่มีค่า residual mix ทางการ — กรณีขาย REC จึงยังคำนวณ Scope 2 แบบ market-based เป็นตัวเลขไม่ได้</p>
+        <p className="text-ink-600">ยังไม่พบค่า residual mix ที่เผยแพร่อย่างเป็นทางการสำหรับไทย — กรณีขาย REC จึงยังคำนวณ Scope 2 แบบ market-based เป็นตัวเลขไม่ได้</p>
 
         <div>
           <SectionTitle>แหล่งอ้างอิง</SectionTitle>
           <ul className="space-y-0.5 text-[11px] text-ink-600">
             <li>Fee Structure I-REC(E) 2026 — FN-01 {REC_FEES.version}</li>
             <li>Evident SF-04 Issue Request v1.2.1</li>
-            <li>{factor ? `${factor.source} · ${factor.source_url}` : 'ค่า EF Scope 2 ของ TGO — ไม่มีค่าสำหรับโครงการนี้'}</li>
+            <li>{factor ? `${sourceLabel} · ${factor.source_url}` : 'ค่า EF Scope 2 ของ TGO — ไม่มีค่าสำหรับโครงการนี้'}</li>
+            <li>Residual mix — {RESIDUAL_MIX_URL}</li>
             <li>GHG Protocol Scope 2 Guidance (market-based method)</li>
           </ul>
         </div>
@@ -374,7 +397,7 @@ function RankingTable({ rows }: { rows: OverviewRow[] }) {
       <tbody>
         {rows.map((r) => (
           <tr key={r.project.id}>
-            <TD className="font-medium text-ink">{r.project.name}</TD>
+            <RowHead>{r.project.name}</RowHead>
             <TD right className="whitespace-nowrap">{formatNumber(r.mwh, 1)}</TD>
             <TD right className="whitespace-nowrap">{r.platform ? breakEvenText(r.platform) : '—'}</TD>
             <TD right className={`whitespace-nowrap ${negative(r.midRoi)}`}>{pct(r.midRoi)}</TD>
@@ -386,10 +409,18 @@ function RankingTable({ rows }: { rows: OverviewRow[] }) {
   );
 }
 
+/** One-sentence text alternative for the break-even chart. */
+function breakEvenLabel(chart: Array<{ name: string; be: number }>): string {
+  const lo = chart.reduce((m, x) => (x.be < m.be ? x : m), chart[0]);
+  const hi = chart.reduce((m, x) => (x.be > m.be ? x : m), chart[0]);
+  return `ราคาคุ้มทุนเส้นทาง ข (ผ่านแพลตฟอร์ม) ของ ${chart.length} โครงการ ต่ำสุด ${pricePerMwh(lo.be)} ฿/MWh (${lo.name}) สูงสุด ${pricePerMwh(hi.be)} ฿/MWh (${hi.name})`;
+}
+
 function BreakEvenChart({ chart, mid }: { chart: Array<{ name: string; be: number }>; mid: number | null }) {
   return (
     <div>
       <SectionTitle>ราคาคุ้มทุนผ่านแพลตฟอร์ม (฿/MWh)</SectionTitle>
+      <div role="img" aria-label={breakEvenLabel(chart)}>
       <BarChart layout="vertical" width={680} height={Math.min(CHART_MAX_HEIGHT, Math.max(160, 22 * chart.length + 40))} data={chart}
         margin={{ top: 4, right: 16, bottom: 0, left: 8 }}>
         <CartesianGrid horizontal={false} stroke="#e2e8f0" />
@@ -399,7 +430,11 @@ function BreakEvenChart({ chart, mid }: { chart: Array<{ name: string; be: numbe
         <Bar dataKey="be" fill={GEM_GREEN} isAnimationActive={false} />
         {mid !== null && <ReferenceLine x={mid} stroke={WARN} label={{ value: 'ราคากลาง', fontSize: 10, fill: WARN }} />}
       </BarChart>
-      <p className="text-[11px] text-ink-500">แท่งที่สั้นกว่าเส้นราคากลางคือโครงการที่คุ้มทุนที่ราคากลาง</p>
+      </div>
+      <p className="text-[11px] text-ink-500">
+        แท่งแสดงราคาคุ้มทุนของเส้นทาง ข (ผ่านแพลตฟอร์ม) ของแต่ละโครงการ — คอลัมน์ ROI และผลในตารางใช้เส้นทางที่แนะนำ ·
+        แท่งที่สั้นกว่าเส้นราคากลางคือโครงการที่คุ้มทุนที่ราคากลาง
+      </p>
     </div>
   );
 }
@@ -410,12 +445,10 @@ function PortfolioOverview({ data, assumptions, orgName }: {
 }) {
   const { totals, projects, generated_at } = data;
   const rows: OverviewRow[] = projects.map((p) => {
-    const roi = p.roi.roi;
-    const best = roi?.recommended ? [roi.own, roi.platform].find((x): x is RecPathOk => x.status === 'ok' && x.path === roi.recommended) : undefined;
     return {
       project: p.project, mwh: p.scope2.annual_mwh,
-      platform: roi?.platform ?? null,
-      midRoi: best?.scenarios.find((s) => s.scenario === 'mid')?.roi_pct ?? null,
+      platform: p.roi.roi?.platform ?? null,
+      midRoi: recommendedMid(p.roi)?.roi_pct ?? null,
       label: buildRecRoiSummary(p.roi, assumptions)?.label ?? '—',
     };
   });
@@ -436,7 +469,7 @@ function PortfolioOverview({ data, assumptions, orgName }: {
   return (
     <>
       <section className="inv-page">
-        <PageHeader title="ภาพรวมพอร์ต · รายงานนักลงทุน REC และ Scope 2" subtitle={subtitle} generatedAt={generated_at} />
+        <PageHeader primary title="ภาพรวมพอร์ต · รายงานนักลงทุน REC และ Scope 2" subtitle={subtitle} generatedAt={generated_at} />
         <div className="inv-grow space-y-4">
           {projects.length === 0 ? (
             <p className="text-ink-600">ยังไม่มีโครงการที่มีข้อมูลการผลิต</p>
@@ -492,27 +525,21 @@ export function InvestorProjectReport() {
   const { projectId = '' } = useParams();
   const sources = useReportSources();
   const role = useStore((s) => s.currentUser.role);
-  const { data, eligible } = useMemo(() => {
-    const d = buildProjectReport({ ...sources, projectId });
-    const project = sources.projects.find((p) => p.id === projectId);
-    const elig = d !== null || (project
-      ? evaluateProjectRecRoi({
-        project, records: sources.records, pdds: sources.pdds, methodologies: sources.methodologies,
-        factors: sources.factors, assumptions: sources.assumptions,
-        setting: sources.projectSettings.find((s) => s.project_id === project.id),
-      }).eligible
-      : false);
-    return { data: d, eligible: elig };
-  }, [sources, projectId]);
+  const result = useMemo(() => buildProjectReport({ ...sources, projectId }), [sources, projectId]);
 
   if (role === 'verifier') return <Notice>{NO_ACCESS}</Notice>;
-  if (!data) {
-    return <Notice>{eligible ? 'ยังไม่มีข้อมูลการผลิต' : 'REC ใช้กับโปรเจกต์ผลิตไฟฟ้าเท่านั้น (methodology ที่วัดเป็น kWh)'}</Notice>;
+  if (result.status !== 'ok') {
+    const message = {
+      not_found: 'ไม่พบโครงการนี้',
+      not_eligible: 'REC ใช้กับโปรเจกต์ผลิตไฟฟ้าเท่านั้น (methodology ที่วัดเป็น kWh)',
+      no_data: 'ยังไม่มีข้อมูลการผลิต',
+    }[result.status];
+    return <Notice>{message}</Notice>;
   }
   return (
     <ReportShell backTo={`/projects/${projectId}?tab=rec-roi`}>
-      <MoneyPage data={data} assumptions={sources.assumptions} />
-      <Scope2Page data={data} years={sources.assumptions.horizon_years} />
+      <MoneyPage primary data={result.data} assumptions={sources.assumptions} />
+      <Scope2Page data={result.data} years={sources.assumptions.horizon_years} />
     </ReportShell>
   );
 }
