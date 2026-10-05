@@ -32,6 +32,8 @@ export function ProjectDetail() {
   const role = useStore((s) => s.currentUser.role);
   // REC ROI is not offered to verifiers, so a deep link must not open it for them either.
   const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'rec-roi' && role !== 'verifier' ? 'rec-roi' : 'overview');
+  // A role switch while the REC ROI tab is open must not leave a verifier on it.
+  const activeTab: Tab = tab === 'rec-roi' && role === 'verifier' ? 'overview' : tab;
 
   if (!project) return <div className="text-sm text-ink-500">Project not found. <Link to="/projects" className="text-brand-700 underline">Back to list</Link></div>;
 
@@ -76,23 +78,23 @@ export function ProjectDetail() {
             onClick={() => setTab(key)}
             className={clsx(
               'relative px-4 py-2.5 text-sm font-medium transition-colors',
-              tab === key ? 'text-brand-700' : 'text-ink-500 hover:text-ink-900'
+              activeTab === key ? 'text-brand-700' : 'text-ink-500 hover:text-ink-900'
             )}
           >
             {label}
             {key === 'evidence' && evidenceCount > 0 && (
               <span className="ml-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[11px] text-ink-600">{evidenceCount}</span>
             )}
-            {tab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-600" />}
+            {activeTab === key && <span className="absolute inset-x-0 -bottom-px h-0.5 bg-brand-600" />}
           </button>
         ))}
       </div>
 
       {/* PDD Document is available regardless of the registration gate so auditors
           can review the registered design document as a standalone record. */}
-      {tab === 'rec-roi' ? (
+      {activeTab === 'rec-roi' ? (
         <RecRoiDetail key={project.id} projectId={project.id} />
-      ) : tab === 'pdd' ? (
+      ) : activeTab === 'pdd' ? (
         pdd ? (
           <Card><CardBody className="p-6"><PddDocument pddId={pdd.id} embedded /></CardBody></Card>
         ) : (
@@ -102,9 +104,9 @@ export function ProjectDetail() {
         )
       ) : (
         <RegistrationGate projectId={project.id}>
-          {tab === 'credits' ? (
+          {activeTab === 'credits' ? (
             <ProjectCreditsTab projectId={project.id} />
-          ) : tab === 'overview' ? (
+          ) : activeTab === 'overview' ? (
             <Card>
               <CardHeader title="Monitoring Records" />
               <CardBody className="p-0">

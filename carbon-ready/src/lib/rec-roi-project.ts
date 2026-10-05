@@ -5,6 +5,7 @@ import type {
   EmissionFactor, Methodology, MonitoringRecord, Project, ProjectDesignDocument, RecRoiProjectSetting, UUID,
 } from '../types';
 import { isBundle } from './pdd-sites';
+import { FIN_DEFAULTS } from './pdd';
 import {
   annualMwh, computeIrrUplift, computeRecRoi,
   type AnnualMwh, type RecIrrUplift, type RecRoiAssumptions, type RecRoiResult,
@@ -46,16 +47,56 @@ export function projectEnergyBasis(
  * number. Bundle (aggregated) PDDs are skipped: their top-level investment is
  * the whole bundle's, which must never be paired with one project's measured MWh.
  */
-function pddInvestment(projectId: UUID, pdds: ProjectDesignDocument[]): { value: number; sectionData: Record<string, unknown> } | null {
+function pddInvestment(projectId: UUID, pdds: ProjectDesignDocument[]): { value: number } | null {
   const mine = pdds
     .filter((p) => p.project_id === projectId)
     .sort((a, b) => Number(b.state === 'registered') - Number(a.state === 'registered'));
   for (const p of mine) {
     if (isBundle(p.section_data ?? {})) continue;
     const v = Number(p.section_data?.investment_mthb);
-    if (Number.isFinite(v) && v > 0) return { value: v, sectionData: p.section_data };
+    if (Number.isFinite(v) && v > 0) return { value: v };
   }
   return null;
+}
+
+/**
+ * Section data of the project's governing non-bundle PDD (registered first),
+ * the only place PEA financial overrides are read from. Bundle PDDs describe
+ * the whole bundle, never one project's economics.
+ */
+function governingNonBundleSectionData(projectId: UUID, pdds: ProjectDesignDocument[]): Record<string, unknown> {
+  const mine = pdds
+    .filter((p) => p.project_id === projectId && !isBundle(p.section_data ?? {}))
+    .sort((a, b) => Number(b.state === 'registered') - Number(a.state === 'registered'));
+  return mine[0]?.section_data ?? {};
+}
+
+// Same semantics as computeFinancialTable's numOrNull (pdd.ts): blank/absent/NaN → not provided.
+function finiteOrNull(v: unknown): number | null {
+  if (v === undefined || v === null || v === '') return null;
+  const n = Number(v);
+  return Number.isNaN(n) ? null : n;
+}
+
+export type FinancialValueSource = 'pdd' | 'pea_default';
+export interface FinancialValue { value: number; source: FinancialValueSource }
+/** The three PEA inputs shown to users, with where each one came from. */
+export interface FinancialBasis {
+  elec_price_thb_kwh: FinancialValue;
+  discount_rate_pct: FinancialValue;
+  lifetime_years: FinancialValue;
+}
+
+function financialBasis(sectionData: Record<string, unknown>): FinancialBasis {
+  const pick = (key: keyof FinancialBasis, fallback: number): FinancialValue => {
+    const v = finiteOrNull(sectionData[key]);
+    return v === null ? { value: fallback, source: 'pea_default' } : { value: v, source: 'pdd' };
+  };
+  return {
+    elec_price_thb_kwh: pick('elec_price_thb_kwh', FIN_DEFAULTS.price),
+    discount_rate_pct: pick('discount_rate_pct', FIN_DEFAULTS.discount),
+    lifetime_years: pick('lifetime_years', FIN_DEFAULTS.lifetime),
+  };
 }
 
 export interface ProjectRecRoi {
@@ -68,6 +109,8 @@ export interface ProjectRecRoi {
   investment_mthb: number | null;
   investment_source: 'pdd' | 'manual' | null;
   uplift: RecIrrUplift | null;
+  /** PEA inputs behind the uplift, each labelled pdd / pea_default. */
+  financial_basis: FinancialBasis;
 }
 
 export function evaluateProjectRecRoi(args: {
@@ -88,7 +131,9 @@ export function evaluateProjectRecRoi(args: {
   const fromPdd = pddInvestment(project.id, args.pdds);
   const investment_mthb = fromPdd?.value ?? setting.investment_mthb;
   const investment_source = fromPdd ? 'pdd' : setting.investment_mthb !== null ? 'manual' : null;
-  const empty = { project, setting, suggested_issuance_type, investment_mthb, investment_source } as const;
+  const overrides = governingNonBundleSectionData(project.id, args.pdds);
+  const financial_basis = financialBasis(overrides);
+  const empty = { project, setting, suggested_issuance_type, investment_mthb, investment_source, financial_basis } as const;
 
   if (!basis.eligible) {
     return { ...empty, eligible: false, annual: { status: 'no_data' }, roi: null, uplift: null };
@@ -105,7 +150,7 @@ export function evaluateProjectRecRoi(args: {
   };
   const roi = computeRecRoi(inputs, assumptions);
   const uplift = computeIrrUplift({
-    project, factors: args.factors, pddSectionData: fromPdd?.sectionData ?? {},
+    project, factors: args.factors, pddSectionData: overrides,
     investment_mthb, inputs, assumptions, path: roi.recommended,
   });
   return { ...empty, eligible: true, annual, roi, uplift };

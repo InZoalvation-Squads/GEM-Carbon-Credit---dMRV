@@ -117,4 +117,47 @@ describe('evaluateProjectRecRoi', () => {
       expect(none.uplift).toEqual({ status: 'missing_investment' });
     });
   });
+
+  describe('financial basis (PEA overrides)', () => {
+    const assumptions = { ...EMPTY_REC_ROI_SETTINGS, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25 };
+    const manual = { ...defaultProjectSetting('prj-a'), investment_mthb: 1 };
+    const run = (section_data: Record<string, unknown> | null, setting = manual) => evaluateProjectRecRoi({
+      ...base, assumptions, setting, pdds: section_data ? [pdd({ section_data })] : [],
+    });
+
+    it('no PDD → every value is the PEA default', () => {
+      expect(run(null).financial_basis).toEqual({
+        elec_price_thb_kwh: { value: 4.18, source: 'pea_default' },
+        discount_rate_pct: { value: 7, source: 'pea_default' },
+        lifetime_years: { value: 25, source: 'pea_default' },
+      });
+    });
+
+    it('a PDD tariff override is used and labelled pdd even when the investment is manual', () => {
+      const withOverride = run({ elec_price_thb_kwh: '6', discount_rate_pct: 9 });
+      expect(withOverride.investment_source).toBe('manual');
+      expect(withOverride.financial_basis).toEqual({
+        elec_price_thb_kwh: { value: 6, source: 'pdd' },
+        discount_rate_pct: { value: 9, source: 'pdd' },
+        lifetime_years: { value: 25, source: 'pea_default' },
+      });
+      const plain = run({});
+      expect(withOverride.uplift?.status).toBe('ok');
+      expect(plain.uplift?.status).toBe('ok');
+      if (withOverride.uplift?.status === 'ok' && plain.uplift?.status === 'ok') {
+        // dearer electricity changes the without-REC project economics
+        expect(withOverride.uplift.without.payback_years).not.toBe(plain.uplift.without.payback_years);
+      }
+    });
+
+    it.each(['', 'abc'])('an unparseable override (%j) counts as the default', (v) => {
+      expect(run({ elec_price_thb_kwh: v }).financial_basis.elec_price_thb_kwh)
+        .toEqual({ value: 4.18, source: 'pea_default' });
+    });
+
+    it('a bundle PDD contributes no overrides', () => {
+      const bundle = { elec_price_thb_kwh: 9, sites: [{ owner: 'A', kwp: 100, project_id: 'prj-a' }] };
+      expect(run(bundle).financial_basis.elec_price_thb_kwh).toEqual({ value: 4.18, source: 'pea_default' });
+    });
+  });
 });

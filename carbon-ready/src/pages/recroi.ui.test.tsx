@@ -307,6 +307,66 @@ describe('ProjectDetail — REC ROI tab', () => {
     expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
   });
 
+  it('drops a verifier off the REC ROI tab when the role switches while it is open', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+    act(() => { useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } })); });
+    expect(screen.queryByText('ข · ผ่านแพลตฟอร์ม')).toBeNull();
+    expect(screen.queryByRole('button', { name: 'REC ROI' })).toBeNull();
+    expect(screen.getByRole('button', { name: 'Monitoring' }).className).toContain('text-brand-700');
+  });
+
+  it('uplift footnote says where each financial value came from', () => {
+    blankInvestment();
+    useStore.setState((s) => ({
+      recRoiProjectSettings: [{
+        project_id: 'prj-0001', issuance_type: 'Normal', digital_meter_exempt: false,
+        investment_mthb: 1, updated_by: 'x', updated_at: '2026-01-01T00:00:00Z',
+      }],
+      pdds: s.pdds.map((p) => (p.project_id === 'prj-0001'
+        ? { ...p, section_data: { ...p.section_data, investment_mthb: '', discount_rate_pct: 9 } } : p)),
+    }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText(/ค่าไฟ 4\.18 ฿\/kWh \(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
+    expect(screen.getByText(/อัตราคิดลด 9% \(จาก PDD\)/)).toBeInTheDocument();
+    expect(screen.getByText(/อายุโครงการ 25 ปี \(ค่าเริ่มต้น PEA\)/)).toBeInTheDocument();
+  });
+
+  it('labels the fixed cost as including the registration fee', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getAllByText('ต้นทุนคงที่ทั้งระยะ (รวมค่าขึ้นทะเบียน)').length).toBe(2);
+  });
+
+  it('digital-meter exemption: absent at >= 250 kWp, present below', () => {
+    const { unmount } = renderProject('prj-0001', '?tab=rec-roi'); // exactly 250 kWp
+    expect(screen.queryByLabelText(/EGAT อนุมัติ digital meter/)).toBeNull();
+    unmount();
+    useStore.setState((s) => ({ projects: s.projects.map((p) => (p.id === 'prj-0001' ? { ...p, capacity_kwp: 100 } : p)) }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByLabelText(/EGAT อนุมัติ digital meter/)).toBeInTheDocument();
+  });
+
+  it('project_owner can edit and save the project settings', () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'project_owner' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByLabelText(/เงินลงทุน \(ล้านบาท\)/)).toBeEnabled();
+    expect(screen.getByRole('button', { name: /บันทึกค่าของโปรเจกต์/ })).toBeInTheDocument();
+  });
+
+  it('disables the save button while a save is in flight', async () => {
+    let resolve: (v: boolean) => void = () => {};
+    const save = vi.spyOn(api, 'saveRecRoiProjectSetting').mockImplementation(() => new Promise((r) => { resolve = r; }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    const btn = screen.getByRole('button', { name: /บันทึกค่าของโปรเจกต์/ });
+    fireEvent.click(btn);
+    await waitFor(() => expect(btn).toBeDisabled());
+    fireEvent.click(btn);
+    expect(save).toHaveBeenCalledTimes(1);
+    await act(async () => { resolve(true); });
+    await waitFor(() => expect(btn).toBeEnabled());
+    save.mockRestore();
+  });
+
   it('is hidden from verifiers, even via ?tab=rec-roi', () => {
     useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } }));
     renderProject('prj-0001', '?tab=rec-roi');

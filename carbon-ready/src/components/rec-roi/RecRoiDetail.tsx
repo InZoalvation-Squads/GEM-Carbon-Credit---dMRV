@@ -11,6 +11,7 @@ import { useStore } from '../../store';
 import { api } from '../../lib/api';
 import { evaluateProjectRecRoi } from '../../lib/rec-roi-project';
 import { registrationFeeThb, REC_FEES } from '../../data/rec-fees';
+import type { FinancialValue } from '../../lib/rec-roi-project';
 import type { RecIrrUplift, RecPath, RecPathResult, RecRoiResult } from '../../lib/rec-roi';
 import type { UUID } from '../../types';
 import { formatNumber } from '../../lib/format';
@@ -44,7 +45,7 @@ function PathCard({ result, badge, capacityKwp, exempt }: {
             <dl className="grid grid-cols-2 gap-x-4 gap-y-1 text-sm">
               <dt className="text-ink-meta">ค่าขึ้นทะเบียน EGAT</dt>
               <dd className="text-right">{thb(registrationFeeThb(capacityKwp, exempt))}</dd>
-              <dt className="text-ink-meta">ต้นทุนคงที่ทั้งระยะ</dt>
+              <dt className="text-ink-meta">ต้นทุนคงที่ทั้งระยะ (รวมค่าขึ้นทะเบียน)</dt>
               <dd className="text-right">{thb(result.fixed_cost_thb)}</dd>
               <dt className="text-ink-meta">ค่าออกใบทั้งระยะ</dt>
               <dd className="text-right">{thb(result.issuance_cost_thb)}</dd>
@@ -77,6 +78,10 @@ function PathCard({ result, badge, capacityKwp, exempt }: {
     </Card>
   );
 }
+
+const SOURCE_LABEL: Record<FinancialValue['source'], string> = { pdd: 'จาก PDD', pea_default: 'ค่าเริ่มต้น PEA' };
+const basisText = (label: string, v: FinancialValue, unit: string) =>
+  `${label} ${formatNumber(v.value, 2).replace(/\.00$/, '')}${unit} (${SOURCE_LABEL[v.source]})`;
 
 const irrText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 2)}%`);
 const yearsText = (v: number | null) => (v === null ? '—' : `${formatNumber(v, 1)} ปี`);
@@ -111,6 +116,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
   const [exempt, setExempt] = useState(r?.setting.digital_meter_exempt ?? false);
   const [investment, setInvestment] = useState(r?.setting.investment_mthb?.toString() ?? '');
   const [investmentBad, setInvestmentBad] = useState(false);
+  const [saving, setSaving] = useState(false);
 
   // Re-sync only when a save landed (updated_at moved), never on a mere re-evaluation,
   // so a half-typed value survives unrelated store updates.
@@ -148,11 +154,19 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
       toast.error('บันทึกไม่ได้', 'ตัวเลขไม่ถูกต้องในช่อง เงินลงทุน');
       return;
     }
-    await api.saveRecRoiProjectSetting(projectId, {
-      issuance_type: issuanceType,
-      digital_meter_exempt: project.capacity_kwp < 250 ? exempt : false,
-      investment_mthb: value,
-    });
+    if (saving) return;
+    setSaving(true);
+    try {
+      // The api toasts success/failure itself; the result only gates the draft state.
+      const ok = await api.saveRecRoiProjectSetting(projectId, {
+        issuance_type: issuanceType,
+        digital_meter_exempt: project.capacity_kwp < 250 ? exempt : false,
+        investment_mthb: value,
+      });
+      if (ok) setInvestmentBad(false);
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
@@ -191,7 +205,9 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
               <p className="text-xs text-ink-meta">
                 เงินลงทุน {formatNumber(u.investment_mthb, 2)} ล้านบาท ({r.investment_source === 'pdd' ? 'จาก PDD' : 'กรอกเอง'}) ·
                 REC ราคากลาง {pricePerMwh(u.price_thb)} ฿/MWh ทาง {PATH_LABEL[u.path]} ·
-                ค่าไฟ/อัตราคิดลด/อายุโครงการใช้ค่าจาก PDD หรือค่าเริ่มต้น PEA (4.18 ฿/kWh, 7%, 25 ปี)
+                {basisText('ค่าไฟ', r.financial_basis.elec_price_thb_kwh, ' ฿/kWh')} ·{' '}
+                {basisText('อัตราคิดลด', r.financial_basis.discount_rate_pct, '%')} ·{' '}
+                {basisText('อายุโครงการ', r.financial_basis.lifetime_years, ' ปี')}
               </p>
             </div>
           ) : (
@@ -230,7 +246,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
               </label>
             )}
           </div>
-          {canEdit && <div className="flex justify-end"><Button onClick={saveSetting}>บันทึกค่าของโปรเจกต์</Button></div>}
+          {canEdit && <div className="flex justify-end"><Button onClick={saveSetting} disabled={saving}>บันทึกค่าของโปรเจกต์</Button></div>}
         </CardBody>
       </Card>
     </div>
