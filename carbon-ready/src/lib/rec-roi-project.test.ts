@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest';
 import type { Methodology, MonitoringRecord, ProjectDesignDocument, Project } from '../types';
 import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
-import { TVER_FORESTRY_METHODOLOGY } from '../data/methodologies';
+import { TVER_FORESTRY_METHODOLOGY, REC_SOLAR_METHODOLOGY } from '../data/methodologies';
 import { EMPTY_REC_ROI_SETTINGS } from './rec-roi';
 import { defaultProjectSetting, evaluateProjectRecRoi, projectEnergyBasis } from './rec-roi-project';
 
@@ -35,6 +35,10 @@ describe('projectEnergyBasis', () => {
   });
   it('no PDD yet but capacity > 0 → eligible, unfiltered', () => {
     expect(projectEnergyBasis(project(), [], METHODS)).toEqual({ eligible: true, driverParam: undefined });
+  });
+  it('a REC-only project (SF-02 methodology) is eligible with the EG_PJ driver', () => {
+    expect(projectEnergyBasis(project(), [pdd({ methodology_id: REC_SOLAR_METHODOLOGY.id })], [...METHODS, REC_SOLAR_METHODOLOGY]))
+      .toEqual({ eligible: true, driverParam: 'EG_PJ' });
   });
   it('forestry (tCO₂e driver) or zero capacity → not eligible', () => {
     expect(projectEnergyBasis(project(), [pdd({ methodology_id: TVER_FORESTRY_METHODOLOGY.id })], METHODS).eligible).toBe(false);
@@ -80,5 +84,37 @@ describe('evaluateProjectRecRoi', () => {
   it('suggests the issuance type of an existing SF-04 request', () => {
     const r = evaluateProjectRecRoi({ ...base, latestRequestType: 'Self consumption' });
     expect(r.suggested_issuance_type).toBe('Self consumption');
+  });
+
+  describe('PDD investment edge cases', () => {
+    const manual = { ...defaultProjectSetting('prj-a'), investment_mthb: 6 };
+    const withPdd = (section_data: Record<string, unknown>, setting?: typeof manual) =>
+      evaluateProjectRecRoi({ ...base, pdds: [pdd({ section_data })], setting });
+
+    it('a string value from the PDD form is parsed', () => {
+      const r = withPdd({ investment_mthb: '8' });
+      expect(r.investment_mthb).toBe(8);
+      expect(r.investment_source).toBe('pdd');
+    });
+    it('the PDD value beats a manual setting', () => {
+      const r = withPdd({ investment_mthb: 8 }, manual);
+      expect(r.investment_mthb).toBe(8);
+      expect(r.investment_source).toBe('pdd');
+    });
+    it.each(['', ' '])('a blank PDD value (%j) falls back to the manual setting', (blank) => {
+      const r = withPdd({ investment_mthb: blank }, manual);
+      expect(r.investment_mthb).toBe(6);
+      expect(r.investment_source).toBe('manual');
+    });
+    it('a bundle PDD investment is never used — manual setting or nothing', () => {
+      const bundle = { investment_mthb: 50, sites: [{ owner: 'A', kwp: 100, project_id: 'prj-a' }] };
+      const m = withPdd(bundle, manual);
+      expect(m.investment_mthb).toBe(6);
+      expect(m.investment_source).toBe('manual');
+      const none = withPdd(bundle);
+      expect(none.investment_mthb).toBeNull();
+      expect(none.investment_source).toBeNull();
+      expect(none.uplift).toEqual({ status: 'missing_investment' });
+    });
   });
 });

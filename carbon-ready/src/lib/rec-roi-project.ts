@@ -4,6 +4,7 @@
 import type {
   EmissionFactor, Methodology, MonitoringRecord, Project, ProjectDesignDocument, RecRoiProjectSetting, UUID,
 } from '../types';
+import { isBundle } from './pdd-sites';
 import {
   annualMwh, computeIrrUplift, computeRecRoi,
   type AnnualMwh, type RecIrrUplift, type RecRoiAssumptions, type RecRoiResult,
@@ -17,7 +18,7 @@ export function defaultProjectSetting(project_id: UUID): RecRoiProjectSetting {
   };
 }
 
-/** The project's governing PDD: newest registered one, else the first found. */
+/** The project's registered PDD, else the first found (array order). */
 function governingPdd(projectId: UUID, pdds: ProjectDesignDocument[]): ProjectDesignDocument | undefined {
   const mine = pdds.filter((p) => p.project_id === projectId);
   return mine.find((p) => p.state === 'registered') ?? mine[0];
@@ -40,14 +41,19 @@ export function projectEnergyBasis(
     : { eligible: false, driverParam: undefined };
 }
 
-/** investment_mthb from any of the project's PDDs (registered first), as a positive number. */
+/**
+ * investment_mthb from the project's PDDs (registered first), as a positive
+ * number. Bundle (aggregated) PDDs are skipped: their top-level investment is
+ * the whole bundle's, which must never be paired with one project's measured MWh.
+ */
 function pddInvestment(projectId: UUID, pdds: ProjectDesignDocument[]): { value: number; sectionData: Record<string, unknown> } | null {
   const mine = pdds
     .filter((p) => p.project_id === projectId)
     .sort((a, b) => Number(b.state === 'registered') - Number(a.state === 'registered'));
   for (const p of mine) {
+    if (isBundle(p.section_data ?? {})) continue;
     const v = Number(p.section_data?.investment_mthb);
-    if (p.section_data?.investment_mthb !== '' && Number.isFinite(v) && v > 0) return { value: v, sectionData: p.section_data };
+    if (Number.isFinite(v) && v > 0) return { value: v, sectionData: p.section_data };
   }
   return null;
 }
