@@ -936,8 +936,16 @@ describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
     return Array.from(list.children).map((li) => (li.firstChild?.textContent ?? '').trim());
   }
 
-  it('lists all nine numbered topics with their bullet sub-items (single mode)', () => {
+  it('single mode has no maintenance plan — the MCRU reference §4.1 carries none', () => {
     seedOfficialData();
+    renderDoc();
+    expect(screen.queryByTestId('maintenance-detail')).toBeNull();
+    expect(screen.queryByText('รายละเอียดแผนการบำรุงรักษาประจำปี')).toBeNull();
+    expect(document.body.textContent).not.toContain('ตามแผนบำรุงรักษาประจำปี');
+  });
+
+  it('lists all nine numbered topics with their bullet sub-items (aggregated mode)', () => {
+    seedBundleDetail();
     renderDoc();
     expect(screen.getByTestId('maintenance-detail').tagName).toBe('OL');
     expect(topicTexts()).toEqual(TOPICS);
@@ -948,10 +956,10 @@ describe('TverSF001Pdd — §4.1 maintenance-plan detail', () => {
     expect(within(weather).getAllByRole('listitem')).toHaveLength(3);
   });
 
-  it('renders the same nine topics in aggregated mode', () => {
+  it('aggregated §4.1 narrative still points at the maintenance table', () => {
     seedBundleDetail();
     renderDoc();
-    expect(topicTexts()).toEqual(TOPICS);
+    expect(screen.getByText(/ตามแผนบำรุงรักษาประจำปี/).textContent).toMatch(/ดังตารางที่ \d/);
   });
 });
 

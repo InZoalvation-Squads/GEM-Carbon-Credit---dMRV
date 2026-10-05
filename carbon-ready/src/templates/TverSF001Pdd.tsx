@@ -40,9 +40,9 @@ const PROJECT_TYPES = [
 ] as const;
 
 /**
- * §4.1 รายละเอียดแผนการบำรุงรักษาประจำปี — the official form's nine maintenance
- * topics (p.22-23). Identical for every solar-PV T-VER project, so it is
- * boilerplate here rather than section_data.
+ * §4.1 รายละเอียดแผนการบำรุงรักษาประจำปี — the aggregated reference's nine
+ * maintenance topics (p.22-23). Identical for every solar-PV T-VER project, so it
+ * is boilerplate here rather than section_data. แบบควบรวม only.
  */
 const MAINTENANCE_TOPICS: ReadonlyArray<{ topic: string; items: readonly string[] }> = [
   {
@@ -1375,8 +1375,9 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             โดยจะมีการบันทึกค่าพลังงานที่ผลิตได้รายวัน รายเดือน และรายปี ผ่านมิเตอร์ซื้อขายไฟฟ้า (Energy Meter)
             และได้กำหนดแนวทางการติดตามผลและหน้าที่รับผิดชอบ รายละเอียดขั้นตอนการจัดเก็บข้อมูล บันทึก การคำนวณ และการรายงานดังภาพที่ 7 และ 8
             {str('qaqc_procedure') !== '-' ? ` ทั้งนี้ มาตรการควบคุมคุณภาพข้อมูล: ${str('qaqc_procedure')}` : ''}
-            {' '}และบำรุงรักษาระบบและอุปกรณ์ต่างๆ ตามแผนบำรุงรักษาประจำปี เพื่อตรวจสอบสภาพทางกายภาพของแผงเซลล์แสงอาทิตย์ และสภาพระบบโดยรวม
-            {bundle ? ` ดังตารางที่ ${maintenanceTableNo}` : ''}
+            {/* แบบเดี่ยว (MCRU p.19) has no maintenance plan, so the clause pointing
+                at one is bundle-only along with the plan itself. */}
+            {bundle && ` และบำรุงรักษาระบบและอุปกรณ์ต่างๆ ตามแผนบำรุงรักษาประจำปี เพื่อตรวจสอบสภาพทางกายภาพของแผงเซลล์แสงอาทิตย์ และสภาพระบบโดยรวม ดังตารางที่ ${maintenanceTableNo}`}
           </p>
           <BoundaryDiagram capacityKwp={fmt(totalKwp)} owner={ownerName} bundle={bundle} />
           {/* Fixed at 7 / 8 by the official form. Deriving them from the number of
@@ -1403,19 +1404,23 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
             </>
           )}
 
-          {/* The official form's annual maintenance checklist (p.22-23). Generic
-              solar-PV boilerplate, so it renders in both แบบเดี่ยว and แบบควบรวม. */}
-          <p className="mt-3 font-bold underline">รายละเอียดแผนการบำรุงรักษาประจำปี</p>
-          <ol data-testid="maintenance-detail" className="mt-1 list-decimal pl-12">
-            {MAINTENANCE_TOPICS.map((t) => (
-              <li key={t.topic} className="mt-1">
-                {t.topic}
-                <ul className="list-disc pl-6">
-                  {t.items.map((i) => <li key={i}>{i}</li>)}
-                </ul>
-              </li>
-            ))}
-          </ol>
+          {/* The aggregated reference's annual maintenance checklist (p.22-23).
+              The แบบเดี่ยว reference (MCRU) has none, so it is bundle-only. */}
+          {bundle && (
+            <>
+              <p className="mt-3 font-bold underline">รายละเอียดแผนการบำรุงรักษาประจำปี</p>
+              <ol data-testid="maintenance-detail" className="mt-1 list-decimal pl-12">
+                {MAINTENANCE_TOPICS.map((t) => (
+                  <li key={t.topic} className="mt-1">
+                    {t.topic}
+                    <ul className="list-disc pl-6">
+                      {t.items.map((i) => <li key={i}>{i}</li>)}
+                    </ul>
+                  </li>
+                ))}
+              </ol>
+            </>
+          )}
 
           <p className="mt-3 font-bold underline">4.2 พารามิเตอร์ที่ไม่ต้องติดตามผล</p>
           <p className="pl-8">ไม่มีพารามิเตอร์ที่ไม่ต้องติดตาม ที่ใช้ในการคำนวณตามระเบียบวิธีการลดก๊าซเรือนกระจกที่เลือกใช้</p>
