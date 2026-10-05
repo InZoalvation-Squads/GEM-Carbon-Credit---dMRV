@@ -6,6 +6,7 @@ import { api } from '../lib/api';
 import { toast } from '../components/layout/Toast';
 import { seedDemo } from '../test/demoFixtures';
 import { RecRoi } from './RecRoi';
+import { ProjectDetail } from './ProjectDetail';
 import { Sidebar } from '../components/layout/Sidebar';
 import type { MonitoringRecord } from '../types';
 
@@ -181,5 +182,135 @@ describe('Sidebar — REC ROI visibility', () => {
     useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } }));
     renderSidebar();
     expect(screen.queryByRole('link', { name: /REC ROI/ })).toBeNull();
+  });
+});
+
+const renderProject = (id: string, query = '') => render(
+  <MemoryRouter initialEntries={[`/projects/${id}${query}`]}>
+    <Routes><Route path="/projects/:id" element={<ProjectDetail />} /></Routes>
+  </MemoryRouter>,
+);
+
+const blankInvestment = () => useStore.setState((s) => ({
+  pdds: s.pdds.map((p) => (p.project_id === 'prj-0001'
+    ? { ...p, section_data: { ...p.section_data, investment_mthb: '' } } : p)),
+}));
+
+describe('ProjectDetail — REC ROI tab', () => {
+  beforeEach(() => {
+    useStore.setState((s) => ({
+      recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25, price_source: 'quote' },
+    }));
+  });
+
+  it('opens from ?tab=rec-roi and shows both paths side by side', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText('ก · เปิดบัญชี Evident เอง')).toBeInTheDocument();
+    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+    expect(screen.getByText('24.19')).toBeInTheDocument();
+    expect(screen.getByText(/ข้อมูล 92 วัน/)).toBeInTheDocument();
+  });
+
+  it('marks the recommended path "แนะนำ" only when it earns >= 0 at the mid price', () => {
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText('แนะนำ')).toBeInTheDocument();
+  });
+
+  it('never shows a green "แนะนำ" without a mid price (neutral lower-break-even badge instead)', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.queryByText('แนะนำ')).toBeNull();
+    expect(screen.getByText('ผ่านแพลตฟอร์ม · คุ้มทุนต่ำกว่า')).toBeInTheDocument();
+  });
+
+  it('never shows "แนะนำ" when the mid price loses money', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 1 } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.queryByText('แนะนำ')).toBeNull();
+    expect(screen.getByText('ไม่คุ้มทั้งสองทาง')).toBeInTheDocument();
+  });
+
+  it('IRR uplift asks for an investment figure when there is none', () => {
+    blankInvestment();
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText(/ยังไม่มีข้อมูลเงินลงทุน/)).toBeInTheDocument();
+  });
+
+  it('IRR uplift explains a missing price and a path that cannot be computed', () => {
+    blankInvestment();
+    useStore.setState((s) => ({
+      recRoiSettings: { ...s.recRoiSettings, price_mid_thb: null, price_source: '' },
+      recRoiProjectSettings: [{
+        project_id: 'prj-0001', issuance_type: 'Normal', digital_meter_exempt: false,
+        investment_mthb: 1, updated_by: 'x', updated_at: '2026-01-01T00:00:00Z',
+      }],
+    }));
+    const { unmount } = renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getAllByText(/ยังไม่กรอกราคา REC/).length).toBeGreaterThan(0);
+    unmount();
+
+    useStore.setState((s) => ({
+      recRoiSettings: { ...s.recRoiSettings, price_mid_thb: 25, price_source: 'quote', platform_fee_pct: null, eur_thb: null },
+    }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText(/ยังคำนวณ.*ไม่ได้/)).toBeInTheDocument();
+  });
+
+  it('saving a manual investment shows IRR without vs with REC', async () => {
+    blankInvestment();
+    renderProject('prj-0001', '?tab=rec-roi');
+    fireEvent.change(screen.getByLabelText(/เงินลงทุน \(ล้านบาท\)/), { target: { value: '1' } });
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกค่าของโปรเจกต์/ }));
+    await waitFor(() => expect(screen.getByText(/IRR ไม่มี REC/)).toBeInTheDocument());
+    expect(screen.getByText(/IRR มี REC/)).toBeInTheDocument();
+    expect(screen.getByText(/กรอกเอง/)).toBeInTheDocument();
+  });
+
+  it('refuses to save an unparseable investment (not silently null)', () => {
+    blankInvestment();
+    const save = vi.spyOn(api, 'saveRecRoiProjectSetting').mockResolvedValue(true);
+    const err = vi.spyOn(toast, 'error');
+    renderProject('prj-0001', '?tab=rec-roi');
+    const input = screen.getByLabelText(/เงินลงทุน \(ล้านบาท\)/) as HTMLInputElement;
+    Object.defineProperty(input, 'validity', { configurable: true, value: { badInput: true } });
+    fireEvent.change(input, { target: { value: '12' } });
+    fireEvent.click(screen.getByRole('button', { name: /บันทึกค่าของโปรเจกต์/ }));
+    expect(save).not.toHaveBeenCalled();
+    expect(screen.getByText(/ตัวเลขไม่ถูกต้อง/)).toBeInTheDocument();
+    expect(err).toHaveBeenCalledWith('บันทึกไม่ได้', expect.stringContaining('ตัวเลขไม่ถูกต้อง'));
+    save.mockRestore(); err.mockRestore();
+  });
+
+  it('keeps a typed investment when the store re-evaluates without a new save', () => {
+    blankInvestment();
+    renderProject('prj-0001', '?tab=rec-roi');
+    fireEvent.change(screen.getByLabelText(/เงินลงทุน \(ล้านบาท\)/), { target: { value: '3' } });
+    act(() => { useStore.setState((s) => ({ records: [...s.records] })); });
+    expect(screen.getByLabelText(/เงินลงทุน \(ล้านบาท\)/)).toHaveValue(3);
+  });
+
+  it('non-electricity projects say REC does not apply', () => {
+    renderProject('prj-0006', '?tab=rec-roi'); // forestry
+    expect(screen.getByText(/REC ใช้กับโปรเจกต์ผลิตไฟฟ้าเท่านั้น/)).toBeInTheDocument();
+  });
+
+  it('without kWh data it links to Upload', () => {
+    useStore.setState((s) => ({ records: s.records.filter((r) => r.project_id !== 'prj-0001') }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    const msg = screen.getByText(/ยังไม่มีข้อมูลการผลิต/);
+    expect(within(msg).getByRole('link', { name: 'Upload Data' })).toHaveAttribute('href', '/upload');
+  });
+
+  it('is reachable by clicking the tab', () => {
+    renderProject('prj-0001');
+    fireEvent.click(screen.getByRole('button', { name: 'REC ROI' }));
+    expect(screen.getByText('ข · ผ่านแพลตฟอร์ม')).toBeInTheDocument();
+  });
+
+  it('is hidden from verifiers, even via ?tab=rec-roi', () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'verifier' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.queryByRole('button', { name: 'REC ROI' })).toBeNull();
+    expect(screen.queryByText('ข · ผ่านแพลตฟอร์ม')).toBeNull();
   });
 });

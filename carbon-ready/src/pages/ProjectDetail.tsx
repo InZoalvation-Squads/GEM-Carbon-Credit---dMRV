@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useSearchParams } from 'react-router-dom';
 import { useStore } from '../store';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
@@ -16,8 +16,9 @@ import { PROJECT_STATUS_LABEL, sourceLabel } from '../lib/labels';
 import { ChevronLeft, Upload as UploadIcon, FileText } from 'lucide-react';
 import clsx from 'clsx';
 import { RegistrationGate } from '../components/project/RegistrationGate';
+import { RecRoiDetail } from '../components/rec-roi/RecRoiDetail';
 
-type Tab = 'overview' | 'evidence' | 'credits' | 'pdd';
+type Tab = 'overview' | 'evidence' | 'credits' | 'pdd' | 'rec-roi';
 
 export function ProjectDetail() {
   const { id } = useParams<{ id: string }>();
@@ -27,7 +28,10 @@ export function ProjectDetail() {
   );
   const evidenceCount = useStore((s) => s.evidence.filter((e) => e.project_id === id && e.status === 'active').length);
   const pdd = useStore((s) => s.pdds.find((p) => p.project_id === id));
-  const [tab, setTab] = useState<Tab>('overview');
+  const [searchParams] = useSearchParams();
+  const role = useStore((s) => s.currentUser.role);
+  // REC ROI is not offered to verifiers, so a deep link must not open it for them either.
+  const [tab, setTab] = useState<Tab>(searchParams.get('tab') === 'rec-roi' && role !== 'verifier' ? 'rec-roi' : 'overview');
 
   if (!project) return <div className="text-sm text-ink-500">Project not found. <Link to="/projects" className="text-brand-700 underline">Back to list</Link></div>;
 
@@ -65,7 +69,8 @@ export function ProjectDetail() {
 
       {/* Tabs */}
       <div className="mb-4 flex items-center gap-1 border-b border-ink-200">
-        {([['overview', 'Monitoring'], ['evidence', 'Evidence'], ['credits', 'Credits'], ['pdd', 'PDD Document']] as [Tab, string][]).map(([key, label]) => (
+        {([['overview', 'Monitoring'], ['evidence', 'Evidence'], ['credits', 'Credits'], ['pdd', 'PDD Document'],
+           ...(role !== 'verifier' ? [['rec-roi', 'REC ROI']] : [])] as [Tab, string][]).map(([key, label]) => (
           <button
             key={key}
             onClick={() => setTab(key)}
@@ -85,7 +90,9 @@ export function ProjectDetail() {
 
       {/* PDD Document is available regardless of the registration gate so auditors
           can review the registered design document as a standalone record. */}
-      {tab === 'pdd' ? (
+      {tab === 'rec-roi' ? (
+        <RecRoiDetail key={project.id} projectId={project.id} />
+      ) : tab === 'pdd' ? (
         pdd ? (
           <Card><CardBody className="p-6"><PddDocument pddId={pdd.id} embedded /></CardBody></Card>
         ) : (
