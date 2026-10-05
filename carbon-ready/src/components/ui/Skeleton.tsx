@@ -26,9 +26,9 @@ export function SkeletonRows({ rows = 6, columns = 4, block = false, entity = fa
 }
 
 export function HeadBlockSkeleton({ figures = 4, sources = true }: { figures?: number; sources?: boolean }) {
-  return <div aria-hidden="true" data-skeleton-figures={figures} className="grid grid-cols-1 divide-y divide-rule rounded-sheet border border-rule bg-surface sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0">
+  return <div aria-hidden="true" data-skeleton-figures={figures} className="grid grid-cols-1 divide-y divide-ink-100 rounded-xl border border-ink-200/80 bg-white shadow-card sm:grid-flow-col sm:auto-cols-fr sm:divide-x sm:divide-y-0">
     {Array.from({ length: figures }, (_, index) => <div key={index} className="min-w-0 px-5 py-4">
-      <Skeleton className="h-[21px] w-2/3" /><Skeleton className="mt-2 h-[39px] w-3/4" />{sources && <Skeleton className="mt-2 h-[18px] w-full" />}
+      <Skeleton className="h-[21px] w-2/3" /><Skeleton className="mt-2 h-[26px] w-3/4" />{sources && <Skeleton className="mt-2 h-[18px] w-full" />}
     </div>)}
   </div>;
 }

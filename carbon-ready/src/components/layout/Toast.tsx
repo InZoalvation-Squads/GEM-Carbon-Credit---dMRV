@@ -36,15 +36,15 @@ export const toast = {
     useToastStore.getState().push({ tone: 'info', title, description }),
 };
 
-const config: Record<ToastTone, { icon: typeof Info; iconColor: string; rail: string }> = {
-  success: { icon: CheckCircle2, iconColor: 'text-petrol-600', rail: 'bg-petrol-700' },
-  error: { icon: AlertCircle, iconColor: 'text-state-rejected', rail: 'bg-state-rejected' },
-  info: { icon: Info, iconColor: 'text-state-review', rail: 'bg-state-review' },
+const config: Record<ToastTone, { icon: typeof Info; ring: string; iconColor: string; rail: string }> = {
+  success: { icon: CheckCircle2, ring: 'ring-brand-600/15', iconColor: 'text-brand-600', rail: 'bg-brand-500' },
+  error:   { icon: AlertCircle,  ring: 'ring-red-600/15',   iconColor: 'text-red-600',   rail: 'bg-red-500' },
+  info:    { icon: Info,         ring: 'ring-sky-600/15',   iconColor: 'text-sky-600',   rail: 'bg-sky-500' },
 };
 
 function ToastRow({ item }: { item: ToastItem }) {
   const dismiss = useToastStore((s) => s.dismiss);
-  const { icon: Icon, iconColor, rail } = config[item.tone];
+  const { icon: Icon, ring, iconColor, rail } = config[item.tone];
 
   useEffect(() => {
     const t = setTimeout(() => dismiss(item.id), 4200);
@@ -54,21 +54,22 @@ function ToastRow({ item }: { item: ToastItem }) {
   return (
     <div
       className={clsx(
-        'pointer-events-auto relative flex w-[min(20rem,calc(100vw-2rem))] items-start gap-3 overflow-hidden rounded-sheet border border-rule bg-surface p-3.5 pr-12 animate-slide-in-right',
+        'pointer-events-auto relative flex w-[min(20rem,calc(100vw-2rem))] items-start gap-3 overflow-hidden rounded-xl border border-ink-200/70 bg-white/95 backdrop-blur p-3.5 pr-9 shadow-lg ring-1 animate-slide-in-right',
+        ring,
       )}
     >
       <span className={clsx('absolute inset-y-0 left-0 w-1', rail)} />
       <Icon size={18} aria-hidden className={clsx('mt-0.5 shrink-0', iconColor)} />
       <div className="min-w-0">
-        <div className="text-sm font-semibold text-ink">{item.title}</div>
-        {item.description && <div className="mt-0.5 text-sm text-ink-secondary">{item.description}</div>}
+        <div className="text-sm font-semibold text-ink-900">{item.title}</div>
+        {item.description && <div className="mt-0.5 text-[13px] text-ink-500">{item.description}</div>}
       </div>
       <button
         onClick={() => dismiss(item.id)}
         aria-label="Dismiss"
-        className="absolute right-2 top-2 grid h-8 w-8 place-items-center rounded-md text-ink-meta transition-colors hover:bg-petrol-50 hover:text-ink"
+        className="absolute right-2 top-2 grid h-6 w-6 place-items-center rounded-md text-ink-400 transition-colors hover:bg-ink-100 hover:text-ink-700"
       >
-        <X size={16} aria-hidden />
+        <X size={14} aria-hidden />
       </button>
     </div>
   );

@@ -32,7 +32,7 @@ export function ProjectDetail() {
   const activity = useStore((s) => s.audit.filter((a) => a.entity_id === id));
   const [tab, setTab] = useState<Tab>('overview');
 
-  if (!project) return <div className="text-sm text-ink-meta">Project not found. <Link to="/projects" className="text-petrol-700 underline">Back to list</Link></div>;
+  if (!project) return <div className="text-sm text-ink-meta">Project not found. <Link to="/projects" className="text-brand-600 underline">Back to list</Link></div>;
 
   const totalKwh = records.reduce((s, r) => s + r.generation_kwh, 0);
 

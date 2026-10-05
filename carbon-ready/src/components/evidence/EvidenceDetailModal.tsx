@@ -93,7 +93,7 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
           <CategoryChip category={evidence.category} />
           <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs font-medium text-ink-secondary">v{evidence.version_number}</span>
           <EvidenceStatusDot status={evidence.status} />
-          {isCover && <span className="rounded-full bg-petrol-100 px-2 py-0.5 text-xs font-medium text-petrol-700">PDD cover</span>}
+          {isCover && <span className="rounded-full bg-brand-100 px-2 py-0.5 text-xs font-medium text-brand-600">PDD cover</span>}
         </div>
         <div className="text-xs text-ink-meta">
           {formatBytes(evidence.file_size)} · uploaded {fmtDate(evidence.uploaded_at)} by {evidence.uploaded_by_name}

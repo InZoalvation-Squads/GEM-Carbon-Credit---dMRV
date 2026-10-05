@@ -189,29 +189,29 @@ export function Login() {
   return (
     <div className="flex min-h-full">
       {/* Left — sign-in card */}
-      <div className="flex flex-1 items-center justify-center bg-ground px-4 py-10 lg:px-10">
-        <div className="w-full max-w-[460px] rounded-sheet border border-rule bg-surface px-7 py-8 sm:px-10 sm:py-10">
+      <div className="flex flex-1 items-center justify-center bg-[#f2f4f3] px-4 py-10 lg:px-10">
+        <div className="w-full max-w-[460px] rounded-[28px] bg-white px-7 py-8 shadow-card sm:px-10 sm:py-10">
           <div className="flex items-start justify-between">
             <img src="/gem-logo-dark.svg" width={1003} height={210} loading="lazy" decoding="async" alt="GEM Carbon Credit" className="h-9 w-auto" />
             <button
               type="button"
               onClick={toggleLang}
-              className="inline-flex h-10 items-center gap-1.5 rounded-sheet border border-rule-strong px-3.5 text-sm font-medium text-ink-secondary transition-colors hover:border-rule-strong hover:bg-ground"
+              className="inline-flex h-9 items-center gap-1.5 rounded-full border border-ink-200 px-3.5 text-sm font-medium text-ink-700 transition-colors hover:border-ink-300 hover:bg-ink-50"
             >
               <Globe size={15} aria-hidden />
               {t.langBadge}
             </button>
           </div>
-          <p className="mt-3 text-base text-ink-secondary">The Chain of Trust for Digital Carbon</p>
+          <p className="mt-3 text-[15px] text-ink-600">The Chain of Trust for Digital Carbon</p>
 
-          <h1 className="mt-7 text-2xl font-semibold text-petrol-800">{t.title}</h1>
-          <p className="mt-1 text-sm text-ink-meta">{t.subtitle}</p>
+          <h1 className="mt-7 text-[26px] font-bold text-petrol-800">{t.title}</h1>
+          <p className="mt-1 text-sm text-ink-500">{t.subtitle}</p>
 
           <form onSubmit={submit} className="mt-5">
             {locked ? (
-              <div className="flex h-11 items-center justify-between rounded-sheet bg-surface-sunk px-4 text-sm">
-                <span className="truncate text-ink-secondary">
-                  {t.signingInAs} <span className="font-semibold text-ink">{accountLabel}</span>
+              <div className="flex h-11 items-center justify-between rounded-xl bg-ink-100 px-4 text-sm">
+                <span className="truncate text-ink-700">
+                  {t.signingInAs} <span className="font-semibold text-ink-900">{accountLabel}</span>
                 </span>
                 <button
                   type="button"
@@ -223,7 +223,7 @@ export function Login() {
               </div>
             ) : (
               <div>
-                <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-ink">
+                <label htmlFor="login-email" className="mb-1.5 block text-sm font-medium text-ink-800">
                   {t.email}
                 </label>
                 <input
@@ -235,7 +235,7 @@ export function Login() {
                   value={email}
                   onChange={(e) => { setEmail(e.target.value); setError(''); }}
                   placeholder="you@gem.demo"
-                  className="block h-11 w-full rounded-sheet border border-rule-strong bg-surface px-4 text-sm transition-colors placeholder:text-ink-meta hover:border-rule-strong focus:border-petrol-600 focus:outline-none focus:ring-2 focus:ring-petrol-600"
+                  className="block h-11 w-full rounded-xl border border-ink-200 bg-white px-4 text-sm shadow-xs transition-colors placeholder:text-ink-500 hover:border-ink-300 focus:border-petrol-500 focus:outline-none focus:ring-4 focus:ring-petrol-500/10"
                 />
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {DEMO_ACCOUNTS.map((a) => (
@@ -243,24 +243,24 @@ export function Login() {
                       key={a.id}
                       type="button"
                       onClick={() => quickFill(a.email)}
-                      className="rounded-sheet border border-rule bg-white px-3 py-2 text-left text-xs transition-colors hover:border-petrol-600 hover:bg-ground"
+                      className="rounded-lg border border-ink-200 bg-white px-3 py-2 text-left text-xs transition-colors hover:border-petrol-400 hover:bg-ink-50"
                     >
-                      <div className="font-medium text-ink">{ROLE_LABEL[a.role]}</div>
-                      <div className="truncate font-mono text-xs text-ink-meta">{a.email}</div>
+                      <div className="font-medium text-ink-800">{ROLE_LABEL[a.role]}</div>
+                      <div className="truncate font-mono text-[11px] text-ink-500">{a.email}</div>
                     </button>
                   ))}
                 </div>
-                <p className="mt-2 text-xs text-ink-meta">
+                <p className="mt-2 text-[11px] text-ink-500">
                   {t.demoHint} · {t.demoPassword} <span className="font-mono">{DEMO_PASSWORD}</span>
                 </p>
               </div>
             )}
 
             <div className="mt-5 flex items-center justify-between">
-              <label htmlFor="login-password" className="text-sm font-medium text-ink">
+              <label htmlFor="login-password" className="text-sm font-medium text-ink-800">
                 {t.password}
               </label>
-              <a href={SUPPORT_MAILTO} className="text-sm text-ink-meta hover:text-ink-secondary hover:underline">
+              <a href={SUPPORT_MAILTO} className="text-sm text-ink-500 hover:text-ink-700 hover:underline">
                 {t.forgot}
               </a>
             </div>
@@ -274,19 +274,19 @@ export function Login() {
                 value={password}
                 onChange={(e) => { setPassword(e.target.value); setError(''); }}
                 placeholder="••••••••••"
-                className="block h-11 w-full rounded-sheet border border-rule-strong bg-surface px-4 pr-11 text-sm transition-colors placeholder:text-ink-meta hover:border-rule-strong focus:border-petrol-600 focus:outline-none focus:ring-2 focus:ring-petrol-600"
+                className="block h-11 w-full rounded-xl border border-ink-200 bg-white px-4 pr-11 text-sm shadow-xs transition-colors placeholder:text-ink-500 hover:border-ink-300 focus:border-petrol-500 focus:outline-none focus:ring-4 focus:ring-petrol-500/10"
               />
               <button
                 type="button"
                 aria-label={showPw ? t.hidePassword : t.showPassword}
                 onClick={() => setShowPw((v) => !v)}
-                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-ink-meta transition-colors hover:text-ink-secondary"
+                className="absolute inset-y-0 right-0 flex w-11 items-center justify-center text-ink-400 transition-colors hover:text-ink-600"
               >
                 {showPw ? <EyeOff size={18} /> : <Eye size={18} />}
               </button>
             </div>
 
-            {error && <p id="login-error" role="alert" className="mt-3 text-sm text-state-rejected">{error}</p>}
+            {error && <p id="login-error" role="alert" className="mt-3 text-sm text-red-600">{error}</p>}
 
             <label className="mt-4 inline-flex min-h-10 cursor-pointer select-none items-center gap-2.5">
               <span className="relative inline-flex">
@@ -294,28 +294,28 @@ export function Login() {
                   type="checkbox"
                   checked={remember}
                   onChange={(e) => setRemember(e.target.checked)}
-                  className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-sheet border border-rule-strong transition-colors checked:border-petrol-600 checked:bg-petrol-600"
+                  className="peer h-[18px] w-[18px] cursor-pointer appearance-none rounded-full border border-ink-300 transition-colors checked:border-petrol-600 checked:bg-petrol-600"
                 />
                 <Check
                   size={12}
-                  strokeWidth={1.75}
+                  strokeWidth={3}
                   aria-hidden
                   className="pointer-events-none absolute inset-0 m-auto text-white opacity-0 transition-opacity peer-checked:opacity-100"
                 />
               </span>
-              <span className="text-sm text-ink-secondary">{t.remember}</span>
+              <span className="text-sm text-ink-700">{t.remember}</span>
             </label>
 
             <button
               type="submit"
               disabled={loading}
-              className="mt-6 h-12 w-full rounded-sheet bg-petrol-700 text-base font-semibold text-on-petrol transition-colors hover:bg-petrol-800 active:bg-petrol-900 disabled:cursor-not-allowed disabled:opacity-60"
+              className="mt-6 h-12 w-full rounded-xl bg-petrol-600 text-[15px] font-semibold text-white transition-colors hover:bg-petrol-500 active:bg-petrol-700 disabled:cursor-not-allowed disabled:opacity-60"
             >
               {t.submit}
             </button>
           </form>
 
-          <div className="mt-7 space-y-2 border-t border-rule pt-6 text-sm text-ink-secondary">
+          <div className="mt-7 space-y-2 border-t border-ink-100 pt-6 text-sm text-ink-700">
             <p>
               {t.noAccount}{' '}
               <Link to="/register" className="font-semibold text-petrol-600 hover:underline">
@@ -333,20 +333,20 @@ export function Login() {
       </div>
 
       {/* Right — brand showcase carousel */}
-      <div className="hidden w-1/2 items-center justify-center bg-petrol-800 px-12 py-10 lg:flex">
+      <div className="hidden w-1/2 items-center justify-center bg-[#e9ebe9] px-12 py-10 lg:flex">
         <div className="w-full max-w-2xl">
-          <div className="relative overflow-hidden rounded-sheet">
+          <div className="relative overflow-hidden rounded-2xl shadow-md">
             <img
               src={active.img}
               alt="" aria-hidden="true" width={1200} height={800} decoding="async"
               loading={slide === 0 ? "eager" : "lazy"} {...{ fetchpriority: slide === 0 ? 'high' : undefined }}
-              className="aspect-[3/2] w-full object-contain"
+              className="aspect-[16/10] w-full object-contain"
             />
             <button
               type="button"
               aria-label={t.prevSlide}
               onClick={() => setSlide((s) => (s - 1 + SLIDES.length) % SLIDES.length)}
-              className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sheet border border-on-petrol-2 bg-petrol-800 text-on-petrol transition-colors hover:bg-petrol-900 rail-focus"
+              className="absolute left-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <ChevronLeft size={20} />
             </button>
@@ -354,23 +354,23 @@ export function Login() {
               type="button"
               aria-label={t.nextSlide}
               onClick={() => setSlide((s) => (s + 1) % SLIDES.length)}
-              className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-sheet border border-on-petrol-2 bg-petrol-800 text-on-petrol transition-colors hover:bg-petrol-900 rail-focus"
+              className="absolute right-4 top-1/2 flex h-10 w-10 -translate-y-1/2 items-center justify-center rounded-full border border-white/60 text-white/90 backdrop-blur-sm transition-colors hover:bg-white/20"
             >
               <ChevronRight size={20} />
             </button>
           </div>
 
           <div className="mx-auto mt-8 max-w-xl text-center">
-            <h2 className="text-2xl font-semibold leading-snug text-on-petrol">
+            <h2 className="text-[26px] font-bold leading-snug text-petrol-800">
               {active[lang].title}
             </h2>
-            <p className="mt-4 leading-7 text-on-petrol-2">{active[lang].body}</p>
+            <p className="mt-4 leading-7 text-ink-600">{active[lang].body}</p>
           </div>
 
           <div className="mt-8 flex items-center justify-center gap-2">
             <button type="button" aria-label={reducedMotion ? 'Carousel paused for reduced motion' : paused ? 'Play carousel' : 'Pause carousel'} aria-pressed={paused || reducedMotion}
               onClick={() => setPaused((value) => !value)} disabled={reducedMotion}
-              className="rail-focus inline-flex min-h-10 min-w-10 items-center justify-center rounded-sheet border border-on-petrol-2 text-on-petrol disabled:opacity-100">
+              className="inline-flex min-h-10 min-w-10 items-center justify-center rounded-full border border-ink-300 text-ink-700 hover:bg-white/60 disabled:opacity-100">
               {paused || reducedMotion ? <Play size={18} /> : <Pause size={18} />}
             </button>
             {SLIDES.map((s, i) => (
@@ -381,8 +381,8 @@ export function Login() {
                 aria-current={i === slide ? "true" : undefined}
                 onClick={() => setSlide(i)}
                 className={clsx(
-                  'h-8 w-8 rounded-sheet border transition-colors rail-focus',
-                  i === slide ? 'border-lime-400 bg-lime-400' : 'border-on-petrol-2 bg-petrol-800 hover:bg-petrol-900'
+                  'h-1.5 rounded-full transition-all',
+                  i === slide ? 'w-9 bg-petrol-700' : 'w-1.5 bg-ink-400/60 hover:bg-ink-400'
                 )}
               />
             ))}

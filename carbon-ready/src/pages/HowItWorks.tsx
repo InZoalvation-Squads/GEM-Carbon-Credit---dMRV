@@ -28,7 +28,7 @@ const LAYERS: Record<LayerKey, {
     why: 'กุญแจไม่เคยออกจากเครื่องเจ้าของ — server เห็นเฉพาะลายเซ็นที่ตรวจได้',
   },
   postgres: {
-    name: 'PostgreSQL', icon: Database, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
+    name: 'PostgreSQL', icon: Database, chip: 'bg-brand-50 text-brand-700', dot: 'bg-brand-600',
     title: 'ฐานข้อมูลหลัก (ระบบบัญชี)',
     what: 'โปรเจกต์ · PDD ทั้งฉบับ + disclosure salts · monitoring · verification · credential · audit log แบบ hash-chain',
     why: 'ข้อมูลเต็ม ค้นเร็ว ควบคุมสิทธิ์ตามบทบาท — ทุกอย่างเขียนที่นี่ก่อนเสมอ',
@@ -40,25 +40,25 @@ const LAYERS: Record<LayerKey, {
     why: 'ไฟล์ถูกสลับแก้ไม่ได้โดยไม่เปลี่ยน hash และไฟล์ซ้ำไม่เปลืองพื้นที่',
   },
   ipfs: {
-    name: 'IPFS', icon: Globe2, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
+    name: 'IPFS', icon: Globe2, chip: 'bg-brand-50 text-brand-700', dot: 'bg-brand-600',
     title: 'สำเนาสาธารณะของ PDD',
     what: 'เนื้อหา PDD ที่ freeze แล้ว (canonical JSON) ถูก pin เป็น CID จริง',
     why: 'ใครก็ดึงเอกสารมา re-hash เทียบกับค่าบน chain ได้เอง ไม่ต้องเชื่อเรา',
   },
   hcs: {
-    name: 'Hedera HCS', icon: Radio, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
+    name: 'Hedera HCS', icon: Radio, chip: 'bg-brand-50 text-brand-700', dot: 'bg-brand-600',
     title: 'สมุดบันทึกสาธารณะ (topic ต่อโปรเจกต์)',
     what: 'ข้อความ 4 ชนิด: project_listed → pdd_registration → verification_approval → token_mint',
     why: 'ประทับเวลาด้วย consensus ของเครือข่าย — แก้ย้อนหลังไม่ได้ ดูได้บน HashScan',
   },
   hts: {
-    name: 'Hedera HTS', icon: Coins, chip: 'bg-lime-300 text-petrol-800', dot: 'bg-lime-ink',
+    name: 'Hedera HTS', icon: Coins, chip: 'bg-brand-50 text-brand-700', dot: 'bg-brand-700',
     title: 'คาร์บอนเครดิต — token แยกต่อโปรเจกต์',
     what: 'แต่ละโปรเจกต์มี HTS token ของตัวเอง (ชื่อเหรียญ = ชื่อโปรเจกต์, 1.00 = 1 tCO₂e) mint เป็น batch พร้อมช่วง serial ต่อเนื่องแบบทะเบียน Verra',
     why: 'ยอดเครดิตของแต่ละโปรเจกต์นับได้ตรง ๆ จาก supply ของเหรียญโปรเจกต์นั้นบน HashScan',
   },
   guardian: {
-    name: 'Guardian', icon: ShieldCheck, chip: 'bg-petrol-50 text-state-review', dot: 'bg-state-review',
+    name: 'Guardian', icon: ShieldCheck, chip: 'bg-brand-50 text-state-review', dot: 'bg-state-review',
     title: 'Hedera Guardian (policy กลาง)',
     what: 'เอกสารในรูป VC เดินผ่าน policy ที่ publish บน testnet — trust chain ตามมาตรฐาน registry',
     why: 'โครงสร้างเดียวกับ registry สากล เปิด Guardian UI ตรวจได้อีกชั้น',
@@ -82,43 +82,43 @@ const STEPS: Array<{
   title: string; detail: string; writes: LayerKey[];
 }> = [
   {
-    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
+    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
     title: 'สร้างโปรเจกต์ + กรอก PDD + แนบหลักฐาน',
     detail: 'ข้อมูลโครงการและเอกสารข้อเสนอ (T-VER-S-F001-PDD) ถูกบันทึกเป็น draft ไฟล์หลักฐานอัปโหลดขึ้น server พร้อม SHA-256 ของไฟล์จริง',
     writes: ['postgres', 'disk'],
   },
   {
-    icon: Send, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
+    icon: Send, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
     title: 'Submit — โครงการขึ้นทะเบียน pipeline',
     detail: 'แบบเดียวกับ Verra: ยื่นครั้งแรกระบบสร้าง HCS topic ประจำโปรเจกต์ และประกาศ "project_listed" ต่อสาธารณะทันที ยังไม่ต้องรออนุมัติ',
     writes: ['postgres', 'hcs'],
   },
   {
-    icon: BadgeCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
+    icon: BadgeCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-brand-50 text-state-review',
     title: 'Validate + Register (Gate 1)',
     detail: 'ผู้ตรวจอนุมัติ → ระบบ freeze content_hash, pin เอกสารขึ้น IPFS เป็น CID จริง, สร้าง salts สำหรับ selective disclosure และส่งเอกสารเข้า Guardian policy ในนามผู้พัฒนา',
     writes: ['postgres', 'ipfs', 'guardian'],
   },
   {
-    icon: Anchor, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
+    icon: Anchor, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-brand-50 text-state-review',
     title: 'เซ็นและ anchor credential',
     detail: 'เบราว์เซอร์เซ็น PDD Registration VC (กุญแจอยู่กับผู้ใช้) → server ตรวจลายเซ็นแล้วเขียน "pdd_registration" ลง topic จริง จากนั้น Guardian approve + mint GEMVCU ตาม ER อัตโนมัติเบื้องหลัง',
     writes: ['browser', 'postgres', 'hcs', 'guardian', 'hts'],
   },
   {
-    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
+    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-600',
     title: 'อัปโหลดข้อมูล monitoring',
     detail: 'ค่าการผลิตไฟฟ้ารายเดือน (kWh) เข้าระบบ ผูกกับ methodology และ emission factor เวอร์ชันที่ประกาศใช้',
     writes: ['postgres'],
   },
   {
-    icon: ClipboardCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
+    icon: ClipboardCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-brand-50 text-state-review',
     title: 'Verification + anchor',
     detail: 'ตรวจแพ็กเกจ → approve จะผนึก hash_value ของทั้งชุด แล้ว anchor "verification_approval" ลง topic เดิมของโปรเจกต์',
     writes: ['postgres', 'hcs'],
   },
   {
-    icon: Sparkles, role: 'Registry', roleTone: 'bg-petrol-50 text-state-review',
+    icon: Sparkles, role: 'Registry', roleTone: 'bg-brand-50 text-state-review',
     title: 'Mint คาร์บอนเครดิต',
     detail: 'mint ครั้งแรกของโปรเจกต์จะสร้าง HTS token ประจำโปรเจกต์ (ชื่อเหรียญ = ชื่อโปรเจกต์) แล้วออก batch พร้อมช่วง serial ต่อเนื่อง + ข้อความ "token_mint" ปิดท้าย trust chain',
     writes: ['postgres', 'hts', 'hcs'],
@@ -208,11 +208,11 @@ const ACCOUNT_GROUPS: Array<{
   {
     icon: Users, title: 'บัญชีในแอป (localhost:5173)', subtitle: 'แยกหน้าที่แบบทะเบียนจริง — คนเดียวทำครบวงจรไม่ได้',
     accounts: [
-      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-petrol-50 text-petrol-700',
+      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-600',
         duty: 'สร้างโปรเจกต์ · กรอก PDD + หลักฐาน · submit · อัปโหลด monitoring · ยื่น verification' },
-      { name: 'vvb@gem.demo', role: 'VVB / Verifier', tone: 'bg-petrol-50 text-state-review',
+      { name: 'vvb@gem.demo', role: 'VVB / Verifier', tone: 'bg-brand-50 text-state-review',
         duty: 'ตรวจ + อนุมัติ PDD (Register / Gate 1) · ตรวจแพ็กเกจ verification · anchor credential ขึ้น Hedera' },
-      { name: 'registry@gem.demo', role: 'Registry / Admin', tone: 'bg-petrol-50 text-state-review',
+      { name: 'registry@gem.demo', role: 'Registry / Admin', tone: 'bg-brand-50 text-state-review',
         duty: 'ขั้นสุดท้ายของ chain: mint คาร์บอนเครดิต (GVCU batch + ERC-1155) · ภาพรวม pipeline' },
       { name: 'esg@gem.demo', role: 'ESG Manager', tone: 'bg-state-revision/5 text-state-revision',
         duty: 'ดูแล emission factors ตามประกาศ อบก. · รันการคำนวณ · สนับสนุนฝั่งข้อมูล' },
@@ -221,22 +221,22 @@ const ACCOUNT_GROUPS: Array<{
   {
     icon: KeyRound, title: 'บัญชี Guardian (localhost:3006)', subtitle: 'ตัวแสดงใน policy ที่ publish บน testnet',
     accounts: [
-      { name: 'gemregistry', role: 'Standard Registry', tone: 'bg-petrol-50 text-state-review',
+      { name: 'gemregistry', role: 'Standard Registry', tone: 'bg-brand-50 text-state-review',
         duty: 'เจ้าของ policy / schema / token GEMVCU — server สวมบทนี้กด approve หลัง VVB anchor แล้ว Guardian mint อัตโนมัติ · login ดู trust chain ทั้งหมด' },
-      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-petrol-50 text-petrol-700',
+      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-600',
         duty: 'server ใช้ส่งเอกสาร PDD เข้า policy ตอน Register — Guardian เซ็น VC ด้วย DID ของบัญชีนี้ และเป็นผู้รับเครดิต GEMVCU' },
-      { name: 'gem-vvb', role: 'VVB', tone: 'bg-petrol-50 text-state-review',
+      { name: 'gem-vvb', role: 'VVB', tone: 'bg-brand-50 text-state-review',
         duty: 'เตรียมไว้สำหรับ flow ตรวจสอบใน Guardian (ปัจจุบันการอนุมัติของ VVB ในแอปถูก map เป็น approve ของ SR)' },
     ],
   },
   {
     icon: Wallet, title: 'บัญชี Hedera บน testnet', subtitle: 'ชั้น blockchain — ผู้จ่ายค่าธรรมเนียมและผู้ถือ token',
     accounts: [
-      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-petrol-50 text-petrol-700',
+      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-brand-50 text-brand-600',
         duty: 'จ่ายค่าธรรมเนียมทุกธุรกรรมของ server (topic / anchor / mint) · treasury ของ GVCU + ERC-1155 · key เดียวกันเป็น EVM address 0x91cF…864f ที่ deploy contract' },
-      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-petrol-50 text-petrol-700',
+      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-brand-50 text-brand-600',
         duty: 'ผู้รับเครดิต GEMVCU ที่ Guardian mint (ต้อง associate token ก่อนรับ — ทำแล้ว)' },
-      { name: '0.0.9714453', role: 'Hedera ของ gem-vvb', tone: 'bg-petrol-50 text-state-review',
+      { name: '0.0.9714453', role: 'Hedera ของ gem-vvb', tone: 'bg-brand-50 text-state-review',
         duty: 'เซ็นธุรกรรมฝั่ง VVB ใน Guardian (ยังไม่ถูกใช้ใน flow ปัจจุบัน)' },
     ],
   },
@@ -245,7 +245,7 @@ const ACCOUNT_GROUPS: Array<{
 function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
     <h2 className="mb-4 mt-10 flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
-      <span className="text-petrol-700">{icon}</span>
+      <span className="text-brand-600">{icon}</span>
       {children}
     </h2>
   );
@@ -300,7 +300,7 @@ export function HowItWorks() {
           return (
             <div key={k} className="p-4">
               <div className="flex items-center justify-between">
-                <span className={clsx('text-petrol-700', l.chip)}>
+                <span className={clsx('text-brand-600', l.chip)}>
                   <l.icon size={18} />
                 </span>
                 <LayerChip k={k} />
@@ -323,7 +323,7 @@ export function HowItWorks() {
           return (
             <details key={inv.layer} open={inv.open} className="group rounded-sheet border border-rule/80 bg-white">
               <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                <span className={clsx('text-petrol-700', l.chip)}><l.icon size={14} /></span>
+                <span className={clsx('text-brand-600', l.chip)}><l.icon size={14} /></span>
                 <span className="text-sm font-semibold text-ink">{l.title}</span>
                 <LayerChip k={inv.layer} />
                 <span className="ml-auto text-ink-meta transition-colors duration-150 ease-out group-open:rotate-90"><ArrowRight size={14} /></span>
@@ -350,10 +350,10 @@ export function HowItWorks() {
 
       {/* ============ lifecycle timeline ============ */}
       <SectionTitle icon={<ScrollText size={16} />}>การเดินทางของข้อมูล ทีละขั้น</SectionTitle>
-      <ol className="relative ml-4 border-l-2 border-petrol-700">
+      <ol className="relative ml-4 border-l-2 border-brand-600">
         {STEPS.map((s, i) => (
           <li key={s.title} className="relative border-b border-rule py-5 pl-8 last:border-b-0 md:pr-28">
-            <span className="absolute -left-[17px] top-5 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-petrol-700 text-on-petrol">
+            <span className="absolute -left-[17px] top-5 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-brand-600 text-white">
               <s.icon size={14} />
             </span>
             <div className="mb-3 h-24 w-24 md:absolute md:right-0 md:top-5 md:mb-0">
@@ -378,7 +378,7 @@ export function HowItWorks() {
         {ACCOUNT_GROUPS.map((g) => (
           <div key={g.title} className="p-4">
             <div className="flex items-center gap-2">
-              <span className="text-petrol-700"><g.icon size={16} /></span>
+              <span className="text-brand-600"><g.icon size={16} /></span>
               <div>
                 <div className="text-sm font-semibold text-ink">{g.title}</div>
                 <div className="text-xs text-ink-meta">{g.subtitle}</div>
@@ -414,7 +414,7 @@ export function HowItWorks() {
           {VERIFY.map((v, i) => (
             <div key={v.title} className="flex flex-1 items-center gap-2">
               <div className="flex-1 border-b border-rule px-3 py-3">
-                <v.icon size={16} className="text-petrol-600" />
+                <v.icon size={16} className="text-brand-600" />
                 <div className="mt-1.5 text-sm font-semibold text-ink">{v.title}</div>
                 <div className="mt-0.5 text-sm leading-snug text-ink-meta">{v.detail}</div>
               </div>
@@ -443,11 +443,11 @@ export function HowItWorks() {
         ].map((x) => (
           <a
             key={x.href} href={x.href} target="_blank" rel="noreferrer"
-            className="group rounded-sheet border border-rule/80 bg-white p-4 transition-colors duration-150 ease-out hover:border-petrol-100"
+            className="group rounded-sheet border border-rule/80 bg-white p-4 transition-colors duration-150 ease-out hover:border-brand-100"
           >
             <div className="flex items-center justify-between text-sm font-semibold text-ink">
               {x.t}
-              <ExternalLink size={14} className="text-ink-meta transition-colors group-hover:text-petrol-600" />
+              <ExternalLink size={14} className="text-ink-meta transition-colors group-hover:text-brand-600" />
             </div>
             <div className="mt-1 text-xs text-ink-meta">{x.d}</div>
           </a>

@@ -74,7 +74,7 @@ export function Registration() {
                 key={p.key}
                 type="button"
                 onClick={() => setProgram(p.key)}
-                className="group rounded-sheet border border-rule/80 bg-white p-5 text-left transition-colors duration-150 ease-out hover:border-petrol-100"
+                className="group rounded-sheet border border-rule/80 bg-white p-5 text-left transition-colors duration-150 ease-out hover:border-brand-100"
               >
                 <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs font-semibold text-ink-secondary">{p.tag}</span>
                 <div className="mt-2 text-lg font-semibold text-ink">{p.title}</div>
@@ -94,7 +94,7 @@ export function Registration() {
         <button
           type="button"
           onClick={() => { setProgram(null); setMethId(''); setPickerOpen(false); }}
-          className="mb-3 min-h-8 text-sm font-medium text-petrol-700 hover:underline"
+          className="mb-3 min-h-8 text-sm font-medium text-brand-600 hover:underline"
         >
           ← เลือกโปรแกรมใหม่
         </button>
@@ -113,11 +113,11 @@ export function Registration() {
                 onClick={() => { setMethId(m.id); setPickerOpen(true); }}
                 className={`group relative block w-full bg-surface p-4 text-left transition-colors
                   ${active
-                    ? 'bg-petrol-100'
-                    : 'hover:bg-petrol-50'}`}
+                    ? 'bg-brand-100'
+                    : 'hover:bg-brand-50'}`}
               >
                 {active && (
-                  <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-petrol-600 text-white">
+                  <span className="absolute right-3 top-3 grid h-5 w-5 place-items-center rounded-full bg-brand-600 text-white">
                     <Check size={12} />
                   </span>
                 )}
@@ -125,7 +125,7 @@ export function Registration() {
                   <Badge tone="gray">{m.standard}</Badge>
                   <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs font-medium text-ink-meta">{m.version}</span>
                   {m.document_template && (
-                    <span className="rounded-full bg-petrol-50 px-2 py-0.5 text-xs font-medium text-state-review">{OFFICIAL_FORMS[m.document_template].badgeLabel}</span>
+                    <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-state-review">{OFFICIAL_FORMS[m.document_template].badgeLabel}</span>
                   )}
                 </div>
                 <div className="mt-2 font-mono text-sm font-semibold text-ink">{m.code}</div>
@@ -240,9 +240,9 @@ function StartPddModal({ methodology, candidates, onClose }: {
             <button
               type="button"
               onClick={() => setMode('create')}
-              className="flex w-full items-center gap-3 rounded-sheet border-2 border-dashed border-petrol-100 bg-petrol-50/40 px-4 py-3 text-left transition-colors hover:border-petrol-600 hover:bg-petrol-50"
+              className="flex w-full items-center gap-3 rounded-sheet border-2 border-dashed border-brand-100 bg-brand-50/40 px-4 py-3 text-left transition-colors hover:border-brand-600 hover:bg-brand-50"
             >
-              <span className="shrink-0 text-petrol-700"><Plus size={16} /></span>
+              <span className="shrink-0 text-brand-600"><Plus size={16} /></span>
               <span>
                 <span className="block text-sm font-semibold text-ink">Create a new project</span>
                 <span className="block text-xs text-ink-meta">ตั้งโปรเจกต์ใหม่แล้วเริ่มกรอก{methodology.standard === 'REC' ? 'ฟอร์มขึ้นทะเบียน REC' : ' PDD'} ต่อทันที</span>
@@ -268,10 +268,10 @@ function StartPddModal({ methodology, candidates, onClose }: {
                       aria-pressed={active}
                       onClick={() => setProjId(p.id)}
                       className={`flex w-full items-center gap-3 rounded-sheet border px-4 py-2.5 text-left transition-colors
-                        ${active ? 'border-petrol-600 bg-petrol-50/60' : 'border-rule hover:border-petrol-100 hover:bg-ground'}`}
+                        ${active ? 'border-brand-600 bg-brand-50/60' : 'border-rule hover:border-brand-100 hover:bg-ground'}`}
                     >
                       <span className={`grid h-4 w-4 shrink-0 place-items-center rounded-full border
-                        ${active ? 'border-petrol-600 bg-petrol-600 text-white' : 'border-rule-strong'}`}>
+                        ${active ? 'border-brand-600 bg-brand-600 text-white' : 'border-rule-strong'}`}>
                         {active && <Check size={10} />}
                       </span>
                       <span className="min-w-0 flex-1">
@@ -401,7 +401,7 @@ function PddEditor({ pddId }: { pddId: string }) {
           { key: 'review', title: 'Review', complete: check.ok }].map((section, i) => <li key={section.key} className="relative shrink-0">
           <button onClick={() => setStep(i)} title={section.title} aria-current={step === i ? 'step' : undefined}
             className="relative flex min-h-11 items-center gap-2 bg-ground pr-2 text-sm text-ink-secondary">
-            <span aria-hidden className={`grid h-6 w-6 place-items-center rounded-full border-2 border-petrol-700 ${step === i ? 'ring-2 ring-petrol-600 ring-offset-2 ring-offset-ground' : ''} ${section.complete ? 'bg-petrol-700 text-on-petrol' : 'bg-surface'}`}>
+            <span aria-hidden className={`grid h-6 w-6 place-items-center rounded-full border-2 border-brand-600 ${step === i ? 'ring-2 ring-brand-600 ring-offset-2 ring-offset-ground' : ''} ${section.complete ? 'bg-brand-600 text-white' : 'bg-surface'}`}>
               {section.complete ? <Check size={14} /> : <span className="font-mono text-xs">{i + 1}</span>}
             </span>
             <span className="max-w-[12rem] truncate">{section.complete ? '✓ ' : ''}{section.title.split('/')[0].trim()}</span>
@@ -442,7 +442,7 @@ function PddEditor({ pddId }: { pddId: string }) {
         <Card className="space-y-4 p-6 md:p-8">
           <h2 className="text-lg font-semibold text-ink">Review & submit</h2>
           {check.ok ? (
-            <p className="text-sm text-petrol-700">All required fields are complete. You can submit for validation.</p>
+            <p className="text-sm text-brand-600">All required fields are complete. You can submit for validation.</p>
           ) : (
             <div className="text-sm text-state-rejected">
               <p className="font-medium">Missing required fields:</p>
@@ -469,7 +469,7 @@ const AUTOSAVE_MS = 1500;
 function AutoSaveStatus({ state }: { state: 'idle' | 'saving' | 'saved' | 'error' }) {
   if (state === 'idle') return null;
   const text = state === 'saving' ? 'กำลังบันทึก…' : state === 'saved' ? '✓ บันทึกอัตโนมัติแล้ว' : '⚠ บันทึกไม่สำเร็จ';
-  const tone = state === 'error' ? 'text-state-rejected' : state === 'saving' ? 'text-ink-meta' : 'text-petrol-700';
+  const tone = state === 'error' ? 'text-state-rejected' : state === 'saving' ? 'text-ink-meta' : 'text-brand-600';
   return <span aria-live="polite" className={`text-xs ${tone}`}>{text}</span>;
 }
 
@@ -531,7 +531,7 @@ function FieldInput({ field, value, computed, readonly, onChange, onDraft }: {
         <Textarea label={labelText} value={String(value ?? '')} disabled={readonly} onChange={(e) => onChange(e.target.value)} />
         {onDraft && !readonly && (
           <button type="button" onClick={applyDraft}
-            className="mt-1 min-h-8 text-xs font-medium text-petrol-700 hover:underline">
+            className="mt-1 min-h-8 text-xs font-medium text-brand-600 hover:underline">
             <Sparkles size={14} aria-hidden className="mr-1 inline" /> ร่างข้อความให้จากข้อมูลโครงการ
           </button>
         )}
@@ -608,7 +608,7 @@ function TableFieldInput({ field, value, readonly, onChange, span }: {
                     <input
                       className={`h-9 w-full rounded-md border border-rule bg-white px-2 text-sm
                         transition-colors hover:border-rule-strong
-                        focus:border-petrol-600 focus:outline-none focus:ring-2 focus:ring-petrol-600/15
+                        focus:border-brand-600 focus:outline-none focus:ring-2 focus:ring-brand-600/15
                         disabled:bg-ground ${c.type === 'number' ? 'text-right tabular-nums' : ''}`}
                       type={c.type === 'number' ? 'number' : 'text'}
                       placeholder={c.label}

@@ -48,7 +48,7 @@ export function AppShell() {
       <TopBar sidebarOpen={sidebarOpen} onOpenSidebar={() => setSidebarOpen((v) => !v)} />
       <div className="flex flex-1 min-h-0">
         <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
-        <main id="content" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto bg-ground p-4 md:p-8 print:overflow-visible print:p-0">
+        <main id="content" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto bg-grid-faint [background-size:32px_32px] p-4 md:p-8 print:overflow-visible print:bg-none print:p-0">
           <div className="mx-auto grid max-w-[1440px] grid-cols-12 gap-6">
             <div className="col-span-12 min-w-0">
               <Suspense fallback={<RouteSkeleton path={pathname} />}>

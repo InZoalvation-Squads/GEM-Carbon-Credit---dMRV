@@ -2,118 +2,86 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  --petrol-950: #061e26;
-  --petrol-950-rgb: 6 30 38;
-  --petrol-900: #082833;
-  --petrol-900-rgb: 8 40 51;
-  --petrol-800: #0b3340;
-  --petrol-800-rgb: 11 51 64;
-  --petrol-700: #0e3e4e;
-  --petrol-700-rgb: 14 62 78;
-  --petrol-600: #16586a;
-  --petrol-600-rgb: 22 88 106;
-  --petrol-100: #e3eef0;
-  --petrol-100-rgb: 227 238 240;
-  --petrol-50: #f1f7f8;
-  --petrol-50-rgb: 241 247 248;
-  --lime-400: #d0ffa0;
-  --lime-400-rgb: 208 255 160;
-  --lime-300: #e2ffc4;
-  --lime-300-rgb: 226 255 196;
-  --lime-ink: #4d7c0f;
-  --lime-ink-rgb: 77 124 15;
-  --rail: #f3f6f5;
-  --rail-rgb: 243 246 245;
-  --ground: #f7f9f8;
-  --ground-rgb: 247 249 248;
-  --surface: #ffffff;
-  --surface-rgb: 255 255 255;
-  --surface-sunk: #eef3f2;
-  --surface-sunk-rgb: 238 243 242;
-  --rule: #d5dedc;
-  --rule-rgb: 213 222 220;
-  --rule-strong: #7d8f8c;
-  --rule-strong-rgb: 125 143 140;
-  --ink: #10201f;
-  --ink-rgb: 16 32 31;
-  --ink-2: #3c4f4d;
-  --ink-2-rgb: 60 79 77;
-  --ink-3: #5b6d6a;
-  --ink-3-rgb: 91 109 106;
-  --on-petrol: #ffffff;
-  --on-petrol-rgb: 255 255 255;
-  --on-petrol-2: #b9cfd4;
-  --on-petrol-2-rgb: 185 207 212;
-  --state-review: #2f5d8a;
-  --state-review-rgb: 47 93 138;
-  --state-revision: #9a6212;
-  --state-revision-rgb: 154 98 18;
-  --state-rejected: #a3262e;
-  --state-rejected-rgb: 163 38 46;
-  color-scheme: light;
+html, body, #root { height: 100%; }
+
+body {
+  @apply text-ink-900 font-sans antialiased;
+  /* Refined OpenType: tighter, more characterful Inter */
+  font-feature-settings: 'cv11', 'ss01', 'cv02', 'cv03', 'cv04';
+  /* Soft layered backdrop instead of a flat fill */
+  background-color: #f6f8fb;
+  background-image:
+    radial-gradient(60rem 60rem at 105% -10%, rgba(16, 185, 129, 0.06), transparent 60%),
+    radial-gradient(50rem 50rem at -10% 110%, rgba(20, 184, 166, 0.05), transparent 60%);
+  background-attachment: fixed;
 }
 
-html, body, #root { height: 100%; }
-body {
-  @apply font-sans antialiased;
-  color: var(--ink);
-  background: var(--ground);
-  font-feature-settings: 'cv11', 'ss01', 'cv02', 'cv03', 'cv04';
-  line-height: 1.5;
-}
-h1, h2, h3 { text-wrap: balance; }
-.tnum, table, .ledger-figure { font-variant-numeric: tabular-nums; }
+/* Headings: tightened tracking for a designed feel */
+h1, h2, h3 { letter-spacing: -0.014em; }
+
+/* Tabular figures for all numeric/metric contexts */
+.tnum { font-variant-numeric: tabular-nums; }
+
+/* Accessible, brand-tinted focus ring */
 *:focus-visible {
-  outline: 2px solid var(--petrol-600);
-  outline-offset: 2px;
+  @apply outline-none ring-2 ring-brand-500/70 ring-offset-2 ring-offset-white rounded-md;
 }
-.rail-focus:focus-visible { outline-color: var(--on-petrol); }
-input, textarea { caret-color: var(--petrol-600); }
-a { text-underline-offset: 3px; }
-::selection { background: var(--petrol-100); color: var(--ink); }
-* { scrollbar-width: thin; scrollbar-color: var(--rule-strong) transparent; }
+
+/* Selection in brand color */
+::selection { background: rgba(16, 185, 129, 0.18); color: #064e3b; }
+
+/* Refined, unobtrusive scrollbars */
+* { scrollbar-width: thin; scrollbar-color: #cbd5e1 transparent; }
 *::-webkit-scrollbar { width: 10px; height: 10px; }
 *::-webkit-scrollbar-thumb {
-  background: var(--rule-strong);
+  background-color: #cbd5e1;
   border: 3px solid transparent;
   border-radius: 9999px;
   background-clip: content-box;
 }
+*::-webkit-scrollbar-thumb:hover { background-color: #94a3b8; background-clip: content-box; }
 *::-webkit-scrollbar-track { background: transparent; }
-/* Lucide icons share one stroke; government document bodies are untouched. */
-.lucide { stroke-width: 1.75; }
-:lang(th) { line-height: 1.65; }
-:lang(th) .text-xs { font-size: 0.8125rem; }
-/* Surface-only shimmer, no pulsing opacity or saturated colour. */
-.skeleton { position: relative; overflow: hidden; background: var(--surface-sunk); border-radius: 6px; }
-.skeleton::after { content: ''; position: absolute; inset: 0; background: var(--surface); opacity: 0.45; transform: translateX(-100%); animation: skeleton-sweep 1.6s ease-in-out infinite; }
-@keyframes skeleton-sweep { to { transform: translateX(100%); } }
-@media (prefers-reduced-motion: reduce) { .skeleton::after { display: none; } }
-/* Restrict ordinary interaction motion to paints. Drawer/anchor motion is explicit. */
-:where(button, a, input, select, textarea, summary, [role="tab"]), .transition-colors, .transition-opacity {
-  transition-property: color, background-color, border-color, opacity;
-  transition-duration: 150ms;
-  transition-timing-function: ease-out;
+
+/* Loading shimmer skeleton */
+.skeleton {
+  position: relative;
+  overflow: hidden;
+  @apply bg-ink-100 rounded-md;
 }
-.skip-link {
-  position: fixed; top: 8px; left: 8px; z-index: 110;
-  transform: translateY(-150%);
-  padding: 10px 16px; background: var(--surface); color: var(--petrol-700);
-  border: 1px solid var(--rule-strong); border-radius: 6px;
+.skeleton::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.65), transparent);
+  @apply animate-shimmer;
 }
-.skip-link:focus { transform: translateY(0); }
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: 0.001ms !important;
     animation-iteration-count: 1 !important;
     transition-duration: 0.001ms !important;
+  }
+}
+
+/* Accessibility and responsive ledger behaviour retained from phases 1–3. */
+.skip-link {
+  position: fixed; top: 8px; left: 8px; z-index: 110;
+  transform: translateY(-150%);
+  padding: 10px 16px;
+  @apply bg-white text-brand-700 border border-ink-300 rounded-lg;
+}
+.skip-link:focus { transform: translateY(0); }
+table, .ledger-figure { font-variant-numeric: tabular-nums; }
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
     transition-delay: 0ms !important;
     animation-delay: 0ms !important;
     scroll-behavior: auto !important;
   }
-  /* Loading remains visible without rotation. */
   .animate-spin { animation: none !important; }
+  .skeleton::after { display: none; }
 }
 
 /* Keep the mobile rail mounted so both entry and exit transforms can play. */
@@ -131,21 +99,19 @@ a { text-underline-offset: 3px; }
   .entity-table { max-height: none; overflow: visible; }
   .entity-table table, .entity-table tbody { display: block; }
   .entity-table thead { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); }
-  .entity-table tbody > tr { display: block; position: relative; padding: 12px 16px 12px 32px; border-bottom: 1px solid var(--rule); }
-  .entity-table tbody > tr::before { content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: var(--petrol-700); }
-  .entity-table tbody > tr::after { content: ''; position: absolute; left: 11px; top: 22px; width: 12px; height: 12px; border: 2px solid var(--petrol-700); border-radius: 50%; background: var(--surface); }
+  .entity-table tbody > tr { display: block; position: relative; padding: 12px 16px 12px 32px; border-bottom: 1px solid #e2e8f0; }
+  .entity-table tbody > tr::before { content: ''; position: absolute; left: 16px; top: 0; bottom: 0; width: 2px; background: #10b981; }
+  .entity-table tbody > tr::after { content: ''; position: absolute; left: 11px; top: 22px; width: 12px; height: 12px; border: 2px solid #10b981; border-radius: 50%; background: #ffffff; }
   .entity-table tbody > tr > td { display: block; min-height: 32px; height: auto; padding: 6px 0; border: 0; text-align: left; white-space: normal; }
-  .entity-table td[data-label]::before { content: attr(data-label); display: block; font: 400 0.8125rem/1.65 Inter, Anuphan, sans-serif; color: var(--ink-3); }
-  .entity-table td:first-child { color: var(--ink); }
+  .entity-table td[data-label]::before { content: attr(data-label); display: block; font: 400 0.8125rem/1.65 Inter, Anuphan, sans-serif; color: #64748b; }
+  .entity-table td:first-child { color: #0f172a; }
   .entity-table td button, .entity-table td a { min-height: 32px; }
   .entity-table td .justify-end { justify-content: flex-start; flex-wrap: wrap; }
 }
 
 .registration-chain { position: relative; }
-.registration-chain::before { content: ''; position: absolute; left: 12px; right: 12px; top: 22px; height: 2px; background: var(--petrol-700); }
+.registration-chain::before { content: ''; position: absolute; left: 12px; right: 12px; top: 22px; height: 2px; background: #10b981; }
 .ledger-node { transition: background-color 225ms cubic-bezier(0.16,1,0.3,1), box-shadow 225ms cubic-bezier(0.16,1,0.3,1); }
 .anchor-provenance { animation: anchor-reveal 225ms cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes anchor-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .ledger-node { transition: none; } .anchor-provenance { animation: none; } }
-
-.sidebar-group:lang(th) { text-transform: none; letter-spacing: normal; }

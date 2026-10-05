@@ -123,14 +123,14 @@ export function RequestVerificationModal({ onClose }: { onClose: () => void }) {
         )}
 
         {/* computed claim — the number is derived, never typed */}
-        <div className="rounded-sheet border border-petrol-100 bg-petrol-50/60 px-4 py-3" data-testid="computed-claim">
-          <div className="flex items-center gap-2 text-xs font-semibold text-petrol-700">
+        <div className="rounded-sheet border border-brand-100 bg-brand-50/60 px-4 py-3" data-testid="computed-claim">
+          <div className="flex items-center gap-2 text-xs font-semibold text-brand-600">
             <Calculator size={13} /> คำนวณจากข้อมูลดิบ (ผู้ยื่นแก้ตัวเลขเองไม่ได้)
           </div>
           {calc && calc.rows > 0 && calc.reductionKg !== null ? (
             <div className="mt-1.5 text-sm text-ink">
               {calc.rows.toLocaleString()} รายการ · {calc.totalKwh.toLocaleString()} kWh × EF {calc.ef!.factor_kgco2e_per_kwh}
-              {' → '}<span className="text-base font-semibold text-petrol-700">{formatTco2e(calc.reductionKg)}</span>
+              {' → '}<span className="text-base font-semibold text-brand-600">{formatTco2e(calc.reductionKg)}</span>
             </div>
           ) : (
             <div className="mt-1.5 text-sm text-state-revision">
@@ -147,7 +147,7 @@ export function RequestVerificationModal({ onClose }: { onClose: () => void }) {
               <label key={e.id} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-ground">
                 <input type="checkbox" checked={isChecked(e.id)}
                   onChange={(ev) => setChecked((m) => ({ ...m, [e.id]: ev.target.checked }))}
-                  className="h-4 w-4 accent-petrol-600" />
+                  className="h-4 w-4 accent-brand-600" />
                 <span className="min-w-0 flex-1 truncate text-sm text-ink">{e.file_name}</span>
                 <CategoryChip category={e.category} />
                 {alreadyClaimed.has(e.id) && <span className="text-xs text-ink-meta">ใช้ในแพ็กเกจก่อนแล้ว</span>}

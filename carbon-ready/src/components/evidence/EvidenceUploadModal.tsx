@@ -137,7 +137,7 @@ export function EvidenceUploadModal({
           }}
           className={clsx(
             'cursor-pointer rounded-sheet border-2 border-dashed px-6 py-8 text-center transition-colors',
-            hover ? 'border-petrol-600 bg-petrol-50' : 'border-rule-strong hover:border-petrol-600'
+            hover ? 'border-brand-600 bg-brand-50' : 'border-rule-strong hover:border-brand-600'
           )}
         >
           <CloudUpload className="mx-auto text-ink-meta" size={28} />
@@ -151,7 +151,7 @@ export function EvidenceUploadModal({
 
         {staged.length === 0 && (
           <button onClick={() => add(SAMPLE.map((name) => ({ name, size: Math.floor(400_000 + Math.random() * 3_500_000) })))}
-            className="min-h-8 text-xs font-medium text-petrol-700 hover:underline">
+            className="min-h-8 text-xs font-medium text-brand-600 hover:underline">
             + Add sample files (demo)
           </button>
         )}

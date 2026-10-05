@@ -113,10 +113,10 @@ export function AuditLogPage() {
 
       <Card className={'mb-4 ' + (integrity.ok ? 'border-rule bg-surface' : 'border-state-rejected/30 bg-state-rejected/5')}>
         <CardBody className="flex items-center gap-3 py-3">
-          {integrity.ok ? <Link2 size={18} className="text-lime-ink" /> : <ShieldAlert size={18} className="text-state-rejected" />}
+          {integrity.ok ? <Link2 size={18} className="text-brand-700" /> : <ShieldAlert size={18} className="text-state-rejected" />}
           <div className="text-sm">
             {integrity.ok ? (
-              <><span className="font-semibold text-lime-ink">Hash chain verified</span><span className="text-lime-ink"> · {integrity.checked} rows checked · SHA-256 linked</span></>
+              <><span className="font-semibold text-brand-700">Hash chain verified</span><span className="text-brand-700"> · {integrity.checked} rows checked · SHA-256 linked</span></>
             ) : (
               <><span className="font-semibold text-state-rejected">Hash chain broken</span><span className="text-state-rejected"> · tampering detected after {integrity.checked} rows</span></>
             )}
@@ -171,7 +171,7 @@ function Diff({ prev, next }: { prev?: Record<string, unknown> | null; next?: Re
             <span className="font-mono text-ink-meta">{k}</span>
             {b !== undefined && <span className={'font-mono ' + (changed ? 'text-state-rejected line-through' : 'text-ink-secondary')}>{fmt(b)}</span>}
             {changed && b !== undefined && a !== undefined && <span className="text-ink-meta">→</span>}
-            {a !== undefined && <span className={'font-mono ' + (changed ? 'text-petrol-700' : 'text-ink-secondary')}>{fmt(a)}</span>}
+            {a !== undefined && <span className={'font-mono ' + (changed ? 'text-brand-600' : 'text-ink-secondary')}>{fmt(a)}</span>}
           </div>
         );
       })}

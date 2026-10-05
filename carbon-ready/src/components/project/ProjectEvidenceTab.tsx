@@ -58,7 +58,7 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
         </Select>
         <button aria-pressed={showArchived} onClick={() => setShowArchived((s) => !s)}
           className={clsx('h-10 rounded-md border px-3 text-sm font-medium transition-colors',
-            showArchived ? 'border-petrol-100 bg-petrol-50 text-petrol-700' : 'border-rule bg-white text-ink-meta hover:text-ink')}>
+            showArchived ? 'border-brand-100 bg-brand-50 text-brand-600' : 'border-rule bg-white text-ink-meta hover:text-ink')}>
           {showArchived ? 'Showing archived' : 'Show archived'}
         </button>
         <Button onClick={() => setUploadOpen(true)}><Plus size={16} /> Upload Evidence</Button>
@@ -76,7 +76,7 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
             />
           ) : (
             <ChainList framed={false}>{rows.map((e) => <BlockRow key={e.id} blockId={e.id} state={e.status} hash={e.content_hash}
-              figure={<button className="inline-flex min-h-8 items-center gap-2 text-left text-base text-petrol-600 hover:underline" onClick={() => setSelected(e)}><FileKindIcon kind={e.kind} />{e.file_name}</button>}
+              figure={<button className="inline-flex min-h-8 items-center gap-2 text-left text-base text-brand-600 hover:underline" onClick={() => setSelected(e)}><FileKindIcon kind={e.kind} />{e.file_name}</button>}
               source={<><CategoryChip category={e.category} /> · <span className="font-mono text-xs">v{e.version_number}</span> · {formatBytes(e.file_size)}</>}>
               <div className="mt-2 text-sm text-ink-secondary">{e.uploaded_by_name.split(' ')[0]} · <span className="font-mono text-xs">{fmtDate(e.uploaded_at)}</span></div>
             </BlockRow>)}</ChainList>

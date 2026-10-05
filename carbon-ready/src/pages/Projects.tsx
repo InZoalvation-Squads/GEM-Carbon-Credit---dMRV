@@ -92,7 +92,7 @@ const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
         const lu = uploads.get(p.id);
         return (
           <TR key={p.id}>
-            <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-petrol-700">{p.name}</Link></TD>
+            <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-brand-600">{p.name}</Link></TD>
             <TD>{p.location}</TD>
             <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
             <TD><StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} /></TD>

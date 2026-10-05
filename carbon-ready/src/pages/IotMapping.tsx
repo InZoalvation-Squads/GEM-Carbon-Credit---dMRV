@@ -178,9 +178,9 @@ export function IotMapping() {
         <Card><CardBody className="py-8 text-center text-sm text-state-rejected">{loadError}</CardBody></Card>
       ) : (
         <div className="space-y-4">
-          <Card className="border-petrol-100 bg-petrol-50/60">
+          <Card className="border-brand-100 bg-brand-50/60">
             <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm text-ink-secondary">
-              <span className="inline-flex items-center gap-1.5 font-semibold text-petrol-700">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-brand-600">
                 <Zap size={15} /> เชื่อมต่อแล้ว
               </span>
               <span>ตาราง <code className="rounded bg-white/70 px-1.5 py-0.5 font-mono text-xs">{status.table}</code></span>
@@ -188,7 +188,7 @@ export function IotMapping() {
               <span>หักตามแผน monitoring {status.deduction_pct}%</span>
               <span>ดึงอัตโนมัติทุกชั่วโมง (เฉพาะวันที่จบแล้ว ไม่เขียนทับของเดิม)</span>
               {lastSync && (
-                <span className="font-medium text-petrol-700">
+                <span className="font-medium text-brand-600">
                   ล่าสุด: +{lastSync.inserted} วัน (ข้าม {lastSync.skipped_existing + lastSync.skipped_partial_day})
                 </span>
               )}
@@ -244,12 +244,12 @@ export function IotMapping() {
                             <TD className="px-3 py-3">
                               {mapped ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-petrol-50 px-2.5 py-1 text-xs font-medium text-petrol-700 ring-1 ring-petrol-600/15">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-xs font-medium text-brand-600 ring-1 ring-brand-600/15">
                                     <ExternalLink size={12} /> {projectName.get(mapped) ?? mapped}
                                   </span>
                                   {d.synced_days != null && (
                                     d.synced_days >= d.days ? (
-                                      <span className="rounded-full bg-petrol-50 px-2 py-0.5 text-xs font-medium text-petrol-700 ring-1 ring-petrol-600/15">
+                                      <span className="rounded-full bg-brand-50 px-2 py-0.5 text-xs font-medium text-brand-600 ring-1 ring-brand-600/15">
                                         ครบ {d.synced_days}/{d.days} วัน
                                       </span>
                                     ) : (

@@ -56,7 +56,7 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
         <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-ink-meta">
           <span className="truncate">CID: {cid}</span>
           <a href={ipfsGatewayUrl(cid)} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-petrol-600 hover:underline">
+            className="inline-flex items-center gap-1 text-brand-600 hover:underline">
             เปิดไฟล์ดิบ <ExternalLink size={11} />
           </a>
         </div>
@@ -79,7 +79,7 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
               <div
                 data-testid="ipfs-verdict"
                 className={`flex items-start gap-2 rounded-sheet px-4 py-3 text-sm ${
-                  verified ? 'bg-petrol-50 text-petrol-800' : 'bg-state-rejected/5 text-state-rejected'
+                  verified ? 'bg-brand-50 text-brand-700' : 'bg-state-rejected/5 text-state-rejected'
                 }`}
               >
                 {verified ? <ShieldCheck size={18} className="mt-0.5 shrink-0" /> : <ShieldX size={18} className="mt-0.5 shrink-0" />}

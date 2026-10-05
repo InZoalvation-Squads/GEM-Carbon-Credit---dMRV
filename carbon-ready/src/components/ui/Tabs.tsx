@@ -22,7 +22,7 @@ export function Tabs<T extends string>({ items, value, onChange, label, classNam
           if (event.key === 'End') next = enabled[enabled.length - 1];
           if (next !== undefined) { event.preventDefault(); refs.current[next]?.focus(); onChange(items[next].value); }
         }}
-        className={clsx('min-h-11 shrink-0 border-b-2 px-1 text-sm font-medium transition-colors disabled:opacity-50', value === item.value ? 'border-petrol-700 text-petrol-700' : 'border-transparent text-ink-secondary hover:text-petrol-600')}>
+        className={clsx('min-h-11 shrink-0 border-b-2 px-1 text-sm font-medium transition-colors disabled:opacity-50', value === item.value ? 'border-brand-600 text-brand-600' : 'border-transparent text-ink-secondary hover:text-brand-600')}>
         {item.label}
       </button>)}
     </div>

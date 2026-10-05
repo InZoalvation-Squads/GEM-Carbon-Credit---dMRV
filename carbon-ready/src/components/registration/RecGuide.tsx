@@ -79,7 +79,7 @@ export function RecGuide() {
           const phasePassed = idx < journeyPhase - 1;
           const isCurrent = idx === journeyPhase - 1;
           return (
-            <div key={phase.key} className={` ${isCurrent ? 'bg-petrol-50' : ''}`}>
+            <div key={phase.key} className={` ${isCurrent ? 'bg-brand-50' : ''}`}>
               <button
                 type="button"
                 aria-expanded={open}
@@ -87,16 +87,16 @@ export function RecGuide() {
                 onClick={() => togglePhase(phase.key)}
                 className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left"
               >
-                {phasePassed && <span className="shrink-0 font-semibold text-petrol-600">✓</span>}
+                {phasePassed && <span className="shrink-0 font-semibold text-brand-600">✓</span>}
                 <span className="flex-1 text-sm font-medium text-ink">{phase.title}</span>
                 {isCurrent && (
-                  <span className="shrink-0 rounded-full bg-petrol-600 px-2 py-0.5 text-xs font-semibold text-white">
+                  <span className="shrink-0 rounded-full bg-brand-600 px-2 py-0.5 text-xs font-semibold text-white">
                     คุณอยู่ขั้นนี้
                   </span>
                 )}
                 {phase.items.length > 0 && (
                   <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
-                    done === phase.items.length ? 'bg-petrol-50 text-petrol-700' : 'bg-surface-sunk text-ink-meta'}`}>
+                    done === phase.items.length ? 'bg-brand-50 text-brand-600' : 'bg-surface-sunk text-ink-meta'}`}>
                     {done}/{phase.items.length}
                   </span>
                 )}
@@ -117,7 +117,7 @@ export function RecGuide() {
                           href={l.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full border border-petrol-100 bg-petrol-50/60 px-2.5 py-1 text-xs font-medium text-petrol-700 transition-colors hover:border-petrol-600 hover:bg-petrol-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50"
                         >
                           <FileDown size={12} aria-hidden />
                           {l.label}
@@ -127,7 +127,7 @@ export function RecGuide() {
                         <button
                           type="button"
                           onClick={() => setLetterOpen(true)}
-                          className="inline-flex items-center gap-1 rounded-full border border-petrol-100 bg-petrol-50/60 px-2.5 py-1 text-xs font-medium text-petrol-700 transition-colors hover:border-petrol-600 hover:bg-petrol-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-brand-100 bg-brand-50/60 px-2.5 py-1 text-xs font-medium text-brand-600 transition-colors hover:border-brand-600 hover:bg-brand-50"
                         >
                           <FileText size={12} aria-hidden />
                           ร่างจดหมายนำส่ง
@@ -143,7 +143,7 @@ export function RecGuide() {
                             type="checkbox"
                             checked={checked.has(item.id)}
                             onChange={() => toggleItem(item.id)}
-                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-rule-strong accent-petrol-600"
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-rule-strong accent-brand-600"
                           />
                           <span>{item.label}</span>
                         </label>

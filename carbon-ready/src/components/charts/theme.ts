@@ -1,6 +1,6 @@
-// Shared CSS tokens work in both SVG paints and Recharts tooltip styles.
+// Original GEM chart paints from 21bf26e; tick text meets the contrast floor.
 export const chartTheme = {
-  generation: 'var(--petrol-600)', reduction: 'var(--petrol-700)', anchored: 'var(--lime-400)',
-  rule: 'var(--rule)', axis: 'var(--ink-3)', surface: 'var(--surface)', ink: 'var(--ink)',
-  tooltip: { borderRadius: 6, border: '1px solid var(--rule)', background: 'var(--surface)', color: 'var(--ink)', fontSize: 12 },
+  generation: '#10b981', reduction: '#14b8a6', anchored: '#14b8a6',
+  rule: '#e2e8f0', axis: '#64748b', surface: '#ffffff', ink: '#0f172a',
+  tooltip: { borderRadius: 8, border: '1px solid #e2e8f0', background: '#ffffff', color: '#0f172a', fontSize: 12 },
 } as const;

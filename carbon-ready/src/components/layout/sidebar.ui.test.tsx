@@ -22,13 +22,13 @@ describe('Sidebar — role-based menu visibility', () => {
     renderSidebar('/projects/prj-0001');
     const active = screen.getByRole('link', { name: 'Projects' });
     expect(active).toHaveAttribute('aria-current', 'page');
-    expect(active).toHaveClass('bg-white', 'ring-rule', 'shadow-xs', 'font-semibold');
-    expect(active.querySelector('svg')).toHaveClass('text-petrol-700');
-    expect(active.querySelector('span[aria-hidden]')).toHaveClass('bg-petrol-700', 'w-[3px]', 'h-5');
+    expect(active).toHaveClass('bg-white', 'ring-ink-200/80', 'shadow-xs', 'font-semibold');
+    expect(active.querySelector('svg')).toHaveClass('text-brand-600');
+    expect(active.querySelector('span[aria-hidden]')).toHaveClass('bg-brand-500', 'w-1', 'h-5');
     const inactive = screen.getByRole('link', { name: 'Dashboard' });
     expect(inactive).not.toHaveAttribute('aria-current');
-    expect(inactive).toHaveClass('text-ink-secondary');
-    expect(document.getElementById('main-navigation')).toHaveClass('bg-rail', 'border-rule');
+    expect(inactive).toHaveClass('text-ink-600');
+    expect(document.getElementById('main-navigation')).toHaveClass('bg-ink-50', 'border-ink-200');
     expect(screen.getByRole('navigation', { name: 'Main' })).toBeInTheDocument();
   });
 
