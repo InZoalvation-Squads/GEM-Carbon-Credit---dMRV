@@ -31,6 +31,15 @@ function pathBadge(roi: RecRoiResult, path: RecPath) {
   return <Badge tone={rec.tone} className="whitespace-nowrap">{rec.tone === 'green' ? 'แนะนำ' : rec.text}</Badge>;
 }
 
+/** Where to fill the org-wide assumptions; a project_owner cannot, so they are told whom to ask. */
+function FillAt() {
+  const role = useStore((s) => s.currentUser.role);
+  const link = <Link to="/rec-roi" className="text-petrol-700 hover:underline">REC ROI</Link>;
+  return role === 'project_owner'
+    ? <>ขอให้ผู้ดูแลระบบหรือ ESG manager กรอกที่หน้า {link}</>
+    : <>กรอกที่ {link}</>;
+}
+
 function PathCard({ result, badge, capacityKwp, exempt }: {
   result: RecPathResult; badge: React.ReactNode; capacityKwp: number; exempt: boolean;
 }) {
@@ -54,7 +63,7 @@ function PathCard({ result, badge, capacityKwp, exempt }: {
             </dl>
             {result.scenarios.length === 0 ? (
               <p className="text-xs text-ink-meta">
-                {MISSING_LABEL.price} — กรอกที่ <Link to="/rec-roi" className="text-petrol-700 hover:underline">REC ROI</Link>
+                {MISSING_LABEL.price} — <FillAt />
               </p>
             ) : (
               <Table>
@@ -173,7 +182,7 @@ export function RecRoiDetail({ projectId }: { projectId: UUID }) {
     <div className="space-y-6">
       {roi.missing.length > 0 && (
         <div className="rounded-sheet border border-state-revision/30 bg-state-revision/5 px-4 py-3 text-xs text-state-revision">
-          ยังขาด: {roi.missing.map((m) => MISSING_LABEL[m]).join(' · ')} — กรอกที่ <Link to="/rec-roi" className="text-petrol-700 hover:underline">REC ROI</Link>
+          ยังขาด: {roi.missing.map((m) => MISSING_LABEL[m]).join(' · ')} — <FillAt />
         </div>
       )}
 

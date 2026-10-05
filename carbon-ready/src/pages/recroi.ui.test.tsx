@@ -366,6 +366,18 @@ describe('ProjectDetail — REC ROI tab', () => {
     expect(screen.getByRole('button', { name: /บันทึกค่าของโปรเจกต์/ })).toBeInTheDocument();
   });
 
+  it('project_owner is told to ask an admin/ESG manager for missing org assumptions; others see the plain hint', () => {
+    useStore.setState((s) => ({ recRoiSettings: { ...s.recRoiSettings, platform_fee_pct: null }, currentUser: { ...s.currentUser, role: 'project_owner' } }));
+    const { unmount } = renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.getByText(/ขอให้ผู้ดูแลระบบหรือ ESG manager กรอกที่หน้า/)).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'REC ROI' })).toHaveAttribute('href', '/rec-roi');
+    unmount();
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'esg_manager' } }));
+    renderProject('prj-0001', '?tab=rec-roi');
+    expect(screen.queryByText(/ขอให้ผู้ดูแลระบบ/)).toBeNull();
+    expect(screen.getByText(/— กรอกที่/)).toBeInTheDocument();
+  });
+
   it('disables the save button while a save is in flight', async () => {
     let resolve: (v: boolean) => void = () => {};
     const save = vi.spyOn(api, 'saveRecRoiProjectSetting').mockImplementation(() => new Promise((r) => { resolve = r; }));

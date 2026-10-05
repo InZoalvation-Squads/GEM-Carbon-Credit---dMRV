@@ -161,3 +161,90 @@ describe('evaluateProjectRecRoi', () => {
     });
   });
 });
+
+describe('one governing PDD, deterministic', () => {
+  const assumptions = { ...EMPTY_REC_ROI_SETTINGS, platform_fee_pct: 10, eur_thb: 40, price_mid_thb: 25 };
+  const run = (pdds: ProjectDesignDocument[], setting = { ...defaultProjectSetting('prj-a'), investment_mthb: 1 }) =>
+    evaluateProjectRecRoi({
+      project: project(), records: daily(92, 100), pdds, methodologies: METHODS, factors: [], assumptions, setting,
+    });
+  const bundle = { investment_mthb: 50, elec_price_thb_kwh: 9, sites: [{ owner: 'A', kwp: 100, project_id: 'prj-a' }] };
+
+  it('a rejected PDD is never governing (investment, overrides, eligibility)', () => {
+    const rejected = pdd({
+      id: 'PDD-rej', state: 'rejected', methodology_id: TVER_FORESTRY_METHODOLOGY.id,
+      section_data: { investment_mthb: 99, elec_price_thb_kwh: 9 },
+    });
+    const draft = pdd({ id: 'PDD-d', state: 'draft', section_data: { investment_mthb: 8 } });
+    const r = run([rejected, draft]);
+    expect(r.investment_mthb).toBe(8);
+    expect(r.financial_basis.elec_price_thb_kwh.source).toBe('pea_default');
+    // only a rejected forestry PDD → behaves like "no PDD yet"
+    const only = run([rejected]);
+    expect(only.eligible).toBe(true);
+    expect(only.investment_mthb).toBe(1);
+    expect(only.investment_source).toBe('manual');
+  });
+
+  it('registered beats a newer draft', () => {
+    const registered = pdd({ id: 'PDD-r', state: 'registered', validated_at: '2025-01-01T00:00:00Z', section_data: { investment_mthb: 8 } });
+    const draft = pdd({ id: 'PDD-d', state: 'draft', submitted_at: '2026-06-01T00:00:00Z', section_data: { investment_mthb: 5 } });
+    expect(run([draft, registered]).investment_mthb).toBe(8);
+  });
+
+  it('investment, overrides and eligibility all come from the SAME PDD', () => {
+    // governing = registered bundle: nothing from the (non-bundle) draft leaks in
+    const registeredBundle = pdd({ id: 'PDD-r', state: 'registered', section_data: bundle });
+    const draft = pdd({ id: 'PDD-d', state: 'draft', section_data: { investment_mthb: 5, elec_price_thb_kwh: 7 } });
+    const r = run([draft, registeredBundle]);
+    expect(r.investment_mthb).toBe(1);
+    expect(r.investment_source).toBe('manual');
+    expect(r.financial_basis.elec_price_thb_kwh).toEqual({ value: 4.18, source: 'pea_default' });
+    // governing = registered forestry PDD → not eligible even though a draft is solar
+    const forestry = pdd({ id: 'PDD-f', state: 'registered', methodology_id: TVER_FORESTRY_METHODOLOGY.id });
+    expect(run([draft, forestry]).eligible).toBe(false);
+    // governing = non-bundle: both from it
+    const solar = pdd({ id: 'PDD-s', state: 'registered', section_data: { investment_mthb: 8, elec_price_thb_kwh: 6 } });
+    const ok = run([draft, solar]);
+    expect(ok.investment_mthb).toBe(8);
+    expect(ok.financial_basis.elec_price_thb_kwh).toEqual({ value: 6, source: 'pdd' });
+  });
+
+  it('is order-independent: newest timestamp wins, ids break exact ties', () => {
+    const older = pdd({ id: 'PDD-1', state: 'draft', submitted_at: '2026-01-01T00:00:00Z', section_data: { investment_mthb: 3 } });
+    const newer = pdd({ id: 'PDD-2', state: 'draft', submitted_at: '2026-03-01T00:00:00Z', section_data: { investment_mthb: 4 } });
+    const untimed = pdd({ id: 'PDD-3', state: 'draft', section_data: { investment_mthb: 5 } });
+    const all = [older, newer, untimed];
+    const perms = [[0, 1, 2], [0, 2, 1], [1, 0, 2], [1, 2, 0], [2, 0, 1], [2, 1, 0]];
+    for (const perm of perms) expect(run(perm.map((i) => all[i])).investment_mthb).toBe(4);
+
+    const t1 = pdd({ id: 'PDD-a', state: 'draft', submitted_at: '2026-01-01T00:00:00Z', section_data: { investment_mthb: 3 } });
+    const t2 = pdd({ id: 'PDD-b', state: 'draft', submitted_at: '2026-01-01T00:00:00Z', section_data: { investment_mthb: 4 } });
+    expect(run([t1, t2]).investment_mthb).toBe(run([t2, t1]).investment_mthb);
+  });
+});
+
+describe('unsaved issuance-type default', () => {
+  const base = {
+    project: project(), records: daily(92, 100), pdds: [pdd({})], methodologies: METHODS, factors: [],
+    assumptions: { ...EMPTY_REC_ROI_SETTINGS, platform_fee_pct: 10, eur_thb: 40 },
+  };
+  it('with no saved setting, the newest SF-04 type is the effective type', () => {
+    const r = evaluateProjectRecRoi({ ...base, latestRequestType: 'Self consumption' });
+    expect(r.setting.issuance_type).toBe('Self consumption');
+    expect(r.setting.updated_at).toBeNull();
+    const saved = evaluateProjectRecRoi({
+      ...base, setting: { ...defaultProjectSetting('prj-a'), issuance_type: 'Self consumption' },
+    });
+    expect(r.roi).toEqual(saved.roi);
+    expect(r.roi).not.toEqual(evaluateProjectRecRoi(base).roi);
+  });
+  it('a saved setting always wins', () => {
+    const r = evaluateProjectRecRoi({
+      ...base, latestRequestType: 'Self consumption', setting: { ...defaultProjectSetting('prj-a'), issuance_type: 'Normal' },
+    });
+    expect(r.setting.issuance_type).toBe('Normal');
+    expect(r.roi).toEqual(evaluateProjectRecRoi(base).roi);
+  });
+});
+

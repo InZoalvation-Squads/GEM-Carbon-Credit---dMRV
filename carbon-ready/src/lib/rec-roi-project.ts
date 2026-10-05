@@ -19,10 +19,27 @@ export function defaultProjectSetting(project_id: UUID): RecRoiProjectSetting {
   };
 }
 
-/** The project's registered PDD, else the first found (array order). */
-function governingPdd(projectId: UUID, pdds: ProjectDesignDocument[]): ProjectDesignDocument | undefined {
-  const mine = pdds.filter((p) => p.project_id === projectId);
-  return mine.find((p) => p.state === 'registered') ?? mine[0];
+/**
+ * The ONE PDD that governs a project's REC ROI: eligibility, investment and
+ * PEA financial overrides all read from it. Candidates exclude 'rejected';
+ * a 'registered' PDD wins; otherwise/among equals the newest
+ * validated_at ?? submitted_at wins (ProjectDesignDocument has no created_at;
+ * a PDD with neither timestamp ranks oldest), and the id breaks exact ties so
+ * the result never depends on array order.
+ */
+export function governingPdd(projectId: UUID, pdds: ProjectDesignDocument[]): ProjectDesignDocument | undefined {
+  const stamp = (p: ProjectDesignDocument) => {
+    const t = Date.parse(p.validated_at ?? p.submitted_at ?? '');
+    return Number.isNaN(t) ? -Infinity : t;
+  };
+  const rank = (p: ProjectDesignDocument) => Number(p.state === 'registered');
+  const candidates = pdds.filter((p) => p.project_id === projectId && p.state !== 'rejected');
+  return candidates.reduce<ProjectDesignDocument | undefined>((best, p) => {
+    if (!best) return p;
+    if (rank(p) !== rank(best)) return rank(p) > rank(best) ? p : best;
+    if (stamp(p) !== stamp(best)) return stamp(p) > stamp(best) ? p : best;
+    return p.id > best.id ? p : best;
+  }, undefined);
 }
 
 /**
@@ -43,32 +60,24 @@ export function projectEnergyBasis(
 }
 
 /**
- * investment_mthb from the project's PDDs (registered first), as a positive
- * number. Bundle (aggregated) PDDs are skipped: their top-level investment is
- * the whole bundle's, which must never be paired with one project's measured MWh.
+ * investment_mthb of the governing PDD, as a positive number. A bundle
+ * (aggregated) governing PDD yields none: its top-level investment is the whole
+ * bundle's, which must never be paired with one project's measured MWh.
  */
-function pddInvestment(projectId: UUID, pdds: ProjectDesignDocument[]): { value: number } | null {
-  const mine = pdds
-    .filter((p) => p.project_id === projectId)
-    .sort((a, b) => Number(b.state === 'registered') - Number(a.state === 'registered'));
-  for (const p of mine) {
-    if (isBundle(p.section_data ?? {})) continue;
-    const v = Number(p.section_data?.investment_mthb);
-    if (Number.isFinite(v) && v > 0) return { value: v };
-  }
-  return null;
+function pddInvestment(governing: ProjectDesignDocument | undefined): { value: number } | null {
+  if (!governing || isBundle(governing.section_data ?? {})) return null;
+  const v = Number(governing.section_data?.investment_mthb);
+  return Number.isFinite(v) && v > 0 ? { value: v } : null;
 }
 
 /**
- * Section data of the project's governing non-bundle PDD (registered first),
- * the only place PEA financial overrides are read from. Bundle PDDs describe
- * the whole bundle, never one project's economics.
+ * Section data of the governing PDD, the only place PEA financial overrides are
+ * read from — empty when it is a bundle (describes the whole bundle, never one
+ * project's economics) or when there is no governing PDD.
  */
-function governingNonBundleSectionData(projectId: UUID, pdds: ProjectDesignDocument[]): Record<string, unknown> {
-  const mine = pdds
-    .filter((p) => p.project_id === projectId && !isBundle(p.section_data ?? {}))
-    .sort((a, b) => Number(b.state === 'registered') - Number(a.state === 'registered'));
-  return mine[0]?.section_data ?? {};
+function governingOverrides(governing: ProjectDesignDocument | undefined): Record<string, unknown> {
+  if (!governing || isBundle(governing.section_data ?? {})) return {};
+  return governing.section_data ?? {};
 }
 
 // Same semantics as computeFinancialTable's numOrNull (pdd.ts): blank/absent/NaN → not provided.
@@ -125,13 +134,15 @@ export function evaluateProjectRecRoi(args: {
   latestRequestType?: RecRoiProjectSetting['issuance_type'];
 }): ProjectRecRoi {
   const { project, assumptions } = args;
-  const setting = args.setting ?? defaultProjectSetting(project.id);
+  const setting = args.setting
+    ?? { ...defaultProjectSetting(project.id), issuance_type: args.latestRequestType ?? 'Normal' };
   const suggested_issuance_type = args.latestRequestType ?? null;
   const basis = projectEnergyBasis(project, args.pdds, args.methodologies);
-  const fromPdd = pddInvestment(project.id, args.pdds);
+  const governing = governingPdd(project.id, args.pdds);
+  const fromPdd = pddInvestment(governing);
   const investment_mthb = fromPdd?.value ?? setting.investment_mthb;
   const investment_source = fromPdd ? 'pdd' : setting.investment_mthb !== null ? 'manual' : null;
-  const overrides = governingNonBundleSectionData(project.id, args.pdds);
+  const overrides = governingOverrides(governing);
   const financial_basis = financialBasis(overrides);
   const empty = { project, setting, suggested_issuance_type, investment_mthb, investment_source, financial_basis } as const;
 

@@ -241,6 +241,8 @@ export function validateRecRoiSettings(s: RecRoiSettingsShape): string | null {
     if (entered[i] < entered[i - 1]) return 'ราคาต้องเรียง ต่ำ ≤ กลาง ≤ สูง';
   }
   if (entered.length > 0 && s.price_source.trim() === '') return 'กรุณาระบุที่มาของราคา (เช่น ใบเสนอซื้อจริง)';
+  if (s.price_source.length > 500) return 'ที่มาของราคายาวเกิน 500 ตัวอักษร';
+  if (s.eur_thb_source.length > 200) return 'ที่มาของอัตรา FX ยาวเกิน 200 ตัวอักษร';
   if (s.platform_fee_pct !== null && !(Number.isFinite(s.platform_fee_pct) && s.platform_fee_pct >= 0 && s.platform_fee_pct < 100)) {
     return 'ค่าบริการแพลตฟอร์มต้องอยู่ระหว่าง 0 ถึงน้อยกว่า 100%';
   }
