@@ -73,6 +73,14 @@ Redemption fees are excluded: the seller does not redeem; the buyer does.
 
 Pure functions, no store/API imports.
 
+### 1.0 Eligibility
+
+REC applies to electricity generators only. A project is evaluated when
+`capacity_kwp > 0` and its methodology (newest PDD, registered preferred)
+has `calculation.input_unit === 'kWh'`, or it has no PDD yet. Others
+(forestry, landfill gas in tCO₂e, …) are left out of the portfolio table
+with a footnote, and their REC ROI tab says REC does not apply.
+
 ### 1.1 Annual MWh (`annualMwh`)
 
 - Input: the project's monitoring records, filtered like `calculateCarbon`:
@@ -185,13 +193,15 @@ Same shape as `rec-issues` (org-scoped, zod, `actorFromRequest` audit).
 
 - `GET /api/v1/rec-roi/settings` → settings or all-null defaults.
 - `PUT /api/v1/rec-roi/settings` → upsert; audit `REC_ROI_SETTINGS_UPDATED`.
-- `GET /api/v1/projects/:id/rec-roi-setting`,
-  `PUT /api/v1/projects/:id/rec-roi-setting` → upsert; audit
-  `REC_ROI_PROJECT_UPDATED`.
+- `GET /api/v1/rec-roi/project-settings` → every saved project setting in
+  the org (the portfolio page needs all of them at once).
+- `PUT /api/v1/projects/:id/rec-roi-setting` → upsert; audit
+  `REC_ROI_PROJECT_UPDATED`; another org's project → 404.
 - `GET /api/v1/fx/eur-thb` → Bank of Thailand exchange-rate API, dormant
   until `BOT_API_TOKEN` is set in `server/.env` (same pattern as the IoT
-  worker). No token → `{ available: false }`. Upstream failure → 502 with a
-  message; the UI keeps manual entry.
+  worker). No token → `{ available: false }`. Upstream failure → 200
+  `{ available: true, rate: null, error }` (the API error envelope masks 5xx
+  messages, so the reason travels in the body); the UI keeps manual entry.
 
 Validation (zod, mirrored in the SPA):
 - prices > 0 and `low ≤ mid ≤ high` among those entered;
@@ -201,7 +211,9 @@ Validation (zod, mirrored in the SPA):
 
 Permissions:
 - Org settings: read/write `admin`, `esg_manager`; read `project_owner`.
-- Project setting: write additionally by `project_owner` of that project.
+- Project setting: write by `admin`, `esg_manager` and `project_owner` of
+  the same org (projects carry no per-user owner, so org scoping is the
+  boundary).
 - `verifier`: no access (403) — prices and fees are commercial data.
 
 ### 2.3 Demo mode
@@ -249,7 +261,7 @@ Results are never stored; they are recomputed from current records.
 | Horizon > 5 | renewal 40% at the start of each 5-year cycle |
 | Capacity on a tier boundary | `≥` (1,000 kWp → ฿19,000) |
 | IRR has no sign change | "—" (existing `irrFromFlows`) |
-| BOT down / bad token | 502 + message; manual entry still works |
+| BOT down / bad token | `rate: null` + error message; manual entry still works |
 
 ## 5. Testing
 
