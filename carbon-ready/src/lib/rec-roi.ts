@@ -5,8 +5,9 @@
 // a kWp × sun-hours estimate), fees from data/rec-fees.ts (FN-01), and prices
 // are user-entered with a source. Anything missing yields an explicit status
 // instead of a guessed number.
-import type { MonitoringRecord } from '../types';
+import type { EmissionFactor, MonitoringRecord, Project } from '../types';
 import { REC_FEES, registrationFeeThb, type RecIssuanceType } from '../data/rec-fees';
+import { computeFinancialTable, type ComputeContext } from './pdd';
 
 const DAY_MS = 86_400_000;
 const dayIndex = (iso: string) => Date.parse(`${iso.slice(0, 10)}T00:00:00Z`) / DAY_MS;
@@ -248,4 +249,69 @@ export function validateRecRoiSettings(s: RecRoiSettingsShape): string | null {
     return 'ระยะประเมินต้องเป็นจำนวนเต็ม 1–25 ปี';
   }
   return null;
+}
+
+// ---------------------------------------------------------------------------
+// IRR uplift — the whole solar project, without vs with REC revenue
+// ---------------------------------------------------------------------------
+
+/** PEA financial overrides that may live in a T-VER PDD's section_data. */
+export const FINANCIAL_OVERRIDE_KEYS = [
+  'elec_price_thb_kwh', 'discount_rate_pct', 'om_cost_thb_year', 'om_start_year',
+  'lifetime_years', 'scrap_value_thb', 'degradation_pct',
+] as const;
+
+export type RecIrrUplift =
+  | {
+      status: 'ok';
+      path: RecPath;
+      price_thb: number;
+      investment_mthb: number;
+      without: { irr_pct: number | null; payback_years: number | null };
+      with: { irr_pct: number | null; payback_years: number | null };
+    }
+  | { status: 'missing_investment' | 'missing_price' | 'no_path' };
+
+/**
+ * Runs the PEA 25-year cash flow twice — plain, and with net REC revenue on
+ * the given path at the MID price. Year-1 generation is the measured annual
+ * figure (never the kWp estimate); later years degrade exactly as electricity
+ * does, and the registration/renewal/account lumps recur over the plant life.
+ */
+export function computeIrrUplift(args: {
+  project: Project;
+  factors: EmissionFactor[];
+  pddSectionData: Record<string, unknown>;
+  investment_mthb: number | null;
+  inputs: RecProjectInputs;
+  assumptions: RecRoiAssumptions;
+  path: RecPath | null;
+}): RecIrrUplift {
+  const { investment_mthb, assumptions: a, inputs, path } = args;
+  if (investment_mthb === null || !(investment_mthb > 0)) return { status: 'missing_investment' };
+  const price = a.price_mid_thb;
+  if (price === null) return { status: 'missing_price' };
+  if (path === null) return { status: 'no_path' };
+
+  const sectionData: Record<string, unknown> = {
+    investment_mthb,
+    year1_generation_kwh: inputs.annual_mwh * 1000,
+  };
+  for (const k of FINANCIAL_OVERRIDE_KEYS) {
+    if (args.pddSectionData[k] !== undefined && args.pddSectionData[k] !== '') sectionData[k] = args.pddSectionData[k];
+  }
+  const ctx: ComputeContext = { project: args.project, factors: args.factors, sectionData };
+  const fee = feeFraction(path, a);
+  const issuance = REC_FEES.issuance_thb_per_mwh[inputs.issuance_type];
+
+  const without = computeFinancialTable(ctx);
+  const withRec = computeFinancialTable(ctx, (y, gen) =>
+    (gen / 1000) * (price * (1 - fee) - issuance) - yearFixedCostThb(path, y, inputs, a));
+  if (!without || !withRec) return { status: 'missing_investment' };
+
+  return {
+    status: 'ok', path, price_thb: price, investment_mthb,
+    without: { irr_pct: without.irr_pct, payback_years: without.payback_years },
+    with: { irr_pct: withRec.irr_pct, payback_years: withRec.payback_years },
+  };
 }

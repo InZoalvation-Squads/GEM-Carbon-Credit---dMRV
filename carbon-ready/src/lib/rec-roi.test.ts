@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest';
-import type { MonitoringRecord } from '../types';
-import { annualMwh, computeRecRoi, yearFixedCostThb, validateRecRoiSettings, EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions, type RecProjectInputs } from './rec-roi';
+import type { MonitoringRecord, Project } from '../types';
+import { annualMwh, computeRecRoi, computeIrrUplift, yearFixedCostThb, validateRecRoiSettings, EMPTY_REC_ROI_SETTINGS, type RecRoiAssumptions, type RecProjectInputs } from './rec-roi';
 
 /** `days` consecutive daily records starting at `from`, each `kwh`. */
 function daily(from: string, days: number, kwh: number, extra: Partial<MonitoringRecord> = {}): MonitoringRecord[] {
@@ -217,5 +217,41 @@ describe('validateRecRoiSettings — finite numbers and a fully valid object', (
       ...base, price_low_thb: 20, price_mid_thb: 25, price_high_thb: 30, price_source: 'quote',
       platform_fee_pct: 10, eur_thb: 40, eur_thb_source: 'BOT', horizon_years: 5,
     })).toBeNull();
+  });
+});
+
+const PROJECT: Project = {
+  id: 'prj-t', organization_id: 'org-t', name: 'Test Solar', location: 'Bangkok, Thailand',
+  capacity_kwp: 500, commission_date: '2025-01-01', status: 'active', lifecycle_stage: 'registered',
+  created_at: '2025-01-01T00:00:00Z', updated_at: '2025-01-01T00:00:00Z',
+};
+
+describe('computeIrrUplift — solar project IRR without vs with REC', () => {
+  const base = {
+    project: PROJECT, factors: [], pddSectionData: {}, investment_mthb: 10,
+    inputs: INPUTS, assumptions: ASSUME, path: 'platform' as const,
+  };
+
+  it('REC net revenue at the mid price raises IRR', () => {
+    const u = computeIrrUplift(base);
+    expect(u.status).toBe('ok');
+    if (u.status !== 'ok') return;
+    expect(u.price_thb).toBe(25);
+    expect(u.without.irr_pct).not.toBeNull();
+    expect(u.with.irr_pct!).toBeGreaterThan(u.without.irr_pct!);
+  });
+
+  it('uses the PDD financial overrides it is given (e.g. tariff)', () => {
+    const cheap = computeIrrUplift({ ...base, pddSectionData: { elec_price_thb_kwh: 2 } });
+    const dear = computeIrrUplift(base); // PEA default 4.18
+    expect(cheap.status === 'ok' && dear.status === 'ok').toBe(true);
+    if (cheap.status !== 'ok' || dear.status !== 'ok') return;
+    expect(cheap.without.irr_pct ?? -Infinity).toBeLessThan(dear.without.irr_pct!);
+  });
+
+  it('reports what is missing instead of guessing', () => {
+    expect(computeIrrUplift({ ...base, investment_mthb: null })).toEqual({ status: 'missing_investment' });
+    expect(computeIrrUplift({ ...base, assumptions: { ...ASSUME, price_mid_thb: null } })).toEqual({ status: 'missing_price' });
+    expect(computeIrrUplift({ ...base, path: null })).toEqual({ status: 'no_path' });
   });
 });

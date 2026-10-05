@@ -282,6 +282,18 @@ describe('computeFinancialTable — PEA-style 25-year cash flow', () => {
     sectionData: { ...MCRU_DATA, investment_mthb: 30 },
   };
 
+  it('an extraBenefit of zero leaves every number unchanged (protects the MCRU appendix)', () => {
+    expect(computeFinancialTable(ctx, () => 0)).toEqual(computeFinancialTable(ctx));
+  });
+
+  it('a positive extraBenefit is added to each year and raises IRR', () => {
+    const base = computeFinancialTable(ctx)!;
+    const extra = computeFinancialTable(ctx, () => 100_000)!;
+    expect(extra.rows[1].benefit_thb).toBeCloseTo(base.rows[1].benefit_thb + 100_000, 6);
+    expect(extra.rows[0].benefit_thb).toBe(0); // year 0 is the outlay only
+    expect(extra.irr_pct!).toBeGreaterThan(base.irr_pct!);
+  });
+
   it('builds year 0 as the investment outlay', () => {
     const f = computeFinancialTable(ctx)!;
     expect(f.rows[0].year).toBe(0);

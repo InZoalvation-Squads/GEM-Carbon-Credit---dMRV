@@ -263,8 +263,15 @@ function irrFromFlows(flows: number[]): number | null {
  * PEA evaluation format. Inputs come from section_data with PEA defaults for
  * anything not provided; returns null without an investment figure or
  * a usable year-1 generation estimate.
+ *
+ * `extraBenefit(year, generationKwh)` adds a further cash flow to each
+ * operating year (REC ROI uses it for net REC revenue). Omitted → identical
+ * to the official appendix.
  */
-export function computeFinancialTable(ctx: ComputeContext): FinancialTable | null {
+export function computeFinancialTable(
+  ctx: ComputeContext,
+  extraBenefit?: (year: number, generationKwh: number) => number,
+): FinancialTable | null {
   const investMthb = numOrNull(ctx.sectionData.investment_mthb);
   if (investMthb === null || investMthb <= 0) return null;
   const gen1 = year1GenerationKwh(ctx);
@@ -291,7 +298,7 @@ export function computeFinancialTable(ctx: ComputeContext): FinancialTable | nul
   for (let y = 1; y <= lifetime; y++) {
     const df = 1 / Math.pow(1 + r, y);
     const gen = gens[y - 1];
-    const benefit = gen * price + (y === lifetime ? scrap : 0);
+    const benefit = gen * price + (y === lifetime ? scrap : 0) + (extraBenefit ? extraBenefit(y, gen) : 0);
     const cost = y >= omStart ? om : 0;
     const snpv = (benefit - cost) * df;
     cum += snpv;
