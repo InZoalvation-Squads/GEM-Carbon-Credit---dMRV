@@ -185,8 +185,7 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const years = numOrNull(ctx.sectionData.crediting_years) ?? 7;
   const d = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
   const gen1 = year1GenerationKwh(ctx);
-  const peExact = (computeEcPj(ctx.sectionData.consumers) * ef) / 1000;
-  const pe = round2(peExact);
+  const pe = round2((computeEcPj(ctx.sectionData.consumers) * ef) / 1000);
   // Bundle mode: each site degrades from its own first-synchronisation year, so
   // the yearly total is the staggered sum rather than one aggregate curve.
   const gens = isBundle(ctx.sectionData)
@@ -200,9 +199,7 @@ export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   }
   const totals = {
     be: round2(rows.reduce((a, r) => a + r.be, 0)),
-    // PE is the same every year, so the run total is the unrounded yearly value
-    // × years — MCRU p.18 prints 19.01 (2.7163 × 7), not 7 × 2.72 = 19.04.
-    pe: round2(peExact * years),
+    pe: round2(rows.reduce((a, r) => a + r.pe, 0)),
     le: 0,
     er: rows.reduce((a, r) => a + r.er, 0),
   };
