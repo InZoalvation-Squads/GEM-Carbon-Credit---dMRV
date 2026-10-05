@@ -101,6 +101,7 @@ model Organization {
 
   users    User[]
   projects Project[]
+  rec_roi_settings RecRoiSettings?
 
   @@map("organizations")
 }
@@ -146,6 +147,7 @@ model Project {
   rec_issue_requests RecIssueRequest[]
   credentials        Credential[]
   iot_device_maps    IotDeviceMap[]
+  rec_roi_setting RecRoiProjectSetting?
 
   @@index([organization_id])
   @@map("projects")
@@ -355,6 +357,40 @@ model RecIssueRequest {
 
   @@index([project_id])
   @@map("rec_issue_requests")
+}
+
+// REC ROI assumptions — one row per organization. Every price/fee/FX is
+// nullable with NO default: real-data-only, blank = not entered.
+model RecRoiSettings {
+  organization_id  String   @id
+  price_low_thb    Float?
+  price_mid_thb    Float?
+  price_high_thb   Float?
+  price_source     String   @default("")
+  platform_fee_pct Float?
+  eur_thb          Float?
+  eur_thb_source   String   @default("")
+  horizon_years    Int      @default(5) // = FN-01 registration validity
+  updated_by       String // user display name
+  updated_at       DateTime @updatedAt
+
+  organization Organization @relation(fields: [organization_id], references: [id])
+
+  @@map("rec_roi_settings")
+}
+
+// Optional per-project REC ROI settings.
+model RecRoiProjectSetting {
+  project_id           String   @id
+  issuance_type        String   @default("Normal") // 'Normal' | 'Self consumption'
+  digital_meter_exempt Boolean  @default(false) // <250 kW with EGAT-approved digital meter access
+  investment_mthb      Float? // used when no T-VER PDD carries investment_mthb
+  updated_by           String
+  updated_at           DateTime @updatedAt
+
+  project Project @relation(fields: [project_id], references: [id])
+
+  @@map("rec_roi_project_settings")
 }
 
 model Credential {
