@@ -7,13 +7,11 @@ import { Select } from '../ui/Select';
 import { useStore } from '../../store';
 import { api } from '../../lib/api';
 import { toast } from '../layout/Toast';
+import { REC_FEES } from '../../data/rec-fees';
 import type { RecIssueRequest } from '../../types';
 
-// SF-04 FN-01 (2026) fee schedule — approximate, per MWh applied for.
-const FEE_PER_MWH: Record<RecIssueRequest['request_type'], number> = {
-  Normal: 0.95,
-  'Self consumption': 1.33,
-};
+// SF-04 issuance fee per MWh applied for — FN-01 schedule, single source in data/rec-fees.ts.
+const FEE_PER_MWH = REC_FEES.issuance_thb_per_mwh;
 
 /**
  * Proponent-side "Issue Request" (SF-04): pick a REC-registered project +
