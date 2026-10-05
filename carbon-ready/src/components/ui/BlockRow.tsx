@@ -39,7 +39,8 @@ export function BlockRow({ blockId, figure, source, state, hash, to, statusLabel
         <div className="flex min-w-0 items-center gap-2 whitespace-normal text-sm font-medium text-ink ledger-figure">{lead}</div>
         <StatusBadge state={state} label={statusLabel} className="shrink-0 whitespace-nowrap" />
       </div>
-      <div className="mt-1 flex min-w-0 items-center gap-1.5 font-mono text-xs text-ink-meta">
+      {/* Wraps between units (time, id, hash) so a narrow column never clips them; each unit stays whole. */}
+      <div className="mt-1 flex min-w-0 flex-wrap items-center gap-x-1.5 gap-y-1 font-mono text-xs text-ink-meta">
         <span className="shrink-0 whitespace-nowrap">{source}</span><span aria-hidden="true">·</span>{id}
         {hash && <HashChip value={hash} className="min-w-0 !text-xs" />}
       </div>

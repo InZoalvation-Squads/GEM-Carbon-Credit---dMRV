@@ -42,7 +42,10 @@ describe('BlockRow identifiers and density', () => {
     expect(screen.getByText('Anchored')).toHaveClass('shrink-0', 'whitespace-nowrap');
     const metadata = screen.getByTitle(blockId).parentElement!;
     expect(metadata).toHaveClass('font-mono', 'text-xs');
-    expect(metadata).not.toHaveClass('flex-wrap');
+    // Narrow columns wrap between units instead of clipping them; each unit stays whole.
+    expect(metadata).toHaveClass('flex-wrap');
+    expect(screen.getByText('5 Oct 2026, 10:15')).toHaveClass('whitespace-nowrap');
+    expect(screen.getByTitle(blockId)).toHaveClass('whitespace-nowrap');
     expect(metadata).toContainElement(screen.getByText('5 Oct 2026, 10:15'));
     expect(metadata).toContainElement(screen.getByRole('button', { name: /abcdef/ }));
     expect(screen.getByTitle(blockId).querySelector('.sr-only')).toHaveTextContent(blockId);
