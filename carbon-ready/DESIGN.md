@@ -81,3 +81,65 @@ Live visual sign-off remains pending: no browser connector was available, and th
 ### Git delivery limitation
 
 The filesystem sandbox permits workspace edits but cannot write the parent repository's `.git/worktrees/ledger-phase2/index.lock`. Creating commits on the current branch was therefore rejected. Three logical commits, each ending in the requested Codex co-author trailer, were prepared in a temporary Git repository and exported as patches/bundle. The original branch remains at `fca6856` with the completed changes in its worktree. The export includes a guarded script that applies each patch to the index and commits it from a normal terminal without rewriting working files.
+
+## Phase 3 — amendment A/B/C, 2026-10-05
+
+The amendment at the end of the brief overrides the historical dark-rail notes above. This phase is limited to A, B and C; all work remains in the working tree, with no commits, patch exports, archives or delivery scripts.
+
+### A. Original light sidebar and calm working surfaces
+
+- The navigation groups, item order, destinations and role guards compare byte-for-byte with `21bf26e`'s original `groups` declaration. The rail uses the new `--rail: #f3f6f5` token and a rule border, without the decorative chain. Original rounded items, 18px icons, white active ring/shadow, petrol left mark and organization card return. English group labels are tracked uppercase; Thai headings have no tracking or uppercase. The version line remains static.
+- Phase 1 navigation naming, skip link, focus management, Escape, focus return, mobile inertness and mobile 44px links remain. The mobile slide/backdrop now take 200ms ease-out, with a petrol-950/40 backdrop and petrol focus outlines on the light rail. TopBar remains petrol.
+- The direction contract's OWN-WORLD line now names the petrol top bar/chain spine and light rail. The How it works overview, evidence preview and IPFS code well use light surfaces. No pure-black text or white page ground was introduced. White sheets retain soft rules.
+- Files: `index.html`, `tailwind.config.ts`, `src/index.css`, `src/components/layout/Sidebar.tsx`, `src/components/evidence/{EvidenceDetailModal,IpfsJsonModal}.tsx`, `src/pages/HowItWorks.tsx`.
+
+### B. Loading and response
+
+- `Skeleton`, `SkeletonRows`, `HeadBlockSkeleton` and `ChartSkeleton` are reusable exports from `src/components/ui/Skeleton.tsx`. Route fallbacks distinguish table, queue, form, detail, guide, document and authentication layouts, including route-specific controls/figure counts, six rows or fields, and responsive entity tables. Document/review fallbacks do not add nonexistent portfolio figures. Skeletons sweep subtly over surface-sunk in 1.6s and are static under reduced motion.
+- `LazyCharts.tsx` loads each Recharts component behind its own boundary. Its placeholder reserves the same 280px plot height, or the caller's explicit height. Recharts is absent from the initial bundle.
+- The store has `hydrateFromServer`, `refreshFromServer` and `hydration_errors`, but **no server loading/hydrated flag**. `hydration_errors` cannot tell pending hydration from success, and localStorage persistence hydration is a different operation. Per the amendment, no flag, store change, inference or timeout was invented. An app-wide server-hydration skeleton gate could not be implemented with the existing state. IoT and Calculations use their existing page-local loading booleans for data skeletons.
+- Sidebar mouse intent and keyboard focus call cached factories from `src/routeLoaders.ts`; App uses the very same factories for `React.lazy`. The underlying loader runs once, and intent failures do not produce an unhandled rejection. Dashboard is already eager and requires no prefetch.
+- Projects, Audit Log, Verifications and REC Issuance defer search/filter values and memoize derived sets. Projects caches the monitoring upload index and memoizes table rows, so the urgent input render does not recompute or format those rows. Dashboard performs the existing selector aggregation verbatim inside page-level `useMemo`, without editing the selector; latest blocks and audit slices are also cached. Queue summaries/magnitude arrays are memoized.
+- Normal hover/press/selection motion is restricted to paints at 150ms ease-out; broad and rotational interaction transitions were removed. The existing authored anchor motion remains. The available route fade is capped at 120ms, with no new route remount, slide or stagger. Main scroll position resets on pathname changes, including parameter changes, while page state is retained.
+- Every app-chrome image reserves dimensions, decodes asynchronously and loads lazily. Login's first slide is eager with high fetch priority; its next image is preloaded, and the preload advances/cleans up with the carousel. Printed-template images are intentionally unchanged under the higher-priority byte-identical-body constraint.
+- Files: `src/App.tsx`, new `src/routeLoaders.ts`, `src/layouts/AppShell.tsx`, `src/components/ui/{Skeleton,RouteSkeleton}.tsx`, new `src/components/charts/LazyCharts.tsx`, `src/components/layout/{Sidebar,TopBar}.tsx`, `src/components/registration/RecGuide.tsx`, `src/pages/{Dashboard,Projects,AuditLog,Verifications,RecIssuance,Calculations,IotMapping,Login,Register,Registration,HowItWorks}.tsx`, `src/templates/{OfficialForm,RecIssueOfficialForm}.tsx`.
+
+### C. Existing illustration assets
+
+All 18 existing WebPs are wired to the amendment's placements; no assets were generated or modified. All illustrations are decorative (`alt=""`, `aria-hidden="true"`). Login retains the same slide order, copy and phase 2 pause/reduced-motion behavior. How it works uses the hero below the h1 and seven illustrations in workflow order, inside 96px square boxes beside desktop steps and above mobile steps. Empty states use 120px square boxes and object-contain, preserving the cropped subjects' varying ratios.
+
+Natural dimensions were read with `sips -g pixelWidth -g pixelHeight`:
+
+| Asset | Natural pixels |
+| --- | --- |
+| login-1 / login-2 / login-3 | 1200 × 800 each |
+| hiw-hero | 1200 × 356 |
+| hiw-1 / hiw-2 / hiw-3 | 480 × 431 / 480 × 220 / 480 × 416 |
+| hiw-4 / hiw-5 / hiw-6 / hiw-7 | 480 × 459 / 480 × 331 / 480 × 362 / 348 × 480 |
+| empty-activity / empty-anchor / empty-document | 142 × 480 / 480 × 440 / 478 × 480 |
+| empty-filter / empty-iot / empty-projects / empty-queue | 480 × 363 / 476 × 480 / 480 × 275 / 480 × 292 |
+
+Closest-choice placements are activity for Calculations, anchor for ProjectCreditsTab, document/filter for ProjectEvidenceTab, and document for RegistrationGate. The PDD/SF-02/SF-04 not-found guards receive document art outside the printed body; no illustration enters an official document.
+
+Files: `src/components/ui/{EmptyState,Illustration}.tsx`, `src/components/project/{ProjectCreditsTab,ProjectEvidenceTab,RegistrationGate}.tsx`, `src/pages/{Login,HowItWorks,Projects,Dashboard,ValidationQueue,Verifications,RecIssuance,AuditLog,Guardian,IotMapping,PddDocument,ProjectDetail,ValidationDetail,Calculations}.tsx`, `src/templates/{OfficialForm,RecIssueOfficialForm,TverSF001Pdd,EvidentSF02,EvidentSF04}.tsx`.
+
+### Tests and verification
+
+No existing assertion was removed or weakened; no existing sidebar assertion required replacement for petrol-only details.
+
+- `src/components/layout/sidebar.ui.test.tsx`: adds active parent/aria-current, original light anatomy, and hover/focus prefetch with a once-only loader shared with the route.
+- New `src/components/ui/emptystate.ui.test.tsx`: checks decorative art, alt/aria-hidden, dimensions, async/lazy attributes, accessible action, and existing icon fallback.
+- New `src/components/ui/skeleton.ui.test.tsx`: checks an actual pending Suspense fallback, six responsive entity rows, form fields, route-specific figure presence, chart heights and configurable row count.
+- New `src/routeLoaders.test.ts`: checks promise identity before/after resolution, eager/unknown route no-ops and rejected intent handling.
+- `src/layouts/appshell.ui.test.tsx`: adds scroll-reset assertions to the existing parameter-navigation/state-preservation test, retaining all its assertions.
+- `src/pages/login.ui.test.tsx`: adds image dimensions/decorative semantics, first-slide priority, next-slide preload advancement and cleanup; all existing carousel/auth/language tests remain.
+- `src/pages/howitworks.ui.test.tsx`: adds eight-image order, seven step placements, natural dimensions and decorative/lazy attributes; all existing content/link checks remain.
+- `src/pages/projects.ui.test.tsx`: adds real-seed search/status behavior and a performance.now timing observation without a flaky hardware-dependent timing assertion.
+
+Final commands, all in `carbon-ready/`: `npx tsc -b` passed; `npx vitest run` passed **64 files / 614 tests** (baseline 61 / 600, fourteen added tests); `npx vite build` passed, **3074 modules**, initial chunk **472.26kB** / 146.98kB gzip. Both charts are separate lazy chunks with a shared 372.43kB Recharts chunk. The previous >500kB initial-chunk warning is gone. Existing React Router future warnings and existing async-test act warnings remain.
+
+The isolated Projects search observation was **2.20ms** with 12 seed projects / 214 monitoring records; the final whole-suite observation was **30.33ms**. An earlier concurrent build/test run recorded 58.43ms of jsdom wall time, so timing observations are not presented as a browser long-task audit. Code inspection confirms cached records, O(project-count) deferred filtering and an urgent-render bailout for table cells.
+
+Source audits pass: route declarations unchanged; original sidebar groups/order/roles unchanged; Thai string/text literal multisets unchanged; no changes in `src/lib`, `src/store`, `src/data`, `src/types`, `server` or dependency manifests. Removing only the new not-found illustration prop reproduces each entire T-VER/SF-02/SF-04 source byte-for-byte, establishing that printed bodies are unchanged. Forbidden palettes/tiny text/pure-black paint are absent outside templates; the only hex paints outside templates are the 24 root token definitions, including rail.
+
+Live visual, browser long-task and zero-CLS sign-off remain unverified: Vite's localhost bind returned EPERM and headless Chrome exited under sandbox restrictions. Image boxes and chart heights are reserved in code, but a measured zero-CLS verdict cannot be claimed for variable route content without a browser. Verdict: implementation/source/automated checks pass; the absent hydrate flag and live-browser limits above remain explicit exceptions.

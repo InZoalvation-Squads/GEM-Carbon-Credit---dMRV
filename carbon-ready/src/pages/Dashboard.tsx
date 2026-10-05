@@ -1,3 +1,4 @@
+import { useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { Activity, Upload, ExternalLink } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
@@ -6,9 +7,9 @@ import { BlockRow, ChainList } from '../components/ui/BlockRow';
 import { LinkButton } from '../components/ui/Button';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
-import { DailyGenerationChart } from '../components/charts/DailyGenerationChart';
-import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
-import { useDashboardSummary } from '../store/selectors';
+import { DailyGenerationChart, MonthlyReductionChart } from '../components/charts/LazyCharts';
+import { calculateCarbon } from '../lib/calc';
+import { locationToCountryCode } from '../lib/geo';
 import { useStore } from '../store';
 import { ACTION_LABEL, sourceLabel } from '../lib/labels';
 import { formatKwh, formatNumber } from '../lib/format';
@@ -16,15 +17,64 @@ import { displayHcs } from '../lib/guardian';
 import { fmtDateTime, fmtDate } from '../lib/date';
 
 export function Dashboard() {
-  const summary = useDashboardSummary();
-  const audit = useStore((s) => s.audit).slice(0, 6);
+  const allAudit = useStore((s) => s.audit);
+  const audit = useMemo(() => allAudit.slice(0, 6), [allAudit]);
   const credentials = useStore((s) => s.credentials);
   const projects = useStore((s) => s.projects);
   const records = useStore((s) => s.records);
   const calculations = useStore((s) => s.calculations);
   const factors = useStore((s) => s.factors);
   const verifications = useStore((s) => s.verifications);
-  const latest = projects.flatMap((project) => {
+  // Same aggregation as useDashboardSummary, cached here without modifying the store.
+  const summary = useMemo(() => {
+    const activeProjects = projects.filter((p) => p.status === 'active').length;
+    const latestUpload = records.reduce<string | null>(
+      (latest, r) => (!latest || r.uploaded_at > latest ? r.uploaded_at : latest),
+      null
+    );
+
+    let totalGen = 0;
+    let totalRedKg = 0;
+    const dailyMap = new Map<string, number>();
+    const monthlyMap = new Map<string, number>();
+
+    for (const project of projects) {
+      const country = project.location.split(',').pop()?.trim() ?? '';
+      const countryCode = locationToCountryCode(country);
+      const projectFactors = factors.filter((f) => f.country === countryCode);
+      const projectRecords = records.filter((r) => r.project_id === project.id);
+      const r = calculateCarbon(projectRecords, projectFactors);
+      totalGen += r.totals.generation_kwh;
+      totalRedKg += r.totals.reduction_kgco2e;
+      for (const d of r.daily) {
+        dailyMap.set(d.date, (dailyMap.get(d.date) ?? 0) + d.generation_kwh);
+      }
+      for (const m of r.monthly) {
+        monthlyMap.set(m.period, (monthlyMap.get(m.period) ?? 0) + m.reduction_kgco2e);
+      }
+    }
+
+    const daily_generation = [...dailyMap.entries()]
+      .map(([date, kwh]) => ({ date, kwh }))
+      .sort((a, b) => a.date.localeCompare(b.date))
+      .slice(-90);
+
+    const monthly_reduction = [...monthlyMap.entries()]
+      .map(([period, kg]) => ({ period, tco2e: kg / 1000 }))
+      .sort((a, b) => a.period.localeCompare(b.period));
+
+    return {
+      kpis: {
+        total_generation_kwh: totalGen,
+        total_reduction_tco2e: totalRedKg / 1000,
+        active_projects: activeProjects,
+        latest_upload_at: latestUpload,
+      },
+      daily_generation,
+      monthly_reduction,
+    };
+  }, [projects, records, factors]);
+  const latest = useMemo(() => projects.flatMap((project) => {
     const record = records.filter((r) => r.project_id === project.id).sort((a, b) => b.uploaded_at.localeCompare(a.uploaded_at) || b.record_date.localeCompare(a.record_date))[0];
     const calculation = calculations.filter((c) => c.project_id === project.id).sort((a, b) => b.calculated_at.localeCompare(a.calculated_at))[0];
     if (!record && !calculation) return [];
@@ -32,7 +82,7 @@ export function Dashboard() {
     const verification = !useCalculation && record ? verifications.find((v) => v.project_id === project.id && v.state === 'approved' && record.record_date >= v.monitoring_period_start && record.record_date <= v.monitoring_period_end) : undefined;
     const factor = useCalculation && factors.find((f) => f.id === calculation.emission_factor_id);
     return [{ project, record, calculation: useCalculation ? calculation : undefined, verification, factor }];
-  });
+  }), [projects, records, calculations, verifications, factors]);
 
   return <div className="space-y-6">
     <PageHeader title="Dashboard" subtitle="Overview of your solar rooftop portfolio"
@@ -67,7 +117,7 @@ export function Dashboard() {
         <h2 className="mb-3 text-lg font-semibold">Recent Activity</h2>
         {audit.length ? <ChainList>{audit.map((a) => <BlockRow key={a.id} blockId={a.id}
           figure={ACTION_LABEL[a.action] ?? a.action} source={<span className="font-mono text-xs">{fmtDateTime(a.created_at)}</span>}
-          state={a.hcs_sequence_number != null ? 'anchored' : 'active'} hash={a.row_hash ?? undefined} />)}</ChainList> : <Card><EmptyState icon={<Activity size={22} />} title="No activity yet" hint="Actions across the platform will appear here."
+          state={a.hcs_sequence_number != null ? 'anchored' : 'active'} hash={a.row_hash ?? undefined} />)}</ChainList> : <Card><EmptyState icon={<Activity size={22} />} illustration="/illustrations/empty-activity.webp" title="No activity yet" hint="Actions across the platform will appear here."
           action={<Link to="/upload" className="text-petrol-600 underline">Upload monitoring data</Link>} /></Card>}
       </section>
     </div>

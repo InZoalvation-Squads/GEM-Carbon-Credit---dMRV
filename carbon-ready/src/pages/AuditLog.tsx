@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { Link2, ShieldAlert } from 'lucide-react';
 import { Card, CardBody } from '../components/ui/Card';
 import { BlockRow, ChainList } from '../components/ui/BlockRow';
@@ -95,13 +95,17 @@ export function AuditLogPage() {
 
   const integrity = useMemo(() => verifyChain(audit), [audit]);
 
-  const filtered = audit.filter((a) => {
-    if (action && a.action !== action) return false;
-    if (entity && a.entity_type !== entity) return false;
-    if (from && a.created_at < from) return false;
-    if (to && a.created_at > to + 'T23:59:59Z') return false;
+  const deferredAction = useDeferredValue(action);
+  const deferredEntity = useDeferredValue(entity);
+  const deferredFrom = useDeferredValue(from);
+  const deferredTo = useDeferredValue(to);
+  const filtered = useMemo(() => audit.filter((a) => {
+    if (deferredAction && a.action !== deferredAction) return false;
+    if (deferredEntity && a.entity_type !== deferredEntity) return false;
+    if (deferredFrom && a.created_at < deferredFrom) return false;
+    if (deferredTo && a.created_at > deferredTo + 'T23:59:59Z') return false;
     return true;
-  });
+  }), [audit, deferredAction, deferredEntity, deferredFrom, deferredTo]);
 
   return (
     <div>
@@ -149,7 +153,7 @@ export function AuditLogPage() {
             <span>→ row_hash</span>
           </div>
         </BlockRow>;
-      })}</ChainList> : <Card><EmptyState title="No matching entries" hint="Try widening the date range or clearing the action/entity filters." /></Card>}
+      })}</ChainList> : <Card><EmptyState illustration="/illustrations/empty-filter.webp" title="No matching entries" hint="Try widening the date range or clearing the action/entity filters." /></Card>}
     </div>
   );
 }

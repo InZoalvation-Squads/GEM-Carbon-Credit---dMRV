@@ -75,7 +75,7 @@ const ERROR_TH: Record<string, string> = {
 
 const SLIDES = [
   {
-    img: '/login/slide-forest.jpg',
+    img: '/illustrations/login-1.webp',
     th: {
       title: 'โทเคไนซ์เครดิตคาร์บอน T-VER อย่างมั่นใจ',
       body: 'เชื่อมข้อมูลจาก TGO ตรวจสอบเอกสารอัตโนมัติ และสร้างโทเคนบนเครือข่ายที่ผ่านการกำกับ ดูสถานะ Mint - Transfer - Retire ในที่เดียว',
@@ -86,7 +86,7 @@ const SLIDES = [
     },
   },
   {
-    img: '/login/slide-valley.jpg',
+    img: '/illustrations/login-2.webp',
     th: {
       title: 'dMRV โปร่งใส ตรวจสอบได้ทุกขั้นตอน',
       body: 'บันทึกหลักฐานการตรวจวัด รายงาน และทวนสอบบนบัญชีแยกประเภทสาธารณะ พร้อมเส้นทางตรวจสอบย้อนกลับครบถ้วนทุกเครดิต',
@@ -97,7 +97,7 @@ const SLIDES = [
     },
   },
   {
-    img: '/login/slide-hills.jpg',
+    img: '/illustrations/login-3.webp',
     th: {
       title: 'ผู้พัฒนา ผู้ทวนสอบ และนายทะเบียน ในที่เดียว',
       body: 'จัดการโครงการ เอกสาร PDD การทวนสอบ และการออกเครดิตร่วมกันบนแพลตฟอร์มเดียว ลดงานซ้ำซ้อนและข้อผิดพลาด',
@@ -148,6 +148,16 @@ export function Login() {
     return () => clearInterval(id);
   }, [paused, reducedMotion]);
 
+  // The next slide is ready before either manual or automatic advance.
+  useEffect(() => {
+    const preload = document.createElement('link');
+    preload.rel = 'preload';
+    preload.setAttribute('as', 'image');
+    preload.href = SLIDES[(slide + 1) % SLIDES.length].img;
+    document.head.appendChild(preload);
+    return () => preload.remove();
+  }, [slide]);
+
   function toggleLang() {
     const next: Lang = lang === 'th' ? 'en' : 'th';
     setLang(next);
@@ -182,7 +192,7 @@ export function Login() {
       <div className="flex flex-1 items-center justify-center bg-ground px-4 py-10 lg:px-10">
         <div className="w-full max-w-[460px] rounded-sheet border border-rule bg-surface px-7 py-8 sm:px-10 sm:py-10">
           <div className="flex items-start justify-between">
-            <img src="/gem-logo-dark.svg" alt="GEM Carbon Credit" className="h-9 w-auto" />
+            <img src="/gem-logo-dark.svg" width={1003} height={210} loading="lazy" decoding="async" alt="GEM Carbon Credit" className="h-9 w-auto" />
             <button
               type="button"
               onClick={toggleLang}
@@ -328,8 +338,9 @@ export function Login() {
           <div className="relative overflow-hidden rounded-sheet">
             <img
               src={active.img}
-              alt=""
-              className="aspect-[16/10] w-full object-cover"
+              alt="" aria-hidden="true" width={1200} height={800} decoding="async"
+              loading={slide === 0 ? "eager" : "lazy"} {...{ fetchpriority: slide === 0 ? 'high' : undefined }}
+              className="aspect-[3/2] w-full object-contain"
             />
             <button
               type="button"

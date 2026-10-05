@@ -4,6 +4,23 @@ import { MemoryRouter } from 'react-router-dom';
 import { HowItWorks } from './HowItWorks';
 
 describe('HowItWorks page', () => {
+  it('places the cropped hero and seven decorative illustrations in workflow order with natural dimensions', () => {
+    const { container } = render(<MemoryRouter><HowItWorks /></MemoryRouter>);
+    const imgs = Array.from(container.querySelectorAll('img'));
+    expect(imgs).toHaveLength(8);
+    const sizes = [[1200, 356], [480, 431], [480, 220], [480, 416], [480, 459], [480, 331], [480, 362], [348, 480]];
+    imgs.forEach((img, index) => {
+      expect(img).toHaveAttribute('src', `/illustrations/${index === 0 ? 'hiw-hero' : `hiw-${index}`}.webp`);
+      expect(img).toHaveAttribute('width', String(sizes[index][0]));
+      expect(img).toHaveAttribute('height', String(sizes[index][1]));
+      expect(img).toHaveAttribute('alt', '');
+      expect(img).toHaveAttribute('aria-hidden', 'true');
+      expect(img).toHaveAttribute('loading', 'lazy');
+      expect(img).toHaveAttribute('decoding', 'async');
+      if (index) expect(img.closest('li')).toBeInTheDocument();
+    });
+  });
+
   it('renders the pipeline, storage layers, timeline and verify chain', () => {
     render(<MemoryRouter><HowItWorks /></MemoryRouter>);
     expect(screen.getByText('ระบบทำงานอย่างไร')).toBeInTheDocument();

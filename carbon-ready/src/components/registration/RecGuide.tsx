@@ -100,7 +100,7 @@ export function RecGuide() {
                     {done}/{phase.items.length}
                   </span>
                 )}
-                <ChevronDown size={14} className={`shrink-0 text-ink-meta transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`shrink-0 text-ink-meta transition-colors duration-150 ease-out ${open ? 'rotate-180' : ''}`} />
               </button>
               {open && (
                 <div id={`rec-guide-${phase.key}`} className="border-t border-rule px-3 py-2">

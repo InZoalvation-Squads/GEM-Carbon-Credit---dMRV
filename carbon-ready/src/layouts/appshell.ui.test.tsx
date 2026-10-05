@@ -76,7 +76,10 @@ it('updates metadata on parameter routes without remounting page state', async (
   expect(document.title).toBe('Project Detail · GEM Carbon Credit');
   await waitFor(() => expect(screen.getByText('ข้อมูลโครงการ')).toHaveAttribute('lang', 'th'));
   fireEvent.click(screen.getByRole('button', { name: 'Count 0' }));
+  const main = screen.getByRole('main');
+  main.scrollTop = 640;
   fireEvent.click(screen.getByRole('link', { name: 'Next' }));
+  expect(main.scrollTop).toBe(0);
   expect(screen.getByRole('button', { name: 'Count 1' })).toBeInTheDocument();
   view.unmount(); root.remove();
 });

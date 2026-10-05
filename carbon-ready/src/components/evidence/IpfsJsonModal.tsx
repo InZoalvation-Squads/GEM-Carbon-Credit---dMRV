@@ -93,7 +93,7 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
                 </span>
               </div>
             )}
-            <pre className="max-h-80 overflow-auto rounded-sheet bg-petrol-950 p-4 text-xs leading-relaxed text-on-petrol-2">
+            <pre className="max-h-80 overflow-auto rounded-sheet bg-surface-sunk p-4 text-xs leading-relaxed text-ink-secondary">
               {state.pretty}
             </pre>
             <div className="flex items-center justify-between text-xs text-ink-meta">

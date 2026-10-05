@@ -74,7 +74,7 @@ export function Registration() {
                 key={p.key}
                 type="button"
                 onClick={() => setProgram(p.key)}
-                className="group rounded-sheet border border-rule/80 bg-white p-5 text-left transition-all hover:border-petrol-100"
+                className="group rounded-sheet border border-rule/80 bg-white p-5 text-left transition-colors duration-150 ease-out hover:border-petrol-100"
               >
                 <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs font-semibold text-ink-secondary">{p.tag}</span>
                 <div className="mt-2 text-lg font-semibold text-ink">{p.title}</div>

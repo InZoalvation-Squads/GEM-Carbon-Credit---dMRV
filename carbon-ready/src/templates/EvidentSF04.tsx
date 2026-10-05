@@ -173,7 +173,7 @@ export function EvidentSF04({ recIssueId: recIssueIdProp }: { recIssueId?: strin
   const rec = useStore((s) => s.recIssues.find((r) => r.id === recIssueId));
 
   if (!rec) {
-    return <EmptyState title="Issue request not found" hint="This document does not exist." />;
+    return <EmptyState illustration="/illustrations/empty-document.webp" title="Issue request not found" hint="This document does not exist." />;
   }
 
   const snap = rec.facility_snapshot;

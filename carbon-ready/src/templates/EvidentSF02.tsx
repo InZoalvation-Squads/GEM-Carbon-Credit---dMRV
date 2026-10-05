@@ -170,7 +170,7 @@ export function EvidentSF02({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const project = useStore((s) => s.projects.find((p) => p.id === pdd?.project_id));
 
   if (!pdd || !project) {
-    return <EmptyState title="PDD not found" hint="This document does not exist." />;
+    return <EmptyState illustration="/illustrations/empty-document.webp" title="PDD not found" hint="This document does not exist." />;
   }
 
   const d = pdd.section_data as Record<string, unknown>;

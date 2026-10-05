@@ -12,10 +12,10 @@ import type { EvidenceFile } from '../../types';
 function Preview({ ev }: { ev: EvidenceFile }) {
   if (ev.kind === 'image') {
     return (
-      <div className="grid place-items-center aspect-[16/10] rounded-sheet bg-petrol-800 text-center text-white">
+      <div className="grid place-items-center aspect-[16/10] rounded-sheet bg-surface-sunk text-center text-ink">
         <div>
           <div className="text-lg font-semibold">{ev.file_name.split('.')[0]}</div>
-          <div className="mt-1 text-xs text-on-petrol-2">Image preview · {formatBytes(ev.file_size)}</div>
+          <div className="mt-1 text-xs text-ink-secondary">Image preview · {formatBytes(ev.file_size)}</div>
         </div>
       </div>
     );

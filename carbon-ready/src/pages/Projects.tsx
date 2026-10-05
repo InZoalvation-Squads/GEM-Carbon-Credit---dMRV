@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { memo, useDeferredValue, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Plus, Pencil } from 'lucide-react';
 import { Card } from '../components/ui/Card';
@@ -28,15 +28,21 @@ export function Projects() {
   const [search, setSearch] = useState('');
   const [filterStatus, setFilterStatus] = useState<'' | ProjectStatus>('');
 
-  const filtered = projects.filter((p) => {
-    if (search && !p.name.toLowerCase().includes(search.toLowerCase())) return false;
-    if (filterStatus && p.status !== filterStatus) return false;
+  const deferredSearch = useDeferredValue(search);
+  const deferredStatus = useDeferredValue(filterStatus);
+  const filtered = useMemo(() => projects.filter((p) => {
+    if (deferredSearch && !p.name.toLowerCase().includes(deferredSearch.toLowerCase())) return false;
+    if (deferredStatus && p.status !== deferredStatus) return false;
     return true;
-  });
+  }), [projects, deferredSearch, deferredStatus]);
 
-  const lastUpload = (projectId: string) =>
-    records.filter((r) => r.project_id === projectId)
-      .reduce<string | null>((latest, r) => (!latest || r.uploaded_at > latest ? r.uploaded_at : latest), null);
+  const uploads = useMemo(() => {
+    const latest = new Map<string, string>();
+    for (const record of records) {
+      if (!latest.has(record.project_id) || record.uploaded_at > latest.get(record.project_id)!) latest.set(record.project_id, record.uploaded_at);
+    }
+    return latest;
+  }, [records]);
 
   return (
     <div>
@@ -56,37 +62,10 @@ export function Projects() {
 
       <Card>
         {filtered.length === 0 ? (
-          <EmptyState title="No projects yet" hint="Create a project to start tracking generation."
+          <EmptyState illustration="/illustrations/empty-projects.webp" title="No projects yet" hint="Create a project to start tracking generation."
             action={<Button onClick={() => setCreating(true)}><Plus size={16} /> New Project</Button>} />
         ) : (
-          <Table mobileLabels={["Name", "Location", "Capacity", "Status", "Commissioned", "Last Upload", "Actions"]}>
-            <THead>
-              <TR>
-                <TH>Name</TH><TH>Location</TH><TH className="text-right">Capacity</TH>
-                <TH>Status</TH><TH>Commissioned</TH><TH>Last Upload</TH><TH>{''}</TH>
-              </TR>
-            </THead>
-            <tbody>
-              {filtered.map((p) => {
-                const lu = lastUpload(p.id);
-                return (
-                  <TR key={p.id}>
-                    <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-petrol-700">{p.name}</Link></TD>
-                    <TD>{p.location}</TD>
-                    <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
-                    <TD><StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} /></TD>
-                    <TD>{fmtDate(p.commission_date)}</TD>
-                    <TD>{lu ? fmtDate(lu.slice(0, 10)) : '—'}</TD>
-                    <TD className="text-right">
-                      <button onClick={() => setEditing(p)} className="inline-flex min-h-8 min-w-8 items-center justify-center text-ink-meta hover:text-ink" aria-label="Edit">
-                        <Pencil size={16} />
-                      </button>
-                    </TD>
-                  </TR>
-                );
-              })}
-            </tbody>
-          </Table>
+          <ProjectRows projects={filtered} uploads={uploads} onEdit={setEditing} />
         )}
       </Card>
 
@@ -95,6 +74,42 @@ export function Projects() {
     </div>
   );
 }
+
+// Stable deferred rows skip the urgent keystroke render, including cell formatting.
+const ProjectRows = memo(function ProjectRows({ projects, uploads, onEdit }: {
+  projects: Project[]; uploads: Map<string, string>; onEdit: (project: Project) => void;
+}) {
+  return (
+  <Table mobileLabels={["Name", "Location", "Capacity", "Status", "Commissioned", "Last Upload", "Actions"]}>
+    <THead>
+      <TR>
+        <TH>Name</TH><TH>Location</TH><TH className="text-right">Capacity</TH>
+        <TH>Status</TH><TH>Commissioned</TH><TH>Last Upload</TH><TH>{''}</TH>
+      </TR>
+    </THead>
+    <tbody>
+      {projects.map((p) => {
+        const lu = uploads.get(p.id);
+        return (
+          <TR key={p.id}>
+            <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-petrol-700">{p.name}</Link></TD>
+            <TD>{p.location}</TD>
+            <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
+            <TD><StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} /></TD>
+            <TD>{fmtDate(p.commission_date)}</TD>
+            <TD>{lu ? fmtDate(lu.slice(0, 10)) : '—'}</TD>
+            <TD className="text-right">
+              <button onClick={() => onEdit(p)} className="inline-flex min-h-8 min-w-8 items-center justify-center text-ink-meta hover:text-ink" aria-label="Edit">
+                <Pencil size={16} />
+              </button>
+            </TD>
+          </TR>
+        );
+      })}
+    </tbody>
+  </Table>
+  );
+});
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
   const [form, setForm] = useState({

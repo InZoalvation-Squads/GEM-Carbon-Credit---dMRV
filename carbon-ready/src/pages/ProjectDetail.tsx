@@ -67,7 +67,7 @@ export function ProjectDetail() {
           <PddDocument pddId={pdd.id} embedded />
         ) : (
           <Card><CardBody className="p-0">
-            <EmptyState icon={<FileText size={32} />} title="No PDD yet" hint="This project has not started registration. Register it under a methodology to generate its Project Design Document." />
+            <EmptyState icon={<FileText size={32} />} illustration="/illustrations/empty-document.webp" title="No PDD yet" hint="This project has not started registration. Register it under a methodology to generate its Project Design Document." />
           </CardBody></Card>
         )
       ) : (

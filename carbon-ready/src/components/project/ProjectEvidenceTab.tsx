@@ -68,6 +68,7 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
         <CardBody className="p-0">
           {rows.length === 0 ? (
             <EmptyState
+              illustration={total === 0 ? "/illustrations/empty-document.webp" : "/illustrations/empty-filter.webp"}
               icon={<FolderSearch size={32} />}
               title={total === 0 ? 'No evidence uploaded yet' : 'No evidence matches your filters'}
               hint={total === 0 ? 'Upload meter readings, utility bills, site photos and reports to build a verification package.' : 'Try clearing the search or category filter.'}

@@ -14,7 +14,7 @@ export function RegistrationGate({ projectId, children }: { projectId: string; c
   const target = pdd ? `/registration/${pdd.id}` : '/registration';
   return (
     <EmptyState
-      title="Project not registered yet"
+      illustration="/illustrations/empty-document.webp" title="Project not registered yet"
       hint="This project must be registered (methodology selected, PDD validated by an auditor) before dMRV monitoring can start."
       action={
         <LinkButton to={target}><Lock size={16} /> Go to Registration</LinkButton>

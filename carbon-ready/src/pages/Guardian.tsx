@@ -134,7 +134,7 @@ function RegistryTab({ credentials, verifications, isRegistry, mintedFor, onMint
   if (credentials.length === 0) {
     return (
       <Card><CardBody className="p-0">
-        <EmptyState icon={<ShieldCheck size={32} />} title="No credentials anchored yet" hint="Approve a verification package, then click Anchor to Hedera Guardian on its review page." />
+        <EmptyState icon={<ShieldCheck size={32} />} illustration="/illustrations/empty-anchor.webp" title="No credentials anchored yet" hint="Approve a verification package, then click Anchor to Hedera Guardian on its review page." />
       </CardBody></Card>
     );
   }
@@ -184,7 +184,7 @@ function TokenHistoryTab({ tokens }: { tokens: GuardianToken[] }) {
   if (tokens.length === 0) {
     return (
       <Card><CardBody className="p-0">
-        <EmptyState icon={<Coins size={32} />} title="No VCU tokens minted yet" hint="As the Standard Registry, mint a token from the Credential Registry tab." />
+        <EmptyState icon={<Coins size={32} />} illustration="/illustrations/empty-anchor.webp" title="No VCU tokens minted yet" hint="As the Standard Registry, mint a token from the Credential Registry tab." />
       </CardBody></Card>
     );
   }
@@ -227,7 +227,7 @@ function TrustChainTab() {
   if (tokens.length === 0) {
     return (
       <Card><CardBody className="p-0">
-        <EmptyState icon={<GitBranch size={32} />} title="No trust chain to show yet" hint="Mint a VCU token to see its full evidence chain here." />
+        <EmptyState icon={<GitBranch size={32} />} illustration="/illustrations/empty-anchor.webp" title="No trust chain to show yet" hint="Mint a VCU token to see its full evidence chain here." />
       </CardBody></Card>
     );
   }

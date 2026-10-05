@@ -10,6 +10,6 @@ export function RecIssueOfficialForm({ recIssueId }: { recIssueId?: string }) {
   const params = useParams();
   const id = recIssueId ?? params.id;
   const rec = useStore((s) => s.recIssues.find((r) => r.id === id));
-  if (!rec) return <EmptyState title="Issue request not found / ไม่พบคำขอ" hint="ลิงก์อาจหมดอายุหรือคำขอถูกลบ" />;
-  return <Suspense fallback={<RouteSkeleton />}><EvidentSF04 recIssueId={rec.id} /></Suspense>;
+  if (!rec) return <EmptyState illustration="/illustrations/empty-document.webp" title="Issue request not found / ไม่พบคำขอ" hint="ลิงก์อาจหมดอายุหรือคำขอถูกลบ" />;
+  return <Suspense fallback={<RouteSkeleton shape="document" />}><EvidentSF04 recIssueId={rec.id} /></Suspense>;
 }

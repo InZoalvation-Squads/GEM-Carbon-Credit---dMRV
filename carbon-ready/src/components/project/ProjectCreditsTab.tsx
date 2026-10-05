@@ -23,7 +23,7 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
         <CardBody className="p-0">
           <EmptyState
             icon={<Gem size={32} />}
-            title="ยังไม่มีเครดิตที่ออกให้โปรเจกต์นี้"
+            illustration="/illustrations/empty-anchor.webp" title="ยังไม่มีเครดิตที่ออกให้โปรเจกต์นี้"
             hint="เครดิตจะปรากฏที่นี่หลัง verification ผ่านและนายทะเบียนกด Mint — ดูสถานะได้ที่หน้า Verifications"
           />
         </CardBody>

@@ -98,6 +98,27 @@ describe('Login page — GEM Carbon Credit layout', () => {
 });
 
 describe('Login carousel accessibility', () => {
+  it('reserves the WebP slide dimensions, prioritises the first image and preloads only the next slide', () => {
+    const view = renderLogin();
+    const first = document.querySelector<HTMLImageElement>('img[src="/illustrations/login-1.webp"]')!;
+    expect(first).toHaveAttribute('alt', '');
+    expect(first).toHaveAttribute('aria-hidden', 'true');
+    expect(first).toHaveAttribute('width', '1200');
+    expect(first).toHaveAttribute('height', '800');
+    expect(first).toHaveAttribute('fetchpriority', 'high');
+    expect(first).toHaveAttribute('loading', 'eager');
+    expect(first).toHaveAttribute('decoding', 'async');
+    expect(document.head.querySelector('link[rel="preload"][as="image"]')).toHaveAttribute('href', '/illustrations/login-2.webp');
+    fireEvent.click(screen.getByRole('button', { name: 'สไลด์ถัดไป' }));
+    const next = document.querySelector('img[src="/illustrations/login-2.webp"]')!;
+    expect(next).toHaveAttribute('loading', 'lazy');
+    expect(next).not.toHaveAttribute('fetchpriority');
+    expect(document.head.querySelectorAll('link[rel="preload"][as="image"]')).toHaveLength(1);
+    expect(document.head.querySelector('link[rel="preload"][as="image"]')).toHaveAttribute('href', '/illustrations/login-3.webp');
+    view.unmount();
+    expect(document.head.querySelector('link[rel="preload"][as="image"]')).toBeNull();
+  });
+
   it('pauses automatic advance and resumes only when Play is pressed', () => {
     vi.useFakeTimers();
     const view = renderLogin();

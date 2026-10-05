@@ -13,11 +13,11 @@ export function OfficialForm() {
   const methodology = useStore((s) => s.methodologies.find((m) => m.id === pdd?.methodology_id));
 
   if (!pdd || !methodology) {
-    return <EmptyState title="PDD not found / ไม่พบเอกสาร" hint="ลิงก์อาจหมดอายุหรือเอกสารถูกลบ" />;
+    return <EmptyState illustration="/illustrations/empty-document.webp" title="PDD not found / ไม่พบเอกสาร" hint="ลิงก์อาจหมดอายุหรือเอกสารถูกลบ" />;
   }
   if (!methodology.document_template) {
-    return <EmptyState title="No official form / ไม่มีฟอร์มทางการ" hint="Methodology นี้ยังไม่มี template ฟอร์มทางการ" />;
+    return <EmptyState illustration="/illustrations/empty-document.webp" title="No official form / ไม่มีฟอร์มทางการ" hint="Methodology นี้ยังไม่มี template ฟอร์มทางการ" />;
   }
   const Renderer = OFFICIAL_FORMS[methodology.document_template].component;
-  return <Suspense fallback={<RouteSkeleton />}><Renderer pddId={pdd.id} /></Suspense>;
+  return <Suspense fallback={<RouteSkeleton shape="document" />}><Renderer pddId={pdd.id} /></Suspense>;
 }

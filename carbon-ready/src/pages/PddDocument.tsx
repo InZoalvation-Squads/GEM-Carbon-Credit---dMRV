@@ -26,7 +26,7 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
   // Renders the document as the public VP would: sensitive values masked.
   const [publicView, setPublicView] = useState(false);
 
-  if (!pdd || !methodology || !project) return <EmptyState title="PDD not found" hint="This document does not exist." />;
+  if (!pdd || !methodology || !project) return <EmptyState illustration="/illustrations/empty-document.webp" title="PDD not found" hint="This document does not exist." />;
   const ctx = { project, factors, sectionData: pdd.section_data };
 
   function display(fieldKey: string, source?: PddComputedSource) {

@@ -1,32 +1,38 @@
+import { routeLoaders } from './routeLoaders';
 import { lazy, Suspense } from 'react';
 import { RouteMetadata } from './components/layout/RouteMetadata';
 import { RouteSkeleton } from './components/ui/RouteSkeleton';
-import { BrowserRouter, Routes, Route, Navigate, Outlet } from 'react-router-dom';
+import { BrowserRouter, Routes, Route, Navigate, Outlet, useLocation } from 'react-router-dom';
 import { useStore } from './store';
 import { AppShell } from './layouts/AppShell';
 import { Login } from './pages/Login';
 import { Dashboard } from './pages/Dashboard';
 
-const Register = lazy(() => import('./pages/Register').then((module) => ({ default: module.Register })));
-const HowItWorks = lazy(() => import('./pages/HowItWorks').then((module) => ({ default: module.HowItWorks })));
-const Projects = lazy(() => import('./pages/Projects').then((module) => ({ default: module.Projects })));
-const ProjectDetail = lazy(() => import('./pages/ProjectDetail').then((module) => ({ default: module.ProjectDetail })));
-const UploadPage = lazy(() => import('./pages/Upload').then((module) => ({ default: module.UploadPage })));
-const IotMapping = lazy(() => import('./pages/IotMapping').then((module) => ({ default: module.IotMapping })));
-const Calculations = lazy(() => import('./pages/Calculations').then((module) => ({ default: module.Calculations })));
-const EmissionFactors = lazy(() => import('./pages/EmissionFactors').then((module) => ({ default: module.EmissionFactors })));
-const AuditLogPage = lazy(() => import('./pages/AuditLog').then((module) => ({ default: module.AuditLogPage })));
-const Verifications = lazy(() => import('./pages/Verifications').then((module) => ({ default: module.Verifications })));
-const ReviewDetail = lazy(() => import('./pages/ReviewDetail').then((module) => ({ default: module.ReviewDetail })));
-const RecIssuance = lazy(() => import('./pages/RecIssuance').then((module) => ({ default: module.RecIssuance })));
-const RecIssueOfficialForm = lazy(() => import('./templates/RecIssueOfficialForm').then((module) => ({ default: module.RecIssueOfficialForm })));
-const Guardian = lazy(() => import('./pages/Guardian').then((module) => ({ default: module.Guardian })));
-const Methodologies = lazy(() => import('./pages/Methodologies').then((module) => ({ default: module.Methodologies })));
-const Registration = lazy(() => import('./pages/Registration').then((module) => ({ default: module.Registration })));
-const PddDocument = lazy(() => import('./pages/PddDocument').then((module) => ({ default: module.PddDocument })));
-const OfficialForm = lazy(() => import('./templates/OfficialForm').then((module) => ({ default: module.OfficialForm })));
-const ValidationQueue = lazy(() => import('./pages/ValidationQueue').then((module) => ({ default: module.ValidationQueue })));
-const ValidationDetail = lazy(() => import('./pages/ValidationDetail').then((module) => ({ default: module.ValidationDetail })));
+const Register = lazy(routeLoaders.Register);
+const HowItWorks = lazy(routeLoaders.HowItWorks);
+const Projects = lazy(routeLoaders.Projects);
+const ProjectDetail = lazy(routeLoaders.ProjectDetail);
+const UploadPage = lazy(routeLoaders.UploadPage);
+const IotMapping = lazy(routeLoaders.IotMapping);
+const Calculations = lazy(routeLoaders.Calculations);
+const EmissionFactors = lazy(routeLoaders.EmissionFactors);
+const AuditLogPage = lazy(routeLoaders.AuditLogPage);
+const Verifications = lazy(routeLoaders.Verifications);
+const ReviewDetail = lazy(routeLoaders.ReviewDetail);
+const RecIssuance = lazy(routeLoaders.RecIssuance);
+const RecIssueOfficialForm = lazy(routeLoaders.RecIssueOfficialForm);
+const Guardian = lazy(routeLoaders.Guardian);
+const Methodologies = lazy(routeLoaders.Methodologies);
+const Registration = lazy(routeLoaders.Registration);
+const PddDocument = lazy(routeLoaders.PddDocument);
+const OfficialForm = lazy(routeLoaders.OfficialForm);
+const ValidationQueue = lazy(routeLoaders.ValidationQueue);
+const ValidationDetail = lazy(routeLoaders.ValidationDetail);
+
+function RouteFallback() {
+  const { pathname } = useLocation();
+  return <RouteSkeleton path={pathname} />;
+}
 
 // Redirects to /login until a demo account is signed in.
 function RequireAuth() {
@@ -38,7 +44,7 @@ export default function App() {
   return (
     <BrowserRouter>
       <RouteMetadata />
-      <Suspense fallback={<RouteSkeleton />}>
+      <Suspense fallback={<RouteFallback />}>
         <Routes>
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />

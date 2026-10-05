@@ -14,6 +14,7 @@ export default {
     extend: {
       colors: {
         petrol,
+        rail: token('rail'),
         lime: { 300: token('lime-300'), 400: token('lime-400'), ink: token('lime-ink') },
         ground: token('ground'), surface: { DEFAULT: token('surface'), sunk: token('surface-sunk') },
         rule: { DEFAULT: token('rule'), strong: token('rule-strong') },
@@ -31,7 +32,7 @@ export default {
         '3xl': ['1.875rem', '1.3'],
       },
       borderRadius: { sheet: '6px' },
-      boxShadow: { xs: 'none', card: 'none' },
+      boxShadow: { xs: '0 1px 2px rgb(var(--ink-rgb) / 0.05)', card: 'none' },
       keyframes: {
         'fade-in': { '0%': { opacity: '0' }, '100%': { opacity: '1' } },
         'fade-in-up': { '0%': { opacity: '0', transform: 'translateY(8px)' }, '100%': { opacity: '1', transform: 'translateY(0)' } },
@@ -39,7 +40,7 @@ export default {
         'slide-in-right': { '0%': { transform: 'translateX(100%)' }, '100%': { transform: 'translateX(0)' } },
       },
       animation: {
-        'fade-in': 'fade-in 0.2s ease-out both',
+        'fade-in': 'fade-in 0.12s ease-out both',
         'fade-in-up': 'fade-in-up 0.25s cubic-bezier(0.22,1,0.36,1) both',
         'scale-in': 'scale-in 0.2s cubic-bezier(0.22,1,0.36,1) both',
         'slide-in-right': 'slide-in-right 0.25s cubic-bezier(0.22,1,0.36,1) both',

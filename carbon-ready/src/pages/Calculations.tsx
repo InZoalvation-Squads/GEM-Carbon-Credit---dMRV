@@ -6,9 +6,10 @@ import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { PageHeader } from '../components/layout/PageHeader';
 import { HeadBlock } from '../components/ui/HeadBlock';
 import { Tabs } from '../components/ui/Tabs';
-import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
+import { MonthlyReductionChart } from '../components/charts/LazyCharts';
 import { RegistrationGate } from '../components/project/RegistrationGate';
 import { EmptyState } from '../components/ui/EmptyState';
+import { ChartSkeleton, HeadBlockSkeleton, SkeletonRows } from '../components/ui/Skeleton';
 import { useStore } from '../store';
 import { api } from '../lib/api';
 import { formatNumber } from '../lib/format';
@@ -52,6 +53,12 @@ export function Calculations() {
       </Card>
 
       <RegistrationGate projectId={projectId}>
+        {loading && <div role="status" aria-label="Calculating..." className="space-y-6">
+          <span className="sr-only">Calculating...</span>
+          <HeadBlockSkeleton figures={3} />
+          <Card><CardHeader title="Monthly Reduction Trend" /><CardBody><ChartSkeleton /></CardBody></Card>
+          <Card><SkeletonRows columns={3} /></Card>
+        </div>}
         {efUsed && (
           <Card className="mb-4 p-4 text-sm">
             <span className="font-medium">Emission Factor:</span>{' '}
@@ -65,13 +72,13 @@ export function Calculations() {
           <Card>
             <EmptyState
               icon={<Calculator size={28} />}
-              title="No monitoring data yet"
+              illustration="/illustrations/empty-activity.webp" title="No monitoring data yet"
               hint="Upload a CSV or sync IoT data for this project — reductions are computed from daily generation records."
             />
           </Card>
         )}
 
-        {result && result.daily.length > 0 && (
+        {result && result.daily.length > 0 && !loading && (
           <>
             <HeadBlock className="mb-6" figures={[
               { label: 'Total Generation', value: `${formatNumber(result.totals.generation_kwh, 1)} kWh`, source: efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—' },

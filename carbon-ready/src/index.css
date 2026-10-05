@@ -23,6 +23,8 @@
   --lime-300-rgb: 226 255 196;
   --lime-ink: #4d7c0f;
   --lime-ink-rgb: 77 124 15;
+  --rail: #f3f6f5;
+  --rail-rgb: 243 246 245;
   --ground: #f7f9f8;
   --ground-rgb: 247 249 248;
   --surface: #ffffff;
@@ -66,7 +68,7 @@ h1, h2, h3 { text-wrap: balance; }
   outline: 2px solid var(--petrol-600);
   outline-offset: 2px;
 }
-.mobile-rail :focus-visible, .rail-focus:focus-visible { outline-color: var(--on-petrol); }
+.rail-focus:focus-visible { outline-color: var(--on-petrol); }
 input, textarea { caret-color: var(--petrol-600); }
 a { text-underline-offset: 3px; }
 ::selection { background: var(--petrol-100); color: var(--ink); }
@@ -83,7 +85,17 @@ a { text-underline-offset: 3px; }
 .lucide { stroke-width: 1.75; }
 :lang(th) { line-height: 1.65; }
 :lang(th) .text-xs { font-size: 0.8125rem; }
-.skeleton { background: var(--surface-sunk); border-radius: 6px; }
+/* Surface-only shimmer, no pulsing opacity or saturated colour. */
+.skeleton { position: relative; overflow: hidden; background: var(--surface-sunk); border-radius: 6px; }
+.skeleton::after { content: ''; position: absolute; inset: 0; background: var(--surface); opacity: 0.45; transform: translateX(-100%); animation: skeleton-sweep 1.6s ease-in-out infinite; }
+@keyframes skeleton-sweep { to { transform: translateX(100%); } }
+@media (prefers-reduced-motion: reduce) { .skeleton::after { display: none; } }
+/* Restrict ordinary interaction motion to paints. Drawer/anchor motion is explicit. */
+:where(button, a, input, select, textarea, summary, [role="tab"]), .transition-colors, .transition-opacity {
+  transition-property: color, background-color, border-color, opacity;
+  transition-duration: 150ms;
+  transition-timing-function: ease-out;
+}
 .skip-link {
   position: fixed; top: 8px; left: 8px; z-index: 110;
   transform: translateY(-150%);
@@ -107,10 +119,10 @@ a { text-underline-offset: 3px; }
 /* Keep the mobile rail mounted so both entry and exit transforms can play. */
 .mobile-rail {
   transform: translateX(-100%); visibility: hidden;
-  transition: transform 250ms cubic-bezier(0.22,1,0.36,1), visibility 0s 250ms;
+  transition: transform 200ms ease-out, visibility 0s 200ms;
 }
 .mobile-rail[data-open="true"] { transform: translateX(0); visibility: visible; transition-delay: 0s; }
-.rail-overlay { opacity: 0; visibility: hidden; transition: opacity 250ms, visibility 0s 250ms; }
+.rail-overlay { opacity: 0; visibility: hidden; transition: opacity 200ms ease-out, visibility 0s 200ms; }
 .rail-overlay[data-open="true"] { opacity: 1; visibility: visible; transition-delay: 0s; }
 @media (min-width: 768px) { .mobile-rail { transform: none; visibility: visible; transition: none; } }
 
@@ -135,3 +147,5 @@ a { text-underline-offset: 3px; }
 .anchor-provenance { animation: anchor-reveal 225ms cubic-bezier(0.16,1,0.3,1) both; }
 @keyframes anchor-reveal { from { opacity: 0; transform: translateY(8px); } to { opacity: 1; transform: translateY(0); } }
 @media (prefers-reduced-motion: reduce) { .ledger-node { transition: none; } .anchor-provenance { animation: none; } }
+
+.sidebar-group:lang(th) { text-transform: none; letter-spacing: normal; }

@@ -6,6 +6,7 @@ import { Button } from '../components/ui/Button';
 import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { Select } from '../components/ui/Select';
 import { EmptyState } from '../components/ui/EmptyState';
+import { SkeletonRows } from '../components/ui/Skeleton';
 import { toast } from '../components/layout/Toast';
 import { useStore } from '../store';
 import { formatNumber } from '../lib/format';
@@ -58,7 +59,7 @@ export function IotMapping() {
       <div>
         <PageHeader title="IoT Mapping" />
         <Card><CardBody className="p-0">
-          <EmptyState icon={<PlugZap size={32} />} title="ต้องใช้โหมด server"
+          <EmptyState icon={<PlugZap size={32} />} illustration="/illustrations/empty-iot.webp" title="ต้องใช้โหมด server"
             hint="หน้านี้ทำงานเมื่อ SPA เชื่อมกับ backend (ตั้งค่า VITE_API_BASE_URL)" />
         </CardBody></Card>
       </div>
@@ -167,10 +168,10 @@ export function IotMapping() {
       />
 
       {loading ? (
-        <Card><CardBody className="py-12 text-center text-sm text-ink-meta">กำลังโหลด…</CardBody></Card>
+        <Card role="status"><span className="sr-only">กำลังโหลด…</span><SkeletonRows columns={6} entity /></Card>
       ) : !status?.enabled ? (
         <Card><CardBody className="p-0">
-          <EmptyState icon={<Cable size={32} />} title="ยังไม่ได้เชื่อมฐานข้อมูล IoT"
+          <EmptyState icon={<Cable size={32} />} illustration="/illustrations/empty-iot.webp" title="ยังไม่ได้เชื่อมฐานข้อมูล IoT"
             hint="ตั้งค่า IOT_DB_URL ใน server/.env แล้ว restart server — mapping ทั้งหมดจัดการจากหน้านี้ได้เลย ไม่ต้องแก้ .env อีก" />
         </CardBody></Card>
       ) : loadError ? (
@@ -198,7 +199,7 @@ export function IotMapping() {
             <CardHeader title={`อุปกรณ์ / Plant (${devices.length})`} action={<Link2 size={16} className="text-ink-meta" />} />
             <CardBody className="p-0">
               {devices.length === 0 ? (
-                <EmptyState icon={<Cable size={32} />} title="ไม่พบข้อมูลในตารางอ่านค่า" />
+                <EmptyState icon={<Cable size={32} />} illustration="/illustrations/empty-iot.webp" title="ไม่พบข้อมูลในตารางอ่านค่า" />
               ) : (
                 <Table mobileLabels={["Plant", "kWp", "ช่วงข้อมูล", "เฉลี่ย/วัน", "โปรเจกต์", "จัดการ"]}>
                     <THead>

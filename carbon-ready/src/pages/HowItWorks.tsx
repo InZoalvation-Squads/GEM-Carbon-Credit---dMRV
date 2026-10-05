@@ -1,3 +1,4 @@
+import { Illustration, illustrations } from '../components/ui/Illustration';
 import type { ReactNode } from 'react';
 import {
   MonitorSmartphone, Database, HardDrive, Globe2, Link2, Coins, ShieldCheck,
@@ -258,8 +259,10 @@ export function HowItWorks() {
         subtitle="เส้นทางของข้อมูลตั้งแต่ร่างโครงการจนเป็นคาร์บอนเครดิตบน Hedera — และวิธีที่คนนอกตรวจสอบเราได้โดยไม่ต้องเชื่อใจ"
       />
 
+      <Illustration src="/illustrations/hiw-hero.webp" className="mb-6 h-auto w-full" />
+
       {/* ============ pipeline hero ============ */}
-      <div className="rounded-sheet border border-rule bg-petrol-800 p-6 text-on-petrol">
+      <div className="rounded-sheet border border-rule bg-surface p-6 text-ink">
         <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-stretch">
           {[
             { icon: FilePlus2, t: 'Draft', d: 'PDD + หลักฐาน' },
@@ -269,22 +272,22 @@ export function HowItWorks() {
             { icon: Gem, t: 'Credited', d: 'token จริงบน Hedera' },
           ].map((s, i, arr) => (
             <div key={s.t} className="flex flex-1 items-center gap-3">
-              <div className="flex-1 border-b border-on-petrol-2/30 px-4 py-3">
-                <s.icon size={18} className="text-on-petrol-2" />
+              <div className="flex-1 border-b border-rule px-4 py-3">
+                <s.icon size={18} className="text-ink-secondary" />
                 <div className="mt-1.5 text-sm font-semibold">{s.t}</div>
-                <div className="text-sm leading-snug text-on-petrol-2">{s.d}</div>
+                <div className="text-sm leading-snug text-ink-secondary">{s.d}</div>
               </div>
               {i < arr.length - 1 && (
                 <>
-                  <ArrowRight size={16} className="hidden shrink-0 text-on-petrol-2 md:block" />
-                  <ArrowDown size={16} className="mx-auto shrink-0 text-on-petrol-2 md:hidden" />
+                  <ArrowRight size={16} className="hidden shrink-0 text-ink-secondary md:block" />
+                  <ArrowDown size={16} className="mx-auto shrink-0 text-ink-secondary md:hidden" />
                 </>
               )}
             </div>
           ))}
         </div>
-        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-on-petrol-2">
-          ทุกการเขียนขึ้น blockchain เป็นแบบ <span className="font-semibold text-on-petrol-2">best-effort</span> —
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-ink-secondary">
+          ทุกการเขียนขึ้น blockchain เป็นแบบ <span className="font-semibold text-ink-secondary">best-effort</span> —
           ข้อมูลถูกบันทึกในฐานข้อมูลก่อนเสมอ เครือข่ายล่มจึงไม่เคยทำให้งานอนุมัติสะดุด และมีการ retry ให้จนครบ
         </p>
       </div>
@@ -323,7 +326,7 @@ export function HowItWorks() {
                 <span className={clsx('text-petrol-700', l.chip)}><l.icon size={14} /></span>
                 <span className="text-sm font-semibold text-ink">{l.title}</span>
                 <LayerChip k={inv.layer} />
-                <span className="ml-auto text-ink-meta transition-transform group-open:rotate-90"><ArrowRight size={14} /></span>
+                <span className="ml-auto text-ink-meta transition-colors duration-150 ease-out group-open:rotate-90"><ArrowRight size={14} /></span>
               </summary>
               <div className="grid gap-x-6 gap-y-3 border-t border-rule px-4 py-3 sm:grid-cols-2">
                 {inv.entities.map((e) => (
@@ -349,10 +352,13 @@ export function HowItWorks() {
       <SectionTitle icon={<ScrollText size={16} />}>การเดินทางของข้อมูล ทีละขั้น</SectionTitle>
       <ol className="relative ml-4 border-l-2 border-petrol-700">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative border-b border-rule py-5 pl-8 last:border-b-0">
+          <li key={s.title} className="relative border-b border-rule py-5 pl-8 last:border-b-0 md:pr-28">
             <span className="absolute -left-[17px] top-5 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-petrol-700 text-on-petrol">
               <s.icon size={14} />
             </span>
+            <div className="mb-3 h-24 w-24 md:absolute md:right-0 md:top-5 md:mb-0">
+              <Illustration src={illustrations.steps[i]} className="h-full w-full object-contain" />
+            </div>
             <div className="flex flex-wrap items-center gap-2">
               <span className="text-xs font-semibold text-ink-meta">{String(i + 1).padStart(2, '0')}</span>
               <h3 className="text-sm font-semibold text-ink">{s.title}</h3>
@@ -437,7 +443,7 @@ export function HowItWorks() {
         ].map((x) => (
           <a
             key={x.href} href={x.href} target="_blank" rel="noreferrer"
-            className="group rounded-sheet border border-rule/80 bg-white p-4 transition-all hover:border-petrol-100"
+            className="group rounded-sheet border border-rule/80 bg-white p-4 transition-colors duration-150 ease-out hover:border-petrol-100"
           >
             <div className="flex items-center justify-between text-sm font-semibold text-ink">
               {x.t}

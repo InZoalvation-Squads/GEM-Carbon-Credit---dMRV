@@ -54,6 +54,22 @@ describe('Projects — create an ARR / land-based project', () => {
 });
 
 describe('Projects — readable status labels and safe create', () => {
+  it('keeps search responsive and preserves matching real project rows with deferred search/status filters', () => {
+    const projects = useStore.getState().projects;
+    const records = useStore.getState().records;
+    const project = projects[0];
+    renderProjects();
+    const start = performance.now();
+    fireEvent.change(screen.getByLabelText('Search'), { target: { value: project.name } });
+    const elapsed = performance.now() - start;
+    expect(screen.getByLabelText('Search')).toHaveValue(project.name);
+    expect(screen.getByRole('link', { name: project.name })).toHaveAttribute('href', `/projects/${project.id}`);
+    expect(screen.getAllByRole('link')).toHaveLength(projects.filter((p) => p.name.toLowerCase().includes(project.name.toLowerCase())).length);
+    fireEvent.change(screen.getByLabelText('Status'), { target: { value: project.status } });
+    expect(screen.getByRole('link', { name: project.name })).toBeInTheDocument();
+    console.info(`Projects seed search: ${projects.length} projects / ${records.length} records; update ${elapsed.toFixed(2)}ms (jsdom, including deferred commit).`);
+  });
+
   it('status badges and the filter dropdown use labels, not raw enums', () => {
     renderProjects();
     // Fixture prj-0003 is status "draft" → badge must read "Draft".

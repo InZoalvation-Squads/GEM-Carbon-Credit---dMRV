@@ -1,4 +1,4 @@
-import { Outlet } from 'react-router-dom';
+import { Outlet, useLocation } from 'react-router-dom';
 import { Suspense, useEffect, useState } from 'react';
 import { RouteSkeleton } from '../components/ui/RouteSkeleton';
 import { Sidebar } from '../components/layout/Sidebar';
@@ -10,6 +10,11 @@ import { serverMode } from '../lib/server-api';
 const REFRESH_MS = Number(import.meta.env.VITE_REFRESH_MS ?? 15_000);
 
 export function AppShell() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    const main = document.getElementById('content');
+    if (main) main.scrollTop = 0;
+  }, [pathname]);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const refreshFromServer = useStore((s) => s.refreshFromServer);
@@ -46,7 +51,7 @@ export function AppShell() {
         <main id="content" tabIndex={-1} className="min-w-0 flex-1 overflow-y-auto bg-ground p-4 md:p-8 print:overflow-visible print:p-0">
           <div className="mx-auto grid max-w-[1440px] grid-cols-12 gap-6">
             <div className="col-span-12 min-w-0">
-              <Suspense fallback={<RouteSkeleton />}>
+              <Suspense fallback={<RouteSkeleton path={pathname} />}>
                 <Outlet />
               </Suspense>
             </div>

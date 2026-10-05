@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useDeferredValue, useMemo, useState } from 'react';
 import { Plus, FileText } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Button, LinkButton } from '../components/ui/Button';
@@ -44,15 +44,18 @@ export function RecIssuance() {
   const [reason, setReason] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
 
+  const deferredFilter = useDeferredValue(filter);
   const rows = useMemo(
-    () => recIssues.filter((r) => (filter === 'all' ? true : r.state === filter)),
-    [recIssues, filter],
+    () => recIssues.filter((r) => (deferredFilter === 'all' ? true : r.state === deferredFilter)),
+    [recIssues, deferredFilter],
   );
 
-  const draft = recIssues.filter((r) => r.state === 'draft').length;
-  const submitted = recIssues.filter((r) => r.state === 'submitted').length;
-  const issued = recIssues.filter((r) => r.state === 'issued');
-  const issuedMwh = issued.reduce((sum, r) => sum + (r.applied_mwh ?? r.total_production_mwh), 0);
+  const { draft, submitted, issued, issuedMwh } = useMemo(() => {
+    const draft = recIssues.filter((r) => r.state === 'draft').length;
+    const submitted = recIssues.filter((r) => r.state === 'submitted').length;
+    const issued = recIssues.filter((r) => r.state === 'issued');
+    return { draft, submitted, issued, issuedMwh: issued.reduce((sum, r) => sum + (r.applied_mwh ?? r.total_production_mwh), 0) };
+  }, [recIssues]);
 
   async function doSubmit(id: string) {
     setBusyId(id);
@@ -112,7 +115,7 @@ export function RecIssuance() {
         <Card><EmptyState title="No REC-registered projects yet"
           hint="Register a project under the REC track (SF-02) before requesting I-REC(E) issuance." /></Card>
       ) : rows.length === 0 ? (
-        <Card><EmptyState title="No issue requests match this filter" hint="Try another state chip above, or create a new SF-04 issue request." /></Card>
+        <Card><EmptyState illustration="/illustrations/empty-filter.webp" title="No issue requests match this filter" hint="Try another state chip above, or create a new SF-04 issue request." /></Card>
       ) : (
         <ChainList>
                 {rows.map((r) => {

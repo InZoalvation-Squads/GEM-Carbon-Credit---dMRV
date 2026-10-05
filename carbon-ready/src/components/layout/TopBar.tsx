@@ -92,7 +92,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
         </button>
         <div className="flex items-center gap-3">
           <img
-            src="/gem-logo.svg"
+            src="/gem-logo.svg" width={1003} height={210} loading="lazy" decoding="async"
             alt="GEM Carbon Credit"
             className="h-7 md:h-8 w-auto select-none"
             draggable={false}
@@ -119,7 +119,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
             </div>
             <ChevronDown
               size={15}
-              className={clsx('hidden sm:block text-on-petrol-2 transition-transform', open && 'rotate-180')}
+              className={clsx('hidden sm:block text-on-petrol-2 transition-colors duration-150 ease-out', open && 'rotate-180')}
             />
           </button>
 

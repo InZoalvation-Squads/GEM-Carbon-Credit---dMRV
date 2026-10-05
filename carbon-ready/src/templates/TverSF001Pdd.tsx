@@ -539,7 +539,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const allEvidence = useStore((s) => s.evidence);
 
   if (!pdd || !methodology || !project) {
-    return <EmptyState title="PDD not found" hint="This document does not exist." />;
+    return <EmptyState illustration="/illustrations/empty-document.webp" title="PDD not found" hint="This document does not exist." />;
   }
 
   const d = pdd.section_data as Record<string, unknown>;

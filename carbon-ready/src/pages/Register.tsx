@@ -40,7 +40,7 @@ export function Register() {
     <div className="grid min-h-full place-items-center bg-petrol-800 p-4">
       <div className="w-full max-w-md rounded-sheet border border-rule bg-surface p-6">
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/gem-logo-dark.svg" alt="GEM Carbon Credit" className="h-10 w-auto" />
+          <img src="/gem-logo-dark.svg" width={1003} height={210} loading="lazy" decoding="async" alt="GEM Carbon Credit" className="h-10 w-auto" />
           <h1 className="mt-4 text-xl font-semibold text-ink">Create your account</h1>
           <p className="mt-1 text-sm text-ink-meta">dMRV on Hedera Guardian</p>
         </div>

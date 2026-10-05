@@ -23,6 +23,6 @@ export function ValidationQueue() {
         <div><dt className="text-ink-meta">Submitted</dt><dd className="font-mono">{p.submitted_at ? fmtDate(p.submitted_at.slice(0, 10)) : '—'}</dd></div>
         <div><dt className="text-ink-meta">Validator</dt><dd>{p.assigned_validator_name}</dd></div>
       </dl>
-    </BlockRow>)}</ChainList> : <Card><EmptyState title="Queue is empty" hint="No PDDs or REC registrations are currently awaiting review." /></Card>}
+    </BlockRow>)}</ChainList> : <Card><EmptyState illustration="/illustrations/empty-queue.webp" title="Queue is empty" hint="No PDDs or REC registrations are currently awaiting review." /></Card>}
   </div>;
 }
