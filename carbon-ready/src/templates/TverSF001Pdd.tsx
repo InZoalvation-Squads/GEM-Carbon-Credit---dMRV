@@ -4,7 +4,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button, LinkButton } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, documentCapacityKwp, creditingStartYear } from '../lib/pdd';
+import { computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, documentCapacityKwp, creditingStartYear } from '../lib/pdd';
 import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import { draftActivityText } from '../lib/pdd-drafts';
@@ -596,7 +596,6 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
     && d.degradation_pct !== null && d.degradation_pct !== ''
     ? Number(d.degradation_pct) : 0;
   const table = computeYearlyTable(ctx);
-  const fin = computeFinancialTable(ctx);
   const comp = (source: PddComputedSource) => resolveComputed(source, ctx);
   const ef = comp('grid_factor');
   const str = (k: string) => {
@@ -1620,62 +1619,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
           </Page>
         )}
 
-        {/* ============ ภาคผนวก — การประเมินทางด้านการเงิน (รูปแบบ PEA) ============ */}
-        {fin && (
-          <Page formLabel={formLabel}>
-            <p className="text-center font-bold">รายละเอียดโครงการ Solar PV จากการประเมินทางด้านการเงินของระบบผลิตไฟฟ้า</p>
-            <table className="doc-table mt-2 w-full text-[10.5px]" data-testid="financial-summary">
-              <tbody>
-                <tr>
-                  <td className="font-bold">ขนาดติดตั้ง Solar Rooftop</td><td>{fmt(totalKwp)} kWp</td>
-                  <td className="font-bold">เงินลงทุน</td><td className="text-right">{fmtInt(fin.investment_thb)} บาท</td>
-                </tr>
-                <tr>
-                  <td className="font-bold">อัตราค่าไฟฟ้าเฉลี่ย</td><td>{fmt(fin.price_thb_kwh)} บาท/kWh</td>
-                  <td className="font-bold">อัตราคิดลด (Discount Rate)</td><td className="text-right">{fmt(fin.discount_rate_pct)}%</td>
-                </tr>
-                <tr>
-                  <td className="font-bold">ผลตอบแทนที่ได้รับ (IRR)</td><td>{fin.irr_pct === null ? '-' : `${fmt(fin.irr_pct)}%`}</td>
-                  <td className="font-bold">ระยะเวลาคุ้มทุน ประมาณ</td><td className="text-right">{fin.payback_years === null ? '-' : `${fmt(fin.payback_years)} ปี`}</td>
-                </tr>
-              </tbody>
-            </table>
-            <table className="doc-table mt-2 w-full text-[9.5px]" data-testid="financial-table">
-              <thead>
-                <tr className="bg-[#f2f2f2] text-center font-bold">
-                  <td>Year</td><td>Discount Factor {fmt(fin.discount_rate_pct)}%</td>
-                  <td>Annual Generation (kWh/y)</td><td>Total Benefit (THB)</td>
-                  <td>Total Cost (THB)</td><td>SNPV</td><td>AC.SNPV</td>
-                </tr>
-              </thead>
-              <tbody>
-                {fin.rows.map((r) => (
-                  <tr key={r.year} className={r.cum_snpv_thb < 0 ? 'text-[#b00]' : ''}>
-                    <td className="text-center">{r.year}</td>
-                    <td className="text-center">{r.discount_factor.toFixed(3)}</td>
-                    <td className="text-right">{r.generation_kwh === null ? '-' : fmtInt(r.generation_kwh)}</td>
-                    <td className="text-right">{r.benefit_thb === 0 ? '-' : fmtInt(r.benefit_thb)}</td>
-                    <td className="text-right">{r.cost_thb === 0 ? '-' : fmtInt(r.cost_thb)}</td>
-                    <td className="text-right">{fmtInt(r.snpv_thb)}</td>
-                    <td className="text-right">{fmtInt(r.cum_snpv_thb)}</td>
-                  </tr>
-                ))}
-                <tr className="font-bold">
-                  <td colSpan={3} className="text-center">Sum</td>
-                  <td className="text-right">{fmtInt(fin.totals.benefit_thb)}</td>
-                  <td className="text-right">{fmtInt(fin.totals.cost_thb)}</td>
-                  <td />
-                  <td className="text-right">{fmtInt(fin.totals.npv_thb)}</td>
-                </tr>
-              </tbody>
-            </table>
-            <p className="mt-1 text-[10px] text-[#555]">
-              หมายเหตุ: คำนวณจากข้อมูลโครงการจริง (เงินลงทุน {fmt(Number(d.investment_mthb ?? 0))} ล้านบาท, เสื่อมสภาพแผง {fmt(Number(d.degradation_pct ?? 0))}%/ปี)
-              ด้วยสมมติฐานมาตรฐานการประเมินของ กฟภ.: ค่าไฟ {fmt(fin.price_thb_kwh)} บาท/kWh · O&M ปีที่ {fin.om_start_year} เป็นต้นไป {fmtInt(fin.om_cost_thb_year)} บาท/ปี ·
-              มูลค่าซาก {fmtInt(fin.scrap_thb)} บาท ในปีที่ {fin.lifetime_years}
-            </p>
-          </Page>
-        )}
+        {/* No การประเมินทางด้านการเงิน appendix: the PDD holds no tariff, discount
+            rate, O&M or salvage inputs, so the 25-year table could only come from
+            PEA default assumptions — not the project's own figures. The MCRU
+            reference attaches the preparer's own evaluation instead. */}
       </div>
 
       <style>{`

@@ -300,22 +300,13 @@ describe('TverSF001Pdd — reference-completeness additions', () => {
     expect(t.textContent).toContain('952,425');
   });
 
-  it('renders the PEA financial appendix with IRR and payback', () => {
-    seedOfficialData();
-    renderDoc();
-    const fin = screen.getByTestId('financial-table');
-    expect(fin).toBeInTheDocument();
-    expect(fin.textContent).toContain('30,000,000');           // investment outlay
-    expect(screen.getByTestId('financial-summary').textContent).toMatch(/ผลตอบแทน.*%/);
-    expect(screen.getByTestId('financial-summary').textContent).toMatch(/คุ้มทุน/);
-  });
-
-  it('omits the financial appendix when no investment figure exists', () => {
-    const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
-    seedOfficialData();
-    delete pdd.section_data.investment_mthb;
+  it('has no financial appendix — its inputs would be PEA assumptions, not project data', () => {
+    seedOfficialData(); // investment_mthb: 30 is set, which used to trigger the table
     renderDoc();
     expect(screen.queryByTestId('financial-table')).toBeNull();
+    expect(screen.queryByTestId('financial-summary')).toBeNull();
+    expect(screen.queryByText(/การประเมินทางด้านการเงิน/)).toBeNull();
+    expect(document.body.textContent).not.toContain('IRR');
   });
 });
 
