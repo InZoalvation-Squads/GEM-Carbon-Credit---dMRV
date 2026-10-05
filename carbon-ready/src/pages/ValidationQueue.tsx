@@ -1,14 +1,11 @@
-import { useNavigate } from 'react-router-dom';
 import { useStore } from '../store';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
-import { Table, THead, TR, TH, TD } from '../components/ui/Table';
-import { PddStatusBadge } from '../components/ui/StatusBadge';
+import { BlockRow, ChainList } from '../components/ui/BlockRow';
 import { EmptyState } from '../components/ui/EmptyState';
 import { fmtDate } from '../lib/date';
 
 export function ValidationQueue() {
-  const navigate = useNavigate();
   const queue = useStore((s) => s.validationQueue());
   const projects = useStore((s) => s.projects);
   const methodologies = useStore((s) => s.methodologies);
@@ -17,37 +14,15 @@ export function ValidationQueue() {
     const m = methodologies.find((x) => x.id === methodologyId);
     return m ? `${m.code} ${m.version}` : snapshot || '—';
   };
-
-  return (
-    <div>
-      <PageHeader title="Validation Queue" subtitle="PDDs and REC registrations awaiting review before a project can be registered" />
-      <Card>
-        {queue.length === 0 ? (
-          <EmptyState title="Queue is empty" hint="No PDDs or REC registrations are currently awaiting review." />
-        ) : (
-          <Table>
-            <THead>
-              <TR><TH>Project</TH><TH>Methodology</TH><TH>State</TH><TH>Submitted</TH><TH>Validator</TH></TR>
-            </THead>
-            <tbody>
-              {queue.map((p) => (
-                <TR key={p.id} hover>
-                  <TD>
-                    <button className="text-left" onClick={() => navigate(`/validation/${p.id}`)}>
-                      <div className="font-medium text-brand-700 hover:underline">{projName(p.project_id)}</div>
-                      <div className="font-mono text-[11px] text-ink-400">{p.id}</div>
-                    </button>
-                  </TD>
-                  <TD>{methLabel(p.methodology_id, p.methodology_snapshot)}</TD>
-                  <TD><PddStatusBadge state={p.state} /></TD>
-                  <TD>{p.submitted_at ? fmtDate(p.submitted_at.slice(0, 10)) : '—'}</TD>
-                  <TD>{p.assigned_validator_name}</TD>
-                </TR>
-              ))}
-            </tbody>
-          </Table>
-        )}
-      </Card>
-    </div>
-  );
+  return <div>
+    <PageHeader title="Validation Queue" subtitle="PDDs and REC registrations awaiting review before a project can be registered" />
+    {queue.length ? <ChainList>{queue.map((p) => <BlockRow key={p.id} blockId={p.id}
+      to={`/validation/${p.id}`} figure={projName(p.project_id)} source={methLabel(p.methodology_id, p.methodology_snapshot)}
+      state={p.state} hash={p.content_hash ?? undefined}>
+      <dl className="mt-3 grid gap-2 text-sm sm:grid-cols-2">
+        <div><dt className="text-ink-meta">Submitted</dt><dd className="font-mono">{p.submitted_at ? fmtDate(p.submitted_at.slice(0, 10)) : '—'}</dd></div>
+        <div><dt className="text-ink-meta">Validator</dt><dd>{p.assigned_validator_name}</dd></div>
+      </dl>
+    </BlockRow>)}</ChainList> : <Card><EmptyState title="Queue is empty" hint="No PDDs or REC registrations are currently awaiting review." /></Card>}
+  </div>;
 }

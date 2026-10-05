@@ -1,13 +1,12 @@
 import { useMemo, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Plus, Zap, FileCheck2, Clock, Leaf, FileText } from 'lucide-react';
-import { Card, CardBody } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
+import { Plus, FileText } from 'lucide-react';
+import { Card } from '../components/ui/Card';
+import { Button, LinkButton } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
-import { Table, THead, TR, TH, TD } from '../components/ui/Table';
-import { KpiCard } from '../components/ui/KpiCard';
+import { BlockRow, ChainList } from '../components/ui/BlockRow';
+import { Segmented } from '../components/ui/Segmented';
+import { HeadBlock } from '../components/ui/HeadBlock';
 import { PageHeader } from '../components/layout/PageHeader';
-import { RecIssueStatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { useStore } from '../store';
 import { api } from '../lib/api';
@@ -101,53 +100,21 @@ export function RecIssuance() {
         ) : undefined}
       />
 
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
-        <KpiCard label="Draft" value={draft} hint="not yet submitted" icon={<Clock size={20} />} />
-        <KpiCard label="Submitted" value={submitted} hint="awaiting Local Issuer" icon={<FileCheck2 size={20} />} />
-        <KpiCard label="Issued" value={issued.length} hint="requests issued" icon={<Zap size={20} />} />
-        <KpiCard label="MWh issued" value={issuedMwh.toLocaleString()} hint="I-REC(E) certificates" icon={<Leaf size={20} />} />
-      </div>
-
-      <div className="mb-4 flex items-center gap-1 overflow-x-auto rounded-full border border-ink-200 bg-white p-1 w-fit max-w-full">
-        {STATES.map((s) => (
-          <button
-            key={s}
-            onClick={() => setFilter(s)}
-            className={
-              'whitespace-nowrap rounded-full px-3.5 py-1.5 text-sm font-medium transition-colors ' +
-              (filter === s ? 'bg-brand-600 text-white' : 'text-ink-500 hover:bg-ink-100 hover:text-ink-900')
-            }
-          >
-            {STATE_CHIP_LABEL[s]}
-          </button>
-        ))}
-      </div>
-
-      <Card>
-        <CardBody className="p-0">
-          {!hasRecProject ? (
-            <EmptyState
-              title="No REC-registered projects yet"
-              hint="Register a project under the REC track (SF-02) before requesting I-REC(E) issuance."
-            />
-          ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Project</TH>
-                  <TH className="hidden md:table-cell">Period</TH>
-                  <TH className="text-right">MWh</TH>
-                  <TH className="hidden sm:table-cell">Request type</TH>
-                  <TH>State</TH>
-                  <TH><span className="sr-only">Actions</span></TH>
-                </TR>
-              </THead>
-              <tbody>
-                {rows.length === 0 && (
-                  <tr><td colSpan={6} className="p-0">
-                    <EmptyState title="No issue requests match this filter" hint="Try another state chip above, or create a new SF-04 issue request." />
-                  </td></tr>
-                )}
+      <HeadBlock className="mb-6" figures={[
+        { label: 'Draft', value: draft, source: 'not yet submitted' },
+        { label: 'Submitted', value: submitted, source: 'awaiting Local Issuer' },
+        { label: 'Issued', value: issued.length, source: 'requests issued' },
+        { label: 'MWh issued', value: issuedMwh.toLocaleString(), source: 'I-REC(E) certificates' },
+      ]} />
+      <Segmented className="mb-4" label="REC state" value={filter} onChange={setFilter}
+        options={STATES.map((state) => ({ value: state, label: STATE_CHIP_LABEL[state] }))} />
+      {!hasRecProject ? (
+        <Card><EmptyState title="No REC-registered projects yet"
+          hint="Register a project under the REC track (SF-02) before requesting I-REC(E) issuance." /></Card>
+      ) : rows.length === 0 ? (
+        <Card><EmptyState title="No issue requests match this filter" hint="Try another state chip above, or create a new SF-04 issue request." /></Card>
+      ) : (
+        <ChainList>
                 {rows.map((r) => {
                   const mwh = r.applied_mwh ?? r.total_production_mwh;
                   const busy = busyId === r.id;
@@ -157,22 +124,12 @@ export function RecIssuance() {
                   // the missing fields can be filled in.
                   const receivingIncomplete = !r.receiving_org_name?.trim() || !r.receiving_account_id?.trim();
                   return (
-                    <TR key={r.id}>
-                      <TD>
-                        <div className="font-medium text-ink-900">{projectName.get(r.project_id) ?? r.project_id}</div>
-                        <span className="font-mono text-[11px] text-ink-400">{r.id}</span>
-                      </TD>
-                      <TD className="hidden md:table-cell">
-                        <div className="text-ink-700">{fmtDate(r.period_start)} – {fmtDate(r.period_end)}</div>
-                      </TD>
-                      <TD className="text-right font-medium">{mwh.toLocaleString()} MWh</TD>
-                      <TD className="hidden sm:table-cell text-ink-700">{r.request_type}</TD>
-                      <TD><RecIssueStatusBadge state={r.state} /></TD>
-                      <TD className="text-right">
-                        <div className="flex justify-end items-center gap-2">
-                          <Link to={`/rec-issuance/${r.id}/official`} title="เอกสารฟอร์ม Evident SF-04">
-                            <Button size="sm" variant="ghost"><FileText size={14} /> SF-04</Button>
-                          </Link>
+                    <BlockRow key={r.id} blockId={r.id} state={r.state}
+                      to={`/rec-issuance/${r.id}/official`} figure={projectName.get(r.project_id) ?? r.project_id}
+                      source={<>{fmtDate(r.period_start)} – {fmtDate(r.period_end)} · {r.request_type}</>}>
+                      <div className="mt-2 font-mono text-base">{mwh.toLocaleString()} MWh</div>
+                        <div className="mt-3 flex flex-wrap items-center gap-2">
+                          <LinkButton to={`/rec-issuance/${r.id}/official`} title="เอกสารฟอร์ม Evident SF-04" size="sm" variant="ghost"><FileText size={14} /> SF-04</LinkButton>
                           {r.state === 'draft' && canCreate && (
                             <>
                               <Button size="sm" variant="ghost" onClick={() => setEditingRow(r)}>แก้ไข</Button>
@@ -191,7 +148,7 @@ export function RecIssuance() {
                           {r.state === 'submitted' && canReview && rejectingId === r.id && (
                             <>
                               <Input
-                                aria-label="Rejection reason" placeholder="Reason for rejection"
+                                label="Rejection reason" placeholder="Reason for rejection"
                                 value={reason} onChange={(e) => setReason(e.target.value)}
                                 className="h-8 w-48 text-xs"
                               />
@@ -200,21 +157,17 @@ export function RecIssuance() {
                             </>
                           )}
                           {r.state === 'issued' && (
-                            <span className="text-xs text-ink-500">Issued {r.issued_at ? fmtDate(r.issued_at) : ''}</span>
+                            <span className="text-xs text-ink-meta">Issued {r.issued_at ? fmtDate(r.issued_at) : ''}</span>
                           )}
                           {r.state === 'rejected' && r.rejection_reason && (
-                            <span className="text-xs text-red-600" title={r.rejection_reason}>Rejected</span>
+                            <span className="text-xs text-state-rejected" title={r.rejection_reason}>Rejected</span>
                           )}
                         </div>
-                      </TD>
-                    </TR>
+                    </BlockRow>
                   );
                 })}
-              </tbody>
-            </Table>
-          )}
-        </CardBody>
-      </Card>
+        </ChainList>
+      )}
       {creating && <RecIssueModal onClose={() => setCreating(false)} />}
       {editingRow && <RecIssueModal editing={editingRow} onClose={() => setEditingRow(null)} />}
     </div>

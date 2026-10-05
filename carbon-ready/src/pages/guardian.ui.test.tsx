@@ -29,7 +29,7 @@ describe('Guardian page', () => {
     expect(screen.getByText('package_hash')).toBeInTheDocument();
 
     // Switch to the registry tab → the pre-anchored seed credential is listed.
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     expect(screen.getByText('urn:vc:vr1000seed')).toBeInTheDocument();
   });
 });
@@ -37,7 +37,7 @@ describe('Guardian page', () => {
 describe('Guardian signature verification', () => {
   it('reports the seed credential as unsigned automatically (no click needed)', () => {
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     expect(screen.getByText('Unsigned (seed data)')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Verify signature/i })).toBeNull();
   });
@@ -53,7 +53,7 @@ describe('Guardian signature verification', () => {
     useStore.getState().anchorVerification('VR-1001');
 
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     expect(screen.getByText('Signature valid (Ed25519)')).toBeInTheDocument();
   });
 });
@@ -66,24 +66,24 @@ describe('Guardian VCU minting', () => {
   it('shows a Mint button for the Standard Registry on an un-minted credential', () => {
     useStore.getState().setRole('admin'); // Standard Registry
     renderGuardian();
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     expect(screen.getByRole('button', { name: /^Mint/i })).toBeInTheDocument();
   });
 
   it('hides the Mint button for a non-Registry role', () => {
     useStore.getState().setRole('project_owner'); // Project Proponent
     renderGuardian();
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     expect(screen.queryByRole('button', { name: /^Mint/i })).toBeNull();
   });
 
   it('mints a token and lists it in the Token History tab', () => {
     useStore.getState().setRole('admin');
     renderGuardian();
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     fireEvent.click(screen.getByRole('button', { name: /^Mint/i }));
 
-    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Token History/i }));
     expect(screen.getByText('24.55 tCO₂e')).toBeInTheDocument();
     expect(screen.getByText(/0\.0\.480200/)).toBeInTheDocument(); // token id
   });
@@ -92,7 +92,7 @@ describe('Guardian VCU minting', () => {
     useStore.getState().setRole('admin');
     useStore.getState().mintToken('urn:vc:vr1000seed');
     renderGuardian();
-    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Trust Chain/i }));
 
     expect(screen.getByText(/PDD registered/i)).toBeInTheDocument();
     expect(screen.getByText(/Verification approved/i)).toBeInTheDocument();
@@ -110,7 +110,7 @@ describe('Guardian VCU minting', () => {
     useStore.getState().setRole('admin');
     useStore.getState().mintToken('urn:vc:vr1000seed');
     renderGuardian();
-    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Trust Chain/i }));
     expect(screen.getByText(/ipfs bafkreitestcid000000000/i)).toBeInTheDocument();
     expect(screen.getByText(/VC urn:vc:vr1000seed/i)).toBeInTheDocument();
   });
@@ -138,12 +138,17 @@ describe('ReviewDetail anchoring', () => {
 
     const anchorBtn = screen.getByRole('button', { name: /Anchor to Hedera Guardian/i });
     expect(anchorBtn).toBeInTheDocument();
+    const node = anchorBtn.closest('li')!.querySelector('[data-anchored]')!;
+    expect(node).toHaveAttribute('data-anchored', 'false');
 
     fireEvent.click(anchorBtn);
 
     expect(screen.getByText(/Anchored on Hedera Guardian/i)).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: /Anchor to Hedera Guardian/i })).not.toBeInTheDocument();
     expect(screen.getByText(/View on HashScan/i)).toBeInTheDocument();
+    expect(node).toHaveAttribute('data-anchored', 'true');
+    const credential = useStore.getState().credentials.find((c) => c.subject.verification_id === 'VR-1001')!;
+    expect(screen.getByText(/HCS: topic/)).toHaveTextContent(credential.hcs.consensus_timestamp);
   });
 
   it('shows the anchored details (not a button) for the already-anchored VR-1000', () => {
@@ -157,7 +162,7 @@ describe('ReviewDetail anchoring', () => {
 describe('Guardian — project names instead of raw ids', () => {
   it('credential registry shows the project name (id stays as secondary text)', () => {
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Credential Registry/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Credential Registry/i }));
     // VR-1000 belongs to prj-0001 — the human-readable name must be visible.
     expect(screen.getByText('Pune Rooftop Phase 1')).toBeInTheDocument();
   });
@@ -165,14 +170,14 @@ describe('Guardian — project names instead of raw ids', () => {
   it('token history shows the project name', () => {
     useStore.getState().mintToken('urn:vc:vr1000seed');
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Token History/i }));
     expect(screen.getByText('Pune Rooftop Phase 1')).toBeInTheDocument();
   });
 
   it('trust chain token picker labels tokens with the project name', () => {
     useStore.getState().mintToken('urn:vc:vr1000seed');
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Trust Chain/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Trust Chain/i }));
     expect(screen.getByRole('option', { name: /Pune Rooftop Phase 1/ })).toBeInTheDocument();
   });
 });
@@ -190,7 +195,7 @@ describe('Guardian — HashScan links target the right objects', () => {
       })),
     }));
     render(<MemoryRouter><Guardian /></MemoryRouter>);
-    fireEvent.click(screen.getByRole('button', { name: /Token History/i }));
+    fireEvent.click(screen.getByRole('tab', { name: /Token History/i }));
     const link = screen.getByRole('link', { name: /HashScan/i });
     expect(link.getAttribute('href')).toBe('https://hashscan.io/testnet/token/0.0.9918402');
   });

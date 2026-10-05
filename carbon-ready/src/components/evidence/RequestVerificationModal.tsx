@@ -111,52 +111,52 @@ export function RequestVerificationModal({ onClose }: { onClose: () => void }) {
           <Input label="Period end" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
         {lastClaimedEnd && !overlapping && (
-          <p className="-mt-2 text-xs text-ink-400">
+          <p className="-mt-2 text-xs text-ink-meta">
             รอบก่อนหน้าของโปรเจกต์นี้เคลมถึง {lastClaimedEnd} — รอบใหม่เริ่มต่อจากนั้นให้อัตโนมัติ
           </p>
         )}
         {overlapping && (
-          <div data-testid="overlap-warning" className="-mt-1 rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div data-testid="overlap-warning" className="-mt-1 rounded-sheet bg-state-rejected/5 px-4 py-3 text-sm text-state-rejected">
             ช่วงเวลาทับซ้อนกับแพ็กเกจ <span className="font-mono">{overlapping.id}</span> ({overlapping.monitoring_period_start} – {overlapping.monitoring_period_end})
             — ตามกติกา Verra ช่วงเวลาหนึ่งเคลมเครดิตได้ครั้งเดียว กันการนับซ้ำ
           </div>
         )}
 
         {/* computed claim — the number is derived, never typed */}
-        <div className="rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3" data-testid="computed-claim">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+        <div className="rounded-sheet border border-petrol-100 bg-petrol-50/60 px-4 py-3" data-testid="computed-claim">
+          <div className="flex items-center gap-2 text-xs font-semibold text-petrol-700">
             <Calculator size={13} /> คำนวณจากข้อมูลดิบ (ผู้ยื่นแก้ตัวเลขเองไม่ได้)
           </div>
           {calc && calc.rows > 0 && calc.reductionKg !== null ? (
-            <div className="mt-1.5 text-sm text-ink-800">
+            <div className="mt-1.5 text-sm text-ink">
               {calc.rows.toLocaleString()} รายการ · {calc.totalKwh.toLocaleString()} kWh × EF {calc.ef!.factor_kgco2e_per_kwh}
-              {' → '}<span className="text-base font-bold text-brand-700">{formatTco2e(calc.reductionKg)}</span>
+              {' → '}<span className="text-base font-semibold text-petrol-700">{formatTco2e(calc.reductionKg)}</span>
             </div>
           ) : (
-            <div className="mt-1.5 text-sm text-amber-700">
+            <div className="mt-1.5 text-sm text-state-revision">
               {calc && calc.rows === 0 ? 'ไม่มีข้อมูล monitoring ในช่วงที่เลือก' : 'ไม่พบค่า EF ของประเทศโครงการ'}
             </div>
           )}
         </div>
 
         <div>
-          <div className="mb-1.5 text-sm font-medium text-ink-700">หลักฐานประกอบ ({selectedIds.length}/{projectEvidence.length})</div>
-          <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-lg border border-ink-100 p-2">
-            {projectEvidence.length === 0 && <p className="px-2 py-3 text-sm text-ink-400">โปรเจกต์นี้ยังไม่มีหลักฐาน</p>}
+          <div className="mb-1.5 text-sm font-medium text-ink-secondary">หลักฐานประกอบ ({selectedIds.length}/{projectEvidence.length})</div>
+          <div className="max-h-44 space-y-1.5 overflow-y-auto rounded-sheet border border-rule p-2">
+            {projectEvidence.length === 0 && <p className="px-2 py-3 text-sm text-ink-meta">โปรเจกต์นี้ยังไม่มีหลักฐาน</p>}
             {projectEvidence.map((e) => (
-              <label key={e.id} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-ink-50">
+              <label key={e.id} className="flex cursor-pointer items-center gap-2.5 rounded-md px-2 py-1.5 hover:bg-ground">
                 <input type="checkbox" checked={isChecked(e.id)}
                   onChange={(ev) => setChecked((m) => ({ ...m, [e.id]: ev.target.checked }))}
-                  className="h-4 w-4 accent-brand-600" />
-                <span className="min-w-0 flex-1 truncate text-sm text-ink-800">{e.file_name}</span>
+                  className="h-4 w-4 accent-petrol-600" />
+                <span className="min-w-0 flex-1 truncate text-sm text-ink">{e.file_name}</span>
                 <CategoryChip category={e.category} />
-                {alreadyClaimed.has(e.id) && <span className="text-[10px] text-ink-400">ใช้ในแพ็กเกจก่อนแล้ว</span>}
+                {alreadyClaimed.has(e.id) && <span className="text-xs text-ink-meta">ใช้ในแพ็กเกจก่อนแล้ว</span>}
               </label>
             ))}
           </div>
         </div>
 
-        <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
+        <div className="flex justify-end gap-2 border-t border-rule pt-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button disabled={!canSubmit} loading={busy} onClick={submit}>
             <Check size={15} /> Submit for verification

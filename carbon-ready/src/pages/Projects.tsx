@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { Plus, Pencil } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Table, THead, TR, TH, TD } from '../components/ui/Table';
-import { Badge } from '../components/ui/Badge';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { Button } from '../components/ui/Button';
 import { Input } from '../components/ui/Input';
 import { Select } from '../components/ui/Select';
@@ -47,8 +47,8 @@ export function Projects() {
       />
 
       <Card className="mb-4 p-4 grid grid-cols-1 sm:grid-cols-3 gap-3">
-        <Input placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} />
-        <Select value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as ProjectStatus | '')}>
+        <Input label="Search" placeholder="Search by name..." value={search} onChange={(e) => setSearch(e.target.value)} />
+        <Select label="Status" value={filterStatus} onChange={(e) => setFilterStatus(e.target.value as ProjectStatus | '')}>
           <option value="">All statuses</option>
           {STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>)}
         </Select>
@@ -59,7 +59,7 @@ export function Projects() {
           <EmptyState title="No projects yet" hint="Create a project to start tracking generation."
             action={<Button onClick={() => setCreating(true)}><Plus size={16} /> New Project</Button>} />
         ) : (
-          <Table>
+          <Table mobileLabels={["Name", "Location", "Capacity", "Status", "Commissioned", "Last Upload", "Actions"]}>
             <THead>
               <TR>
                 <TH>Name</TH><TH>Location</TH><TH className="text-right">Capacity</TH>
@@ -71,14 +71,14 @@ export function Projects() {
                 const lu = lastUpload(p.id);
                 return (
                   <TR key={p.id}>
-                    <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-brand-700">{p.name}</Link></TD>
+                    <TD className="font-medium"><Link to={`/projects/${p.id}`} className="hover:text-petrol-700">{p.name}</Link></TD>
                     <TD>{p.location}</TD>
                     <TD className="text-right">{formatNumber(p.capacity_kwp, 2)} kWp</TD>
-                    <TD><StatusBadge status={p.status} /></TD>
+                    <TD><StatusBadge state={p.status} label={PROJECT_STATUS_LABEL[p.status]} /></TD>
                     <TD>{fmtDate(p.commission_date)}</TD>
                     <TD>{lu ? fmtDate(lu.slice(0, 10)) : '—'}</TD>
                     <TD className="text-right">
-                      <button onClick={() => setEditing(p)} className="text-ink-500 hover:text-ink-900" aria-label="Edit">
+                      <button onClick={() => setEditing(p)} className="inline-flex min-h-8 min-w-8 items-center justify-center text-ink-meta hover:text-ink" aria-label="Edit">
                         <Pencil size={16} />
                       </button>
                     </TD>
@@ -94,11 +94,6 @@ export function Projects() {
       {editing && <EditProjectDrawer project={editing} onClose={() => setEditing(null)} />}
     </div>
   );
-}
-
-function StatusBadge({ status }: { status: ProjectStatus }) {
-  const tone = status === 'active' ? 'green' : status === 'draft' ? 'gray' : status === 'suspended' ? 'amber' : 'red';
-  return <Badge tone={tone as 'green' | 'gray' | 'amber' | 'red'}>{PROJECT_STATUS_LABEL[status]}</Badge>;
 }
 
 function CreateProjectModal({ onClose }: { onClose: () => void }) {
@@ -132,7 +127,7 @@ function CreateProjectModal({ onClose }: { onClose: () => void }) {
         <Input label="Project Name" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })} error={errors.name} />
         <Input label="Location" placeholder="e.g. Pune, India" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })} error={errors.location} />
         <Input label="Capacity (kWp)" type="number" inputMode="decimal" value={form.capacity_kwp} onChange={(e) => setForm({ ...form, capacity_kwp: e.target.value })} error={errors.capacity_kwp} />
-        <p className="-mt-2 text-xs text-ink-400">Use 0 for land-based projects (forestry, ARR) with no installed capacity.</p>
+        <p className="-mt-2 text-xs text-ink-meta">Use 0 for land-based projects (forestry, ARR) with no installed capacity.</p>
         <Input label="Commission Date" type="date" value={form.commission_date} onChange={(e) => setForm({ ...form, commission_date: e.target.value })} />
         <Select label="Status" value={form.status} onChange={(e) => setForm({ ...form, status: e.target.value as ProjectStatus })}>
           {STATUSES.map((s) => <option key={s} value={s}>{PROJECT_STATUS_LABEL[s]}</option>)}

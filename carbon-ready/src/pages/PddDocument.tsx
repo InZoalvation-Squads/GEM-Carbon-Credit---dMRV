@@ -1,9 +1,9 @@
 import { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { Printer, ArrowLeft, Lock, Eye, EyeOff, FileText } from 'lucide-react';
+import { useParams } from 'react-router-dom';
+import { Printer, ArrowLeft, Lock, Eye, EyeOff, FileText, Link2 } from 'lucide-react';
 import { useStore } from '../store';
 import { Card } from '../components/ui/Card';
-import { Button } from '../components/ui/Button';
+import { Button, LinkButton } from '../components/ui/Button';
 import { PddStatusBadge } from '../components/ui/StatusBadge';
 import { EmptyState } from '../components/ui/EmptyState';
 import { HashChip } from '../components/ui/HashChip';
@@ -37,15 +37,16 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
     return String(v);
   }
 
+  const Heading = embedded ? 'h2' : 'h1';
+  const SectionHeading = embedded ? 'h3' : 'h2';
+
   return (
     <div className={embedded ? '' : 'mx-auto max-w-3xl'}>
-      <div className={clsx('mb-4 flex items-center print:hidden', embedded ? 'justify-end' : 'justify-between')}>
-        {!embedded && <Link to={`/registration/${pdd.id}`}><Button variant="ghost"><ArrowLeft size={16} /> Back to editor</Button></Link>}
-        <div className="flex items-center gap-2">
+      <div className={clsx('mb-4 flex flex-wrap items-center gap-3 print:hidden', embedded ? 'justify-end' : 'justify-between')}>
+        {!embedded && <LinkButton to={`/registration/${pdd.id}`} variant="ghost"><ArrowLeft size={16} /> Back to editor</LinkButton>}
+        <div className="flex flex-wrap items-center gap-2">
           {methodology.document_template && (
-            <Link to={`/registration/${pdd.id}/official`}>
-              <Button variant="ghost"><FileText size={16} /> {OFFICIAL_FORMS[methodology.document_template].buttonLabel}</Button>
-            </Link>
+            <LinkButton to={`/registration/${pdd.id}/official`} variant="ghost"><FileText size={16} /> {OFFICIAL_FORMS[methodology.document_template].buttonLabel}</LinkButton>
           )}
           <Button variant="ghost" onClick={() => setPublicView((v) => !v)}>
             {publicView ? <EyeOff size={16} /> : <Eye size={16} />} Public view
@@ -55,27 +56,27 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
       </div>
 
       <Card className="space-y-8 p-8">
-        <header className="border-b border-ink-200 pb-4">
-          <div className="flex items-center justify-between">
-            <h1 className="text-2xl font-bold text-ink-900">Project Design Document</h1>
+        <header className="border-b border-rule pb-4">
+          <div className="flex flex-wrap items-center justify-between gap-3">
+            <Heading className="text-2xl font-semibold text-ink">Project Design Document</Heading>
             <PddStatusBadge state={pdd.state} />
           </div>
-          <p className="mt-1 text-sm text-ink-500">{project.name} · {methodology.code} {methodology.version}</p>
-          {pdd.content_hash && <p className="mt-1 flex items-center gap-1 font-mono text-xs text-ink-400">hash: <HashChip value={pdd.content_hash} /></p>}
+          <p className="mt-1 text-sm text-ink-meta">{project.name} · {methodology.code} {methodology.version}</p>
+          {pdd.content_hash && <p className="mt-1 flex items-center gap-1 font-mono text-xs text-ink-meta">hash: <HashChip value={pdd.content_hash} /></p>}
           {pdd.ipfs_cid && (
-            <p className="font-mono text-xs text-ink-400">
+            <p className="font-mono text-xs text-ink-meta">
               ipfs:{' '}
-              <button onClick={() => setShowIpfs(true)} title={pdd.ipfs_cid} className="text-brand-600 hover:underline">
+              <button onClick={() => setShowIpfs(true)} title={pdd.ipfs_cid} className="min-h-8 text-petrol-600 hover:underline">
                 {pdd.ipfs_cid.length > 24 ? `${pdd.ipfs_cid.slice(0, 14)}…${pdd.ipfs_cid.slice(-6)}` : pdd.ipfs_cid}
               </button>{' '}
-              <span className="text-ink-300">· คลิกเพื่อดู JSON + ตรวจ hash</span>
+              <span className="text-ink-meta">· คลิกเพื่อดู JSON + ตรวจ hash</span>
             </p>
           )}
           {credential && (
-            <p className="flex flex-wrap items-center gap-1 font-mono text-xs text-ink-400">
+            <p className="flex flex-wrap items-center gap-1 font-mono text-xs text-ink-meta">
               vc: <HashChip value={credential.id} /> ·{' '}
-              <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:underline">
-                HCS message #{displayHcs(credential).sequence_number}{displayHcs(credential).real ? ' ⛓ on-chain' : ' (simulated)'}
+              <a href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer" className="min-h-8 text-petrol-600 hover:underline">
+                HCS message #{displayHcs(credential).sequence_number}{displayHcs(credential).real ? <><Link2 size={14} aria-hidden /> on-chain</> : ' (simulated)'}
               </a>
             </p>
           )}
@@ -86,19 +87,19 @@ export function PddDocument({ pddId: pddIdProp, embedded = false }: { pddId?: st
 
         {methodology.pdd_sections.map((section) => (
           <section key={section.key}>
-            <h2 className="mb-3 text-lg font-semibold text-ink-900">{section.title}</h2>
+            <SectionHeading className="mb-3 text-lg font-semibold text-ink">{section.title}</SectionHeading>
             <dl className="grid grid-cols-1 gap-x-6 gap-y-3 sm:grid-cols-2">
               {section.fields.filter((f) => isFieldVisible(f, pdd.section_data)).map((f) => (
                 <div key={f.key}>
-                  <dt className="text-xs font-medium uppercase tracking-wide text-ink-400">
+                  <dt className="text-xs font-medium text-ink-meta">
                     {f.label}{f.unit ? ` (${f.unit})` : ''}
                     {f.sensitive && (
-                      <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-amber-50 px-1 py-0.5 text-[10px] font-medium normal-case tracking-normal text-amber-700">
+                      <span className="ml-1 inline-flex items-center gap-0.5 rounded bg-state-revision/5 px-1 py-0.5 text-xs font-medium normal-case tracking-normal text-state-revision">
                         <Lock size={10} /> Restricted
                       </span>
                     )}
                   </dt>
-                  <dd className="mt-0.5 text-sm text-ink-800">{f.sensitive && publicView ? '•••' : display(f.key, f.source)}</dd>
+                  <dd className="mt-0.5 text-sm text-ink">{f.sensitive && publicView ? '•••' : display(f.key, f.source)}</dd>
                 </div>
               ))}
             </dl>

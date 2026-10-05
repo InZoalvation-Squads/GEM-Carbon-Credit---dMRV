@@ -53,22 +53,22 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
   return (
     <Modal open onClose={onClose} title="เอกสารบน IPFS" size="lg">
       <div className="space-y-3">
-        <div className="flex flex-wrap items-center gap-2 font-mono text-[11px] text-ink-500">
+        <div className="flex flex-wrap items-center gap-2 font-mono text-xs text-ink-meta">
           <span className="truncate">CID: {cid}</span>
           <a href={ipfsGatewayUrl(cid)} target="_blank" rel="noreferrer"
-            className="inline-flex items-center gap-1 text-brand-600 hover:underline">
+            className="inline-flex items-center gap-1 text-petrol-600 hover:underline">
             เปิดไฟล์ดิบ <ExternalLink size={11} />
           </a>
         </div>
 
         {state.phase === 'loading' && (
-          <div className="flex items-center gap-2 rounded-lg bg-ink-50 px-4 py-6 text-sm text-ink-500">
+          <div className="flex items-center gap-2 rounded-sheet bg-ground px-4 py-6 text-sm text-ink-meta">
             <LoaderCircle size={16} className="animate-spin" /> กำลังดึงไฟล์จาก IPFS…
           </div>
         )}
 
         {state.phase === 'error' && (
-          <div className="rounded-lg bg-red-50 px-4 py-3 text-sm text-red-700">
+          <div className="rounded-sheet bg-state-rejected/5 px-4 py-3 text-sm text-state-rejected">
             ดึงไฟล์ไม่สำเร็จ ({state.message}) — IPFS node (พอร์ต 8080) ต้องออนไลน์อยู่
           </div>
         )}
@@ -78,8 +78,8 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
             {verified !== null && (
               <div
                 data-testid="ipfs-verdict"
-                className={`flex items-start gap-2 rounded-lg px-4 py-3 text-sm ${
-                  verified ? 'bg-emerald-50 text-emerald-800' : 'bg-red-50 text-red-700'
+                className={`flex items-start gap-2 rounded-sheet px-4 py-3 text-sm ${
+                  verified ? 'bg-petrol-50 text-petrol-800' : 'bg-state-rejected/5 text-state-rejected'
                 }`}
               >
                 {verified ? <ShieldCheck size={18} className="mt-0.5 shrink-0" /> : <ShieldX size={18} className="mt-0.5 shrink-0" />}
@@ -87,16 +87,16 @@ export function IpfsJsonModal({ cid, expectedHash, onClose }: {
                   {verified
                     ? 'ตรวจแล้ว: SHA-256 ของไฟล์นี้ตรงกับ hash ที่ freeze ตอน register — เอกสารไม่เคยถูกแก้'
                     : 'คำเตือน: hash ของไฟล์ไม่ตรงกับที่ freeze ไว้ — เอกสารอาจถูกแก้ไข!'}
-                  <span className="mt-1 block break-all font-mono text-[10px] opacity-70">
+                  <span className="mt-1 block break-all font-mono text-xs">
                     คำนวณได้: {state.computedHash}
                   </span>
                 </span>
               </div>
             )}
-            <pre className="max-h-80 overflow-auto rounded-lg bg-ink-950 p-4 text-[11px] leading-relaxed text-emerald-100">
+            <pre className="max-h-80 overflow-auto rounded-sheet bg-petrol-950 p-4 text-xs leading-relaxed text-on-petrol-2">
               {state.pretty}
             </pre>
-            <div className="flex items-center justify-between text-[11px] text-ink-400">
+            <div className="flex items-center justify-between text-xs text-ink-meta">
               <span>{state.bytes.toLocaleString()} bytes</span>
               <Button variant="ghost" size="sm" onClick={() => void navigator.clipboard.writeText(state.pretty)}>
                 <Copy size={13} /> คัดลอก JSON

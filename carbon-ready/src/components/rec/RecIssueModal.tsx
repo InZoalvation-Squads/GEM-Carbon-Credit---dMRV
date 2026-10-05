@@ -185,16 +185,16 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
           <Input label="Period end" type="date" value={to} onChange={(e) => setTo(e.target.value)} />
         </div>
 
-        <div className="rounded-xl border border-brand-200 bg-brand-50/60 px-4 py-3">
-          <div className="flex items-center gap-2 text-[11px] font-semibold uppercase tracking-wide text-brand-700">
+        <div className="rounded-sheet border border-petrol-100 bg-petrol-50/60 px-4 py-3">
+          <div className="flex items-center gap-2 text-xs font-semibold text-petrol-700">
             <Zap size={13} /> คำนวณจากข้อมูลการผลิตจริง (ผู้ยื่นแก้ตัวเลขเองไม่ได้)
           </div>
           {mwh > 0 ? (
-            <div className="mt-1.5 text-sm text-ink-800">
-              <span data-testid="mwh-preview" className="text-base font-bold text-brand-700">{mwh.toLocaleString()} MWh</span>
+            <div className="mt-1.5 text-sm text-ink">
+              <span data-testid="mwh-preview" className="text-base font-semibold text-petrol-700">{mwh.toLocaleString()} MWh</span>
             </div>
           ) : (
-            <div className="mt-1.5 text-sm text-amber-700">ไม่มีข้อมูล monitoring ในช่วงที่เลือก</div>
+            <div className="mt-1.5 text-sm text-state-revision">ไม่มีข้อมูล monitoring ในช่วงที่เลือก</div>
           )}
         </div>
 
@@ -215,7 +215,7 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
           <Input label="Receiving account ID" value={receivingAccountId} onChange={(e) => setReceivingAccountId(e.target.value)} />
         </div>
         {!receivingComplete && (
-          <p className="-mt-2 text-xs text-amber-700">
+          <p className="-mt-2 text-xs text-state-revision">
             ต้องระบุ Receiving organisation และ Account ID ก่อน submit
           </p>
         )}
@@ -232,19 +232,19 @@ export function RecIssueModal({ onClose, editing }: { onClose: () => void; editi
           />
         </div>
 
-        <div className="rounded-xl bg-ink-50 px-4 py-3 text-sm">
-          <div className="text-ink-600">
-            ค่าธรรมเนียมโดยประมาณ: <span data-testid="fee-estimate" className="font-semibold text-ink-900">
+        <div className="rounded-sheet bg-ground px-4 py-3 text-sm">
+          <div className="text-ink-secondary">
+            ค่าธรรมเนียมโดยประมาณ: <span data-testid="fee-estimate" className="font-semibold text-ink">
               ฿{fee.toFixed(2)}
             </span> (EGAT FN-01 2026 — โดยประมาณ)
           </div>
         </div>
 
-        <p className="text-xs text-ink-400">
+        <p className="text-xs text-ink-meta">
           ไฟฟ้างวดนี้ต้องไม่ถูกเคลมในกลไกอื่น (T-VER ฯลฯ) — ตามคำประกาศ SF-04A
         </p>
 
-        <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
+        <div className="flex justify-end gap-2 border-t border-rule pt-3">
           <Button variant="ghost" onClick={onClose}>Cancel</Button>
           <Button variant="secondary" disabled={!canSaveDraft} loading={busy} onClick={saveDraft}>
             {editing ? 'Save changes' : 'Save draft'}

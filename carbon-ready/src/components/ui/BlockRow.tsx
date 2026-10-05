@@ -22,7 +22,7 @@ export function BlockRow({ blockId, figure, source, state, hash, to, statusLabel
   const diameter = magnitude && magnitudeDiameter(magnitude.value, magnitude.visibleValues);
   return <li className={clsx('relative grid grid-cols-[5rem_minmax(0,1fr)] gap-6 border-b border-rule bg-surface px-4 py-4 last:border-b-0 hover:bg-petrol-50 sm:pr-5', anchored && 'bg-lime-300/30', className)} {...rest}>
     <span className="min-w-0 self-start break-all pr-4 font-mono text-xs text-ink-meta">{blockId}</span>
-    <span aria-hidden className={clsx('absolute left-[73px] top-6 z-[1] h-4 w-4 rounded-full border-2 border-petrol-700', filled ? 'bg-petrol-700' : 'bg-surface', anchored && 'ring-2 ring-lime-400 ring-offset-2 ring-offset-surface')} />
+    <span aria-hidden data-anchored={anchored} className={clsx('absolute left-[73px] top-6 z-[1] ledger-node h-4 w-4 rounded-full border-2 border-petrol-700', filled ? 'bg-petrol-700' : 'bg-surface', anchored && 'ring-2 ring-lime-400 ring-offset-2 ring-offset-surface')} />
     <div className="min-w-0 sm:flex sm:items-start sm:justify-between sm:gap-6">
       <div className="min-w-0">
         <div className="flex items-center gap-2 text-xl font-medium text-ink ledger-figure">
@@ -39,8 +39,8 @@ export function BlockRow({ blockId, figure, source, state, hash, to, statusLabel
     </div>
   </li>;
 }
-export function ChainList({ children, className, ...rest }: HTMLAttributes<HTMLOListElement>) {
-  return <div className={clsx('relative isolate overflow-hidden rounded-sheet border border-rule bg-surface', className)}>
+export function ChainList({ children, className, framed = true, ...rest }: HTMLAttributes<HTMLOListElement> & { framed?: boolean }) {
+  return <div className={clsx('relative isolate overflow-hidden bg-surface', framed && 'rounded-sheet border border-rule', className)}>
     <span aria-hidden className="pointer-events-none absolute bottom-8 left-20 top-8 z-[1] w-0.5 bg-petrol-700" />
     <ol {...rest}>{children}</ol>
   </div>;

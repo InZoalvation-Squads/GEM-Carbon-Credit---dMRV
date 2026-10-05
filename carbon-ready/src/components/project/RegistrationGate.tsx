@@ -1,9 +1,8 @@
 import type { ReactNode } from 'react';
-import { Link } from 'react-router-dom';
 import { Lock } from 'lucide-react';
 import { useStore } from '../../store';
 import { EmptyState } from '../ui/EmptyState';
-import { Button } from '../ui/Button';
+import { LinkButton } from '../ui/Button';
 
 /** Renders children only when the project is registered; otherwise blocks dMRV with a link to the wizard. */
 export function RegistrationGate({ projectId, children }: { projectId: string; children: ReactNode }) {
@@ -18,9 +17,7 @@ export function RegistrationGate({ projectId, children }: { projectId: string; c
       title="Project not registered yet"
       hint="This project must be registered (methodology selected, PDD validated by an auditor) before dMRV monitoring can start."
       action={
-        <Link to={target}>
-          <Button><Lock size={16} /> Go to Registration</Button>
-        </Link>
+        <LinkButton to={target}><Lock size={16} /> Go to Registration</LinkButton>
       }
     />
   );

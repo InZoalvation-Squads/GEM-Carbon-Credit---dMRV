@@ -67,7 +67,7 @@ export default function App() {
             <Route path="/rec-issuance/:id/official" element={<RecIssueOfficialForm />} />
             <Route path="/guardian" element={<Guardian />} />
             <Route path="/audit-log" element={<AuditLogPage />} />
-            <Route path="*" element={<div className="p-8 text-ink-500">Page not found</div>} />
+            <Route path="*" element={<div className="p-8 text-ink-meta">Page not found</div>} />
           </Route>
           </Route>
         </Routes>

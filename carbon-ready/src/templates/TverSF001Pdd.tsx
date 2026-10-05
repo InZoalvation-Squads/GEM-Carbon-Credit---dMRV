@@ -1,8 +1,8 @@
 import { Fragment, useEffect, useState, type ReactNode } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
-import { Button } from '../components/ui/Button';
+import { Button, LinkButton } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
 import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
@@ -622,11 +622,10 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const coverImage = pickCoverImage(siteImages, d.cover_evidence_id);
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link to={`/registration/${pdd.id}/document`}>
-          <Button variant="ghost"><ArrowLeft size={16} /> Back to document</Button>
-        </Link>
+    <div className="mx-auto max-w-4xl rounded-sheet border border-rule bg-surface print:border-0">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3 print:hidden">
+        <h1 className="w-full text-xl font-semibold text-ink">{formLabel}</h1>
+        <LinkButton to={`/registration/${pdd.id}/document`} variant="ghost"><ArrowLeft size={16} /> Back to document</LinkButton>
         <Button onClick={() => window.print()}><Printer size={16} /> Print / PDF</Button>
       </div>
 

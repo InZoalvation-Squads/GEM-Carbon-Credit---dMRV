@@ -3,6 +3,7 @@ import { CloudUpload, X, AlertTriangle } from 'lucide-react';
 import clsx from 'clsx';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
+import { Select } from '../ui/Select';
 import { Textarea } from '../ui/Textarea';
 import { FileKindIcon } from '../ui/StatusBadge';
 import { CATEGORY_LABEL, EVIDENCE_CATEGORIES } from '../../lib/labels';
@@ -127,7 +128,7 @@ export function EvidenceUploadModal({
         <div
           role="button" tabIndex={0}
           onClick={() => inputRef.current?.click()}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && inputRef.current?.click()}
+          onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); inputRef.current?.click(); } }}
           onDragOver={(e) => { e.preventDefault(); setHover(true); }}
           onDragLeave={() => setHover(false)}
           onDrop={(e) => {
@@ -135,13 +136,13 @@ export function EvidenceUploadModal({
             add(Array.from(e.dataTransfer.files).map((f) => ({ name: f.name, size: f.size, file: f })));
           }}
           className={clsx(
-            'cursor-pointer rounded-xl border-2 border-dashed px-6 py-8 text-center transition-colors',
-            hover ? 'border-brand-500 bg-brand-50' : 'border-ink-200 hover:border-brand-500'
+            'cursor-pointer rounded-sheet border-2 border-dashed px-6 py-8 text-center transition-colors',
+            hover ? 'border-petrol-600 bg-petrol-50' : 'border-rule-strong hover:border-petrol-600'
           )}
         >
-          <CloudUpload className="mx-auto text-ink-400" size={28} />
-          <div className="mt-2 text-sm font-medium text-ink-900">Drop files here, or click to browse</div>
-          <div className="mt-1 text-xs text-ink-500">PDF · JPG · PNG · XLSX — up to 25 MB each</div>
+          <CloudUpload className="mx-auto text-ink-meta" size={28} />
+          <div className="mt-2 text-sm font-medium text-ink">Drop files here, or click to browse</div>
+          <div className="mt-1 text-xs text-ink-meta">PDF · JPG · PNG · XLSX — up to 25 MB each</div>
         </div>
         <input
           ref={inputRef} type="file" multiple accept=".pdf,.jpg,.jpeg,.png,.xlsx" className="hidden"
@@ -150,33 +151,33 @@ export function EvidenceUploadModal({
 
         {staged.length === 0 && (
           <button onClick={() => add(SAMPLE.map((name) => ({ name, size: Math.floor(400_000 + Math.random() * 3_500_000) })))}
-            className="text-xs font-medium text-brand-700 hover:underline">
+            className="min-h-8 text-xs font-medium text-petrol-700 hover:underline">
             + Add sample files (demo)
           </button>
         )}
 
         {staged.length > 0 && (
           <div className="space-y-1.5 max-h-52 overflow-y-auto">
-            <div className="text-xs font-medium text-ink-500">Selected ({staged.length})</div>
+            <div className="text-xs font-medium text-ink-meta">Selected ({staged.length})</div>
             {staged.map((s) => (
-              <div key={s.key} className={clsx('flex items-center gap-3 rounded-md border px-3 py-2',
-                s.tooBig ? 'border-red-200 bg-red-50' : 'border-ink-200 bg-ink-50')}>
+              <div key={s.key} className={clsx('flex flex-wrap items-end gap-3 border-b border-rule px-3 py-3',
+                s.tooBig ? 'border-state-rejected/30 bg-state-rejected/5' : 'border-rule bg-ground')}>
                 <FileKindIcon kind={s.kind} />
                 <div className="min-w-0 flex-1">
-                  <div className="truncate text-sm font-medium text-ink-900">{s.file_name}</div>
-                  <div className={clsx('text-xs', s.tooBig ? 'text-red-600' : 'text-ink-500')}>
+                  <div className="truncate text-sm font-medium text-ink">{s.file_name}</div>
+                  <div className={clsx('text-xs', s.tooBig ? 'text-state-rejected' : 'text-ink-meta')}>
                     {formatBytes(s.file_size)}{s.tooBig && ' · exceeds 25 MB, skipped'}
                   </div>
                 </div>
                 {!s.tooBig && (
-                  <select value={s.category}
+                  <Select label="Category" aria-label={`Category for ${s.file_name}`} value={s.category}
                     onChange={(e) => setStaged((prev) => prev.map((x) => x.key === s.key ? { ...x, category: e.target.value as EvidenceCategory } : x))}
-                    className="h-8 rounded-md border border-ink-200 bg-white px-2 text-xs">
+                    className="w-full sm:w-48">
                     {EVIDENCE_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-                  </select>
+                  </Select>
                 )}
                 <button onClick={() => setStaged((prev) => prev.filter((x) => x.key !== s.key))}
-                  aria-label={`Remove ${s.file_name}`} className="text-ink-400 hover:text-ink-900">
+                  aria-label={`Remove ${s.file_name}`} className="inline-flex min-h-8 min-w-8 items-center justify-center text-ink-meta hover:text-ink">
                   <X size={14} />
                 </button>
               </div>
@@ -190,7 +191,7 @@ export function EvidenceUploadModal({
         )}
 
         {staged.some((s) => s.tooBig) && (
-          <div className="flex items-center gap-2 rounded-md bg-amber-50 px-3 py-2 text-xs text-amber-700">
+          <div className="flex items-center gap-2 rounded-md bg-state-revision/5 px-3 py-2 text-xs text-state-revision">
             <AlertTriangle size={14} /> {staged.filter((s) => s.tooBig).length} file(s) exceed 25 MB and will be skipped.
           </div>
         )}

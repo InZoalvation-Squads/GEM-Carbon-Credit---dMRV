@@ -1,11 +1,13 @@
 import { useMemo, useState } from 'react';
-import { Plus, Search, FolderSearch } from 'lucide-react';
+import { Plus, FolderSearch } from 'lucide-react';
 import clsx from 'clsx';
 import { Card, CardBody } from '../ui/Card';
 import { Button } from '../ui/Button';
-import { Table, THead, TR, TH, TD } from '../ui/Table';
+import { BlockRow, ChainList } from '../ui/BlockRow';
+import { Input } from '../ui/Input';
+import { Select } from '../ui/Select';
 import { EmptyState } from '../ui/EmptyState';
-import { CategoryChip, EvidenceStatusDot, FileKindIcon } from '../ui/StatusBadge';
+import { CategoryChip, FileKindIcon } from '../ui/StatusBadge';
 import { EvidenceUploadModal } from '../evidence/EvidenceUploadModal';
 import { EvidenceDetailModal } from '../evidence/EvidenceDetailModal';
 import { useStore } from '../../store';
@@ -47,22 +49,16 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
   return (
     <div>
       <div className="flex flex-wrap items-center gap-2.5 mb-4">
-        <label className="relative flex-1 min-w-[220px]">
-          <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" size={16} />
-          <input
-            value={query} onChange={(e) => setQuery(e.target.value)}
-            placeholder="Search file name or description…"
-            className="h-10 w-full rounded-md border border-ink-200 bg-white pl-9 pr-3 text-sm shadow-sm placeholder:text-ink-400 focus:border-brand-500 focus:ring-1 focus:ring-brand-500"
-          />
-        </label>
-        <select value={cat} onChange={(e) => setCat(e.target.value as EvidenceCategory | 'all')}
-          className="h-10 rounded-md border border-ink-200 bg-white px-3 text-sm shadow-sm focus:border-brand-500 focus:ring-1 focus:ring-brand-500">
+        <div className="min-w-0 flex-1">
+          <Input label="Search evidence" value={query} onChange={(e) => setQuery(e.target.value)} placeholder="Search file name or description…" />
+        </div>
+        <Select label="Category" value={cat} onChange={(e) => setCat(e.target.value as EvidenceCategory | 'all')}>
           <option value="all">All categories</option>
           {EVIDENCE_CATEGORIES.map((c) => <option key={c} value={c}>{CATEGORY_LABEL[c]}</option>)}
-        </select>
-        <button onClick={() => setShowArchived((s) => !s)}
+        </Select>
+        <button aria-pressed={showArchived} onClick={() => setShowArchived((s) => !s)}
           className={clsx('h-10 rounded-md border px-3 text-sm font-medium transition-colors',
-            showArchived ? 'border-brand-300 bg-brand-50 text-brand-700' : 'border-ink-200 bg-white text-ink-500 hover:text-ink-900')}>
+            showArchived ? 'border-petrol-100 bg-petrol-50 text-petrol-700' : 'border-rule bg-white text-ink-meta hover:text-ink')}>
           {showArchived ? 'Showing archived' : 'Show archived'}
         </button>
         <Button onClick={() => setUploadOpen(true)}><Plus size={16} /> Upload Evidence</Button>
@@ -78,38 +74,12 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
               action={total === 0 ? <Button onClick={() => setUploadOpen(true)}><Plus size={16} /> Upload Evidence</Button> : undefined}
             />
           ) : (
-            <Table>
-              <THead>
-                <TR>
-                  <TH>Name</TH>
-                  <TH className="hidden sm:table-cell">Category</TH>
-                  <TH>Ver</TH>
-                  <TH className="hidden md:table-cell text-right">Size</TH>
-                  <TH className="hidden lg:table-cell">Status</TH>
-                  <TH>Uploaded</TH>
-                </TR>
-              </THead>
-              <tbody>
-                {rows.map((e) => (
-                  <TR key={e.id} className="cursor-pointer hover:bg-brand-50/40" >
-                    <TD className="font-medium text-ink-900">
-                      <button onClick={() => setSelected(e)} className="flex items-center gap-2.5 text-left">
-                        <FileKindIcon kind={e.kind} />
-                        <span className="truncate">{e.file_name}</span>
-                      </button>
-                    </TD>
-                    <TD className="hidden sm:table-cell"><CategoryChip category={e.category} /></TD>
-                    <TD className="font-mono text-xs text-ink-500">v{e.version_number}</TD>
-                    <TD className="hidden md:table-cell text-right">{formatBytes(e.file_size)}</TD>
-                    <TD className="hidden lg:table-cell"><EvidenceStatusDot status={e.status} /></TD>
-                    <TD>
-                      <div className="text-ink-700">{e.uploaded_by_name.split(' ')[0]}</div>
-                      <div className="text-xs text-ink-400">{fmtDate(e.uploaded_at)}</div>
-                    </TD>
-                  </TR>
-                ))}
-              </tbody>
-            </Table>
+            <ChainList framed={false}>{rows.map((e) => <BlockRow key={e.id} blockId={e.id} state={e.status} hash={e.content_hash}
+              figure={<button className="inline-flex min-h-8 items-center gap-2 text-left text-base text-petrol-600 hover:underline" onClick={() => setSelected(e)}><FileKindIcon kind={e.kind} />{e.file_name}</button>}
+              source={<><CategoryChip category={e.category} /> · <span className="font-mono text-xs">v{e.version_number}</span> · {formatBytes(e.file_size)}</>}>
+              <div className="mt-2 text-sm text-ink-secondary">{e.uploaded_by_name.split(' ')[0]} · <span className="font-mono text-xs">{fmtDate(e.uploaded_at)}</span></div>
+            </BlockRow>)}</ChainList>
+
           )}
         </CardBody>
       </Card>
@@ -118,7 +88,7 @@ export function ProjectEvidenceTab({ projectId }: { projectId: UUID }) {
       <EvidenceDetailModal evidence={selected} onClose={() => setSelected(null)} />
 
       {toast && (
-        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-ink-900 px-4 py-2 text-sm font-medium text-white shadow-xl">
+        <div role="status" className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 rounded-full bg-ink px-4 py-2 text-sm font-medium text-white">
           {toast}
         </div>
       )}

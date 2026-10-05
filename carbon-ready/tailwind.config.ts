@@ -13,20 +13,13 @@ export default {
   theme: {
     extend: {
       colors: {
-        petrol: { ...petrol, 400: petrol[600], 500: petrol[600] },
-        lime: { 300: token('lime-300'), 400: token('lime-400'), 500: token('lime-ink'), ink: token('lime-ink') },
+        petrol,
+        lime: { 300: token('lime-300'), 400: token('lime-400'), ink: token('lime-ink') },
         ground: token('ground'), surface: { DEFAULT: token('surface'), sunk: token('surface-sunk') },
         rule: { DEFAULT: token('rule'), strong: token('rule-strong') },
         'on-petrol': { DEFAULT: token('on-petrol'), 2: token('on-petrol-2') },
         state: { review: token('state-review'), revision: token('state-revision'), rejected: token('state-rejected') },
-        // Compatibility aliases until the phase 2 page migration.
-        brand: { ...petrol, 200: petrol[100], 300: petrol[100], 400: petrol[600], 500: petrol[600] },
-        ink: {
-          DEFAULT: token('ink'), 50: token('ground'), 100: token('surface-sunk'), 200: token('rule'),
-          300: token('ink-3'), 400: token('ink-3'), 500: token('ink-3'),
-          600: token('ink-2'), 700: token('ink-2'), 800: token('ink'), 900: token('ink'), 950: token('ink'),
-          secondary: token('ink-2'), meta: token('ink-3'),
-        },
+        ink: { DEFAULT: token('ink'), secondary: token('ink-2'), meta: token('ink-3') },
       },
       fontFamily: {
         sans: ['Inter', 'Anuphan', 'system-ui', '-apple-system', 'Segoe UI', 'sans-serif'],

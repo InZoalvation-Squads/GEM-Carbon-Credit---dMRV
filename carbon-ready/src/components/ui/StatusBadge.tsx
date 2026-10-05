@@ -19,12 +19,14 @@ export const STATUS_STYLES = {
   verified: 'border-lime-400 bg-lime-400 text-petrol-800',
   rejected: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
   suspended: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
+  deprecated: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
+  retired: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
   archived: 'border-state-rejected/30 bg-state-rejected/10 text-state-rejected',
   superseded: 'border-rule-strong bg-surface text-ink-secondary',
 } as const;
 export type LedgerState = keyof typeof STATUS_STYLES;
 const labels: Record<LedgerState, string> = {
-  ...STATE_LABEL, active: 'Active', suspended: 'Suspended', archived: 'Archived',
+  ...STATE_LABEL, active: 'Active', suspended: 'Suspended', archived: 'Archived', retired: 'Retired', deprecated: 'deprecated',
   anchored: 'Anchored', verified: 'Verified', under_validation: 'Under Validation',
   registered: 'Registered', issued: 'Issued', superseded: 'Superseded',
 };
@@ -50,8 +52,5 @@ export function FileKindIcon({ kind, className }: { kind: FileKind; className?: 
 export function PddStatusBadge({ state }: { state: PddState }) { return <StatusBadge state={state} />; }
 export function RecIssueStatusBadge({ state }: { state: RecIssueState }) { return <StatusBadge state={state} />; }
 export function EvidenceStatusDot({ status }: { status: EvidenceStatus }) {
-  return <span className="inline-flex items-center gap-1.5 text-xs capitalize text-ink-secondary">
-    <span aria-hidden className={clsx('h-1.5 w-1.5 rounded-full', status === 'active' ? 'bg-petrol-700' : status === 'archived' ? 'bg-state-rejected' : 'bg-ink-meta')} />
-    {status}
-  </span>;
+  return <StatusBadge state={status} label={status} />;
 }

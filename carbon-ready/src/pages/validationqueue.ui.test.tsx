@@ -10,7 +10,8 @@ describe('ValidationQueue — project name is the clickable lead', () => {
   it('the row link names the project, with the PDD id as secondary text', () => {
     render(<MemoryRouter><ValidationQueue /></MemoryRouter>);
     // PDD-2002 (submitted) belongs to prj-0003 "Surin Rice-Husk Power".
-    expect(screen.getByRole('button', { name: /Surin Rice-Husk Power/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Surin Rice-Husk Power/ })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /Surin Rice-Husk Power/ })).toHaveAttribute('href', '/validation/PDD-2002');
   });
 
   it('methodology column shows the readable code, not a raw snapshot string only', () => {

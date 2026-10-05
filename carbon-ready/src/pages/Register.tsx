@@ -37,36 +37,36 @@ export function Register() {
   }
 
   return (
-    <div className="grid min-h-full place-items-center bg-grid-faint [background-size:32px_32px] p-4">
-      <div className="w-full max-w-md">
+    <div className="grid min-h-full place-items-center bg-petrol-800 p-4">
+      <div className="w-full max-w-md rounded-sheet border border-rule bg-surface p-6">
         <div className="mb-6 flex flex-col items-center text-center">
-          <img src="/gem-logo.svg" alt="GEM Carbon Credit" className="h-10 w-auto" />
-          <h1 className="mt-4 text-xl font-semibold text-ink-900">Create your account</h1>
-          <p className="mt-1 text-sm text-ink-500">dMRV on Hedera Guardian</p>
+          <img src="/gem-logo-dark.svg" alt="GEM Carbon Credit" className="h-10 w-auto" />
+          <h1 className="mt-4 text-xl font-semibold text-ink">Create your account</h1>
+          <p className="mt-1 text-sm text-ink-meta">dMRV on Hedera Guardian</p>
         </div>
 
-        <form onSubmit={submit} className="rounded-2xl border border-ink-200 bg-white p-6 shadow-sm">
+        <form onSubmit={submit} className="border-y border-rule py-6">
           <div className="space-y-4">
-            <Input label="Full name" name="name" autoComplete="name" value={name}
+            <Input aria-invalid={!!error} aria-describedby={error ? "register-error" : undefined} label="Full name" name="name" autoComplete="name" value={name}
               onChange={(e) => { setName(e.target.value); setError(''); }} placeholder="Your name" />
-            <Input label="Email" name="email" type="email" autoComplete="username" value={email}
+            <Input aria-invalid={!!error} aria-describedby={error ? "register-error" : undefined} label="Email" name="email" type="email" autoComplete="username" value={email}
               onChange={(e) => { setEmail(e.target.value); setError(''); }} placeholder="you@gem.demo" />
             <Select label="Role" name="role" value={role}
               onChange={(e) => { setRole(e.target.value as UserRole); setError(''); }}>
               {roles.map((r) => <option key={r} value={r}>{ROLE_LABEL[r]}</option>)}
             </Select>
-            <Input label="Password" name="password" type="password" autoComplete="new-password" value={password}
+            <Input aria-invalid={!!error} aria-describedby={error ? "register-error" : undefined} label="Password" name="password" type="password" autoComplete="new-password" value={password}
               onChange={(e) => { setPassword(e.target.value); setError(''); }} placeholder="At least 8 characters" />
-            <Input label="Confirm password" name="confirm" type="password" autoComplete="new-password" value={confirm}
+            <Input aria-invalid={!!error} aria-describedby={error ? "register-error" : undefined} label="Confirm password" name="confirm" type="password" autoComplete="new-password" value={confirm}
               onChange={(e) => { setConfirm(e.target.value); setError(''); }} placeholder="••••••••" />
-            {error && <p className="text-sm text-red-600">{error}</p>}
+            {error && <p id="register-error" role="alert" className="text-sm text-state-rejected">{error}</p>}
             <Button type="submit" className="w-full justify-center"><UserPlus size={16} /> Create account</Button>
           </div>
         </form>
 
-        <p className="mt-4 text-center text-sm text-ink-500">
+        <p className="mt-4 text-center text-sm text-ink-meta">
           Already have an account?{' '}
-          <Link to="/login" className="font-medium text-brand-600 hover:underline">Sign in</Link>
+          <Link to="/login" className="font-medium text-petrol-600 hover:underline">Sign in</Link>
         </p>
       </div>
     </div>

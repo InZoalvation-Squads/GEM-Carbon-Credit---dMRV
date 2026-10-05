@@ -32,7 +32,7 @@ export function EmissionFactors() {
 
       <Card>
         <CardBody className="p-0">
-          <Table>
+          <Table mobileLabels={["Country", "Source", "Factor (kgCO₂e/kWh)", "Effective Date", "Version", "Status"]}>
             <THead>
               <TR>
                 <TH>Country</TH><TH>Source</TH><TH className="text-right">Factor (kgCO₂e/kWh)</TH>

@@ -21,43 +21,43 @@ const LAYERS: Record<LayerKey, {
   title: string; what: string; why: string;
 }> = {
   browser: {
-    name: 'Browser', icon: MonitorSmartphone, chip: 'bg-slate-100 text-slate-700', dot: 'bg-slate-400',
+    name: 'Browser', icon: MonitorSmartphone, chip: 'bg-surface-sunk text-ink-secondary', dot: 'bg-rule-strong',
     title: 'เบราว์เซอร์ของผู้ใช้',
     what: 'State ของหน้าจอ และกุญแจ Ed25519 ที่ใช้เซ็น Verifiable Credential',
     why: 'กุญแจไม่เคยออกจากเครื่องเจ้าของ — server เห็นเฉพาะลายเซ็นที่ตรวจได้',
   },
   postgres: {
-    name: 'PostgreSQL', icon: Database, chip: 'bg-teal-50 text-teal-800', dot: 'bg-teal-500',
+    name: 'PostgreSQL', icon: Database, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
     title: 'ฐานข้อมูลหลัก (ระบบบัญชี)',
     what: 'โปรเจกต์ · PDD ทั้งฉบับ + disclosure salts · monitoring · verification · credential · audit log แบบ hash-chain',
     why: 'ข้อมูลเต็ม ค้นเร็ว ควบคุมสิทธิ์ตามบทบาท — ทุกอย่างเขียนที่นี่ก่อนเสมอ',
   },
   disk: {
-    name: 'File Store', icon: HardDrive, chip: 'bg-amber-50 text-amber-800', dot: 'bg-amber-500',
+    name: 'File Store', icon: HardDrive, chip: 'bg-state-revision/5 text-state-revision', dot: 'bg-state-revision',
     title: 'ไฟล์หลักฐาน (content-addressed)',
     what: 'รูปถ่าย / PDF / สเปรดชีตของ evidence เก็บด้วยชื่อ = SHA-256 ของไฟล์',
     why: 'ไฟล์ถูกสลับแก้ไม่ได้โดยไม่เปลี่ยน hash และไฟล์ซ้ำไม่เปลืองพื้นที่',
   },
   ipfs: {
-    name: 'IPFS', icon: Globe2, chip: 'bg-cyan-50 text-cyan-800', dot: 'bg-cyan-500',
+    name: 'IPFS', icon: Globe2, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
     title: 'สำเนาสาธารณะของ PDD',
     what: 'เนื้อหา PDD ที่ freeze แล้ว (canonical JSON) ถูก pin เป็น CID จริง',
     why: 'ใครก็ดึงเอกสารมา re-hash เทียบกับค่าบน chain ได้เอง ไม่ต้องเชื่อเรา',
   },
   hcs: {
-    name: 'Hedera HCS', icon: Radio, chip: 'bg-emerald-50 text-emerald-800', dot: 'bg-emerald-500',
+    name: 'Hedera HCS', icon: Radio, chip: 'bg-petrol-50 text-petrol-800', dot: 'bg-petrol-600',
     title: 'สมุดบันทึกสาธารณะ (topic ต่อโปรเจกต์)',
     what: 'ข้อความ 4 ชนิด: project_listed → pdd_registration → verification_approval → token_mint',
     why: 'ประทับเวลาด้วย consensus ของเครือข่าย — แก้ย้อนหลังไม่ได้ ดูได้บน HashScan',
   },
   hts: {
-    name: 'Hedera HTS', icon: Coins, chip: 'bg-lime-50 text-lime-800', dot: 'bg-lime-500',
+    name: 'Hedera HTS', icon: Coins, chip: 'bg-lime-300 text-petrol-800', dot: 'bg-lime-ink',
     title: 'คาร์บอนเครดิต — token แยกต่อโปรเจกต์',
     what: 'แต่ละโปรเจกต์มี HTS token ของตัวเอง (ชื่อเหรียญ = ชื่อโปรเจกต์, 1.00 = 1 tCO₂e) mint เป็น batch พร้อมช่วง serial ต่อเนื่องแบบทะเบียน Verra',
     why: 'ยอดเครดิตของแต่ละโปรเจกต์นับได้ตรง ๆ จาก supply ของเหรียญโปรเจกต์นั้นบน HashScan',
   },
   guardian: {
-    name: 'Guardian', icon: ShieldCheck, chip: 'bg-violet-50 text-violet-800', dot: 'bg-violet-500',
+    name: 'Guardian', icon: ShieldCheck, chip: 'bg-petrol-50 text-state-review', dot: 'bg-state-review',
     title: 'Hedera Guardian (policy กลาง)',
     what: 'เอกสารในรูป VC เดินผ่าน policy ที่ publish บน testnet — trust chain ตามมาตรฐาน registry',
     why: 'โครงสร้างเดียวกับ registry สากล เปิด Guardian UI ตรวจได้อีกชั้น',
@@ -67,7 +67,7 @@ const LAYERS: Record<LayerKey, {
 function LayerChip({ k }: { k: LayerKey }) {
   const l = LAYERS[k];
   return (
-    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-[11px] font-medium', l.chip)}>
+    <span className={clsx('inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-medium', l.chip)}>
       <span className={clsx('h-1.5 w-1.5 rounded-full', l.dot)} />
       {l.name}
     </span>
@@ -81,43 +81,43 @@ const STEPS: Array<{
   title: string; detail: string; writes: LayerKey[];
 }> = [
   {
-    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
+    icon: FilePlus2, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
     title: 'สร้างโปรเจกต์ + กรอก PDD + แนบหลักฐาน',
     detail: 'ข้อมูลโครงการและเอกสารข้อเสนอ (T-VER-S-F001-PDD) ถูกบันทึกเป็น draft ไฟล์หลักฐานอัปโหลดขึ้น server พร้อม SHA-256 ของไฟล์จริง',
     writes: ['postgres', 'disk'],
   },
   {
-    icon: Send, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
+    icon: Send, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
     title: 'Submit — โครงการขึ้นทะเบียน pipeline',
     detail: 'แบบเดียวกับ Verra: ยื่นครั้งแรกระบบสร้าง HCS topic ประจำโปรเจกต์ และประกาศ "project_listed" ต่อสาธารณะทันที ยังไม่ต้องรออนุมัติ',
     writes: ['postgres', 'hcs'],
   },
   {
-    icon: BadgeCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-sky-50 text-sky-700',
+    icon: BadgeCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
     title: 'Validate + Register (Gate 1)',
     detail: 'ผู้ตรวจอนุมัติ → ระบบ freeze content_hash, pin เอกสารขึ้น IPFS เป็น CID จริง, สร้าง salts สำหรับ selective disclosure และส่งเอกสารเข้า Guardian policy ในนามผู้พัฒนา',
     writes: ['postgres', 'ipfs', 'guardian'],
   },
   {
-    icon: Anchor, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-sky-50 text-sky-700',
+    icon: Anchor, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
     title: 'เซ็นและ anchor credential',
     detail: 'เบราว์เซอร์เซ็น PDD Registration VC (กุญแจอยู่กับผู้ใช้) → server ตรวจลายเซ็นแล้วเขียน "pdd_registration" ลง topic จริง จากนั้น Guardian approve + mint GEMVCU ตาม ER อัตโนมัติเบื้องหลัง',
     writes: ['browser', 'postgres', 'hcs', 'guardian', 'hts'],
   },
   {
-    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-brand-50 text-brand-700',
+    icon: UploadCloud, role: 'Project Proponent', roleTone: 'bg-petrol-50 text-petrol-700',
     title: 'อัปโหลดข้อมูล monitoring',
     detail: 'ค่าการผลิตไฟฟ้ารายเดือน (kWh) เข้าระบบ ผูกกับ methodology และ emission factor เวอร์ชันที่ประกาศใช้',
     writes: ['postgres'],
   },
   {
-    icon: ClipboardCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-sky-50 text-sky-700',
+    icon: ClipboardCheck, role: 'VVB (ผู้ตรวจ)', roleTone: 'bg-petrol-50 text-state-review',
     title: 'Verification + anchor',
     detail: 'ตรวจแพ็กเกจ → approve จะผนึก hash_value ของทั้งชุด แล้ว anchor "verification_approval" ลง topic เดิมของโปรเจกต์',
     writes: ['postgres', 'hcs'],
   },
   {
-    icon: Sparkles, role: 'Registry', roleTone: 'bg-violet-50 text-violet-700',
+    icon: Sparkles, role: 'Registry', roleTone: 'bg-petrol-50 text-state-review',
     title: 'Mint คาร์บอนเครดิต',
     detail: 'mint ครั้งแรกของโปรเจกต์จะสร้าง HTS token ประจำโปรเจกต์ (ชื่อเหรียญ = ชื่อโปรเจกต์) แล้วออก batch พร้อมช่วง serial ต่อเนื่อง + ข้อความ "token_mint" ปิดท้าย trust chain',
     writes: ['postgres', 'hts', 'hcs'],
@@ -207,35 +207,35 @@ const ACCOUNT_GROUPS: Array<{
   {
     icon: Users, title: 'บัญชีในแอป (localhost:5173)', subtitle: 'แยกหน้าที่แบบทะเบียนจริง — คนเดียวทำครบวงจรไม่ได้',
     accounts: [
-      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-700',
+      { name: 'proponent@gem.demo', role: 'Project Proponent', tone: 'bg-petrol-50 text-petrol-700',
         duty: 'สร้างโปรเจกต์ · กรอก PDD + หลักฐาน · submit · อัปโหลด monitoring · ยื่น verification' },
-      { name: 'vvb@gem.demo', role: 'VVB / Verifier', tone: 'bg-sky-50 text-sky-700',
+      { name: 'vvb@gem.demo', role: 'VVB / Verifier', tone: 'bg-petrol-50 text-state-review',
         duty: 'ตรวจ + อนุมัติ PDD (Register / Gate 1) · ตรวจแพ็กเกจ verification · anchor credential ขึ้น Hedera' },
-      { name: 'registry@gem.demo', role: 'Registry / Admin', tone: 'bg-violet-50 text-violet-700',
+      { name: 'registry@gem.demo', role: 'Registry / Admin', tone: 'bg-petrol-50 text-state-review',
         duty: 'ขั้นสุดท้ายของ chain: mint คาร์บอนเครดิต (GVCU batch + ERC-1155) · ภาพรวม pipeline' },
-      { name: 'esg@gem.demo', role: 'ESG Manager', tone: 'bg-amber-50 text-amber-700',
+      { name: 'esg@gem.demo', role: 'ESG Manager', tone: 'bg-state-revision/5 text-state-revision',
         duty: 'ดูแล emission factors ตามประกาศ อบก. · รันการคำนวณ · สนับสนุนฝั่งข้อมูล' },
     ],
   },
   {
     icon: KeyRound, title: 'บัญชี Guardian (localhost:3006)', subtitle: 'ตัวแสดงใน policy ที่ publish บน testnet',
     accounts: [
-      { name: 'gemregistry', role: 'Standard Registry', tone: 'bg-violet-50 text-violet-700',
+      { name: 'gemregistry', role: 'Standard Registry', tone: 'bg-petrol-50 text-state-review',
         duty: 'เจ้าของ policy / schema / token GEMVCU — server สวมบทนี้กด approve หลัง VVB anchor แล้ว Guardian mint อัตโนมัติ · login ดู trust chain ทั้งหมด' },
-      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-brand-50 text-brand-700',
+      { name: 'gem-developer', role: 'Project Proponent', tone: 'bg-petrol-50 text-petrol-700',
         duty: 'server ใช้ส่งเอกสาร PDD เข้า policy ตอน Register — Guardian เซ็น VC ด้วย DID ของบัญชีนี้ และเป็นผู้รับเครดิต GEMVCU' },
-      { name: 'gem-vvb', role: 'VVB', tone: 'bg-sky-50 text-sky-700',
+      { name: 'gem-vvb', role: 'VVB', tone: 'bg-petrol-50 text-state-review',
         duty: 'เตรียมไว้สำหรับ flow ตรวจสอบใน Guardian (ปัจจุบันการอนุมัติของ VVB ในแอปถูก map เป็น approve ของ SR)' },
     ],
   },
   {
     icon: Wallet, title: 'บัญชี Hedera บน testnet', subtitle: 'ชั้น blockchain — ผู้จ่ายค่าธรรมเนียมและผู้ถือ token',
     accounts: [
-      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-emerald-50 text-emerald-700',
+      { name: '0.0.9651712 (operator)', role: 'Platform treasury', tone: 'bg-petrol-50 text-petrol-700',
         duty: 'จ่ายค่าธรรมเนียมทุกธุรกรรมของ server (topic / anchor / mint) · treasury ของ GVCU + ERC-1155 · key เดียวกันเป็น EVM address 0x91cF…864f ที่ deploy contract' },
-      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-brand-50 text-brand-700',
+      { name: '0.0.9714436', role: 'Hedera ของ gem-developer', tone: 'bg-petrol-50 text-petrol-700',
         duty: 'ผู้รับเครดิต GEMVCU ที่ Guardian mint (ต้อง associate token ก่อนรับ — ทำแล้ว)' },
-      { name: '0.0.9714453', role: 'Hedera ของ gem-vvb', tone: 'bg-sky-50 text-sky-700',
+      { name: '0.0.9714453', role: 'Hedera ของ gem-vvb', tone: 'bg-petrol-50 text-state-review',
         duty: 'เซ็นธุรกรรมฝั่ง VVB ใน Guardian (ยังไม่ถูกใช้ใน flow ปัจจุบัน)' },
     ],
   },
@@ -243,8 +243,8 @@ const ACCOUNT_GROUPS: Array<{
 
 function SectionTitle({ icon, children }: { icon: ReactNode; children: ReactNode }) {
   return (
-    <h2 className="mb-4 mt-10 flex items-center gap-2 text-lg font-bold tracking-tight text-ink-900">
-      <span className="grid h-8 w-8 place-items-center rounded-lg bg-brand-gradient text-white">{icon}</span>
+    <h2 className="mb-4 mt-10 flex items-center gap-2 text-lg font-semibold tracking-tight text-ink">
+      <span className="text-petrol-700">{icon}</span>
       {children}
     </h2>
   );
@@ -259,10 +259,7 @@ export function HowItWorks() {
       />
 
       {/* ============ pipeline hero ============ */}
-      <div className="relative overflow-hidden rounded-2xl bg-ink-gradient p-6 text-white shadow-card">
-        <div className="pointer-events-none absolute -right-16 -top-16 h-64 w-64 rounded-full bg-brand-500/20 blur-3xl" />
-        <div className="pointer-events-none absolute -bottom-20 -left-10 h-56 w-56 rounded-full bg-teal-400/10 blur-3xl" />
-        <div className="text-[11px] font-semibold uppercase tracking-[0.2em] text-brand-300">dMRV pipeline</div>
+      <div className="rounded-sheet border border-rule bg-petrol-800 p-6 text-on-petrol">
         <div className="mt-4 flex flex-col gap-3 md:flex-row md:items-stretch">
           {[
             { icon: FilePlus2, t: 'Draft', d: 'PDD + หลักฐาน' },
@@ -272,42 +269,42 @@ export function HowItWorks() {
             { icon: Gem, t: 'Credited', d: 'token จริงบน Hedera' },
           ].map((s, i, arr) => (
             <div key={s.t} className="flex flex-1 items-center gap-3">
-              <div className="flex-1 rounded-xl border border-white/10 bg-white/5 px-4 py-3 backdrop-blur-sm">
-                <s.icon size={18} className="text-brand-300" />
+              <div className="flex-1 border-b border-on-petrol-2/30 px-4 py-3">
+                <s.icon size={18} className="text-on-petrol-2" />
                 <div className="mt-1.5 text-sm font-semibold">{s.t}</div>
-                <div className="text-[11px] leading-snug text-ink-300">{s.d}</div>
+                <div className="text-sm leading-snug text-on-petrol-2">{s.d}</div>
               </div>
               {i < arr.length - 1 && (
                 <>
-                  <ArrowRight size={16} className="hidden shrink-0 text-brand-400/70 md:block" />
-                  <ArrowDown size={16} className="mx-auto shrink-0 text-brand-400/70 md:hidden" />
+                  <ArrowRight size={16} className="hidden shrink-0 text-on-petrol-2 md:block" />
+                  <ArrowDown size={16} className="mx-auto shrink-0 text-on-petrol-2 md:hidden" />
                 </>
               )}
             </div>
           ))}
         </div>
-        <p className="mt-4 max-w-3xl text-[13px] leading-relaxed text-ink-300">
-          ทุกการเขียนขึ้น blockchain เป็นแบบ <span className="font-semibold text-brand-300">best-effort</span> —
+        <p className="mt-4 max-w-3xl text-sm leading-relaxed text-on-petrol-2">
+          ทุกการเขียนขึ้น blockchain เป็นแบบ <span className="font-semibold text-on-petrol-2">best-effort</span> —
           ข้อมูลถูกบันทึกในฐานข้อมูลก่อนเสมอ เครือข่ายล่มจึงไม่เคยทำให้งานอนุมัติสะดุด และมีการ retry ให้จนครบ
         </p>
       </div>
 
       {/* ============ storage layers ============ */}
       <SectionTitle icon={<Database size={16} />}>ข้อมูลถูกเก็บไว้ที่ไหนบ้าง — 7 ชั้น</SectionTitle>
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
+      <div className="divide-y divide-rule rounded-sheet border border-rule bg-surface">
         {(Object.keys(LAYERS) as LayerKey[]).map((k) => {
           const l = LAYERS[k];
           return (
-            <div key={k} className="rounded-xl border border-ink-200/80 bg-white p-4 shadow-card">
+            <div key={k} className="p-4">
               <div className="flex items-center justify-between">
-                <span className={clsx('grid h-9 w-9 place-items-center rounded-lg', l.chip)}>
+                <span className={clsx('text-petrol-700', l.chip)}>
                   <l.icon size={18} />
                 </span>
                 <LayerChip k={k} />
               </div>
-              <div className="mt-3 text-sm font-semibold text-ink-900">{l.title}</div>
-              <p className="mt-1 text-[13px] leading-relaxed text-ink-600">{l.what}</p>
-              <p className="mt-2 border-t border-dashed border-ink-100 pt-2 text-[12px] leading-relaxed text-ink-400">
+              <div className="mt-3 text-sm font-semibold text-ink">{l.title}</div>
+              <p className="mt-1 text-sm leading-relaxed text-ink-secondary">{l.what}</p>
+              <p className="mt-2 border-t border-dashed border-rule pt-2 text-sm leading-relaxed text-ink-meta">
                 {l.why}
               </p>
             </div>
@@ -321,20 +318,20 @@ export function HowItWorks() {
         {INVENTORY.map((inv) => {
           const l = LAYERS[inv.layer];
           return (
-            <details key={inv.layer} open={inv.open} className="group rounded-xl border border-ink-200/80 bg-white shadow-card">
+            <details key={inv.layer} open={inv.open} className="group rounded-sheet border border-rule/80 bg-white">
               <summary className="flex cursor-pointer list-none items-center gap-2 px-4 py-3 [&::-webkit-details-marker]:hidden">
-                <span className={clsx('grid h-7 w-7 place-items-center rounded-lg', l.chip)}><l.icon size={14} /></span>
-                <span className="text-sm font-semibold text-ink-900">{l.title}</span>
+                <span className={clsx('text-petrol-700', l.chip)}><l.icon size={14} /></span>
+                <span className="text-sm font-semibold text-ink">{l.title}</span>
                 <LayerChip k={inv.layer} />
-                <span className="ml-auto text-ink-300 transition-transform group-open:rotate-90"><ArrowRight size={14} /></span>
+                <span className="ml-auto text-ink-meta transition-transform group-open:rotate-90"><ArrowRight size={14} /></span>
               </summary>
-              <div className="grid gap-x-6 gap-y-3 border-t border-ink-100 px-4 py-3 sm:grid-cols-2">
+              <div className="grid gap-x-6 gap-y-3 border-t border-rule px-4 py-3 sm:grid-cols-2">
                 {inv.entities.map((e) => (
                   <div key={e.name}>
-                    <div className="font-mono text-[12px] font-semibold text-ink-800">{e.name}</div>
+                    <div className="text-sm font-semibold text-ink">{e.name}</div>
                     <ul className="mt-1 space-y-0.5">
                       {e.items.map((it) => (
-                        <li key={it} className="flex gap-1.5 text-[12px] leading-relaxed text-ink-600">
+                        <li key={it} className="flex gap-1.5 text-sm leading-relaxed text-ink-secondary">
                           <span className={clsx('mt-1.5 h-1 w-1 shrink-0 rounded-full', l.dot)} />
                           {it}
                         </li>
@@ -350,18 +347,18 @@ export function HowItWorks() {
 
       {/* ============ lifecycle timeline ============ */}
       <SectionTitle icon={<ScrollText size={16} />}>การเดินทางของข้อมูล ทีละขั้น</SectionTitle>
-      <ol className="relative ml-4 border-l-2 border-ink-100">
+      <ol className="relative ml-4 border-l-2 border-petrol-700">
         {STEPS.map((s, i) => (
-          <li key={s.title} className="relative pb-8 pl-8 last:pb-0">
-            <span className="absolute -left-[17px] top-0 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-brand-gradient text-white shadow">
+          <li key={s.title} className="relative border-b border-rule py-5 pl-8 last:border-b-0">
+            <span className="absolute -left-[17px] top-5 grid h-8 w-8 place-items-center rounded-full border-2 border-white bg-petrol-700 text-on-petrol">
               <s.icon size={14} />
             </span>
             <div className="flex flex-wrap items-center gap-2">
-              <span className="text-[11px] font-bold text-ink-300">{String(i + 1).padStart(2, '0')}</span>
-              <h3 className="text-sm font-semibold text-ink-900">{s.title}</h3>
-              <span className={clsx('rounded-full px-2 py-0.5 text-[11px] font-medium', s.roleTone)}>{s.role}</span>
+              <span className="text-xs font-semibold text-ink-meta">{String(i + 1).padStart(2, '0')}</span>
+              <h3 className="text-sm font-semibold text-ink">{s.title}</h3>
+              <span className={clsx('rounded-full px-2 py-0.5 text-xs font-medium', s.roleTone)}>{s.role}</span>
             </div>
-            <p className="mt-1 max-w-2xl text-[13px] leading-relaxed text-ink-600">{s.detail}</p>
+            <p className="mt-1 max-w-2xl text-sm leading-relaxed text-ink-secondary">{s.detail}</p>
             <div className="mt-2 flex flex-wrap gap-1.5">
               {s.writes.map((w) => <LayerChip key={w} k={w} />)}
             </div>
@@ -371,60 +368,60 @@ export function HowItWorks() {
 
       {/* ============ accounts & roles ============ */}
       <SectionTitle icon={<Users size={16} />}>บัญชีและบทบาท — ใครทำอะไร</SectionTitle>
-      <div className="grid gap-3 lg:grid-cols-3">
+      <div className="divide-y divide-rule rounded-sheet border border-rule bg-surface">
         {ACCOUNT_GROUPS.map((g) => (
-          <div key={g.title} className="rounded-xl border border-ink-200/80 bg-white p-4 shadow-card">
+          <div key={g.title} className="p-4">
             <div className="flex items-center gap-2">
-              <span className="grid h-8 w-8 place-items-center rounded-lg bg-ink-100 text-ink-600"><g.icon size={16} /></span>
+              <span className="text-petrol-700"><g.icon size={16} /></span>
               <div>
-                <div className="text-sm font-semibold text-ink-900">{g.title}</div>
-                <div className="text-[11px] text-ink-400">{g.subtitle}</div>
+                <div className="text-sm font-semibold text-ink">{g.title}</div>
+                <div className="text-xs text-ink-meta">{g.subtitle}</div>
               </div>
             </div>
             <ul className="mt-3 space-y-3">
               {g.accounts.map((a) => (
-                <li key={a.name} className="border-t border-dashed border-ink-100 pt-2.5 first:border-t-0 first:pt-0">
+                <li key={a.name} className="border-t border-dashed border-rule pt-2.5 first:border-t-0 first:pt-0">
                   <div className="flex flex-wrap items-center gap-1.5">
-                    <code className="rounded bg-ink-50 px-1.5 py-0.5 text-[11px] font-medium text-ink-800">{a.name}</code>
-                    <span className={clsx('rounded-full px-2 py-0.5 text-[10px] font-semibold', a.tone)}>{a.role}</span>
+                    <code className="rounded bg-ground px-1.5 py-0.5 text-xs font-medium text-ink">{a.name}</code>
+                    <span className={clsx('rounded-full px-2 py-0.5 text-xs font-semibold', a.tone)}>{a.role}</span>
                   </div>
-                  <p className="mt-1 text-[12px] leading-relaxed text-ink-600">{a.duty}</p>
+                  <p className="mt-1 text-sm leading-relaxed text-ink-secondary">{a.duty}</p>
                 </li>
               ))}
             </ul>
           </div>
         ))}
       </div>
-      <p className="mt-3 rounded-xl border border-ink-100 bg-ink-50/60 px-4 py-3 text-[12px] leading-relaxed text-ink-500">
+      <p className="mt-3 rounded-sheet border border-rule bg-ground/60 px-4 py-3 text-sm leading-relaxed text-ink-meta">
         เส้นเชื่อมสำคัญ: สามระบบนี้เป็นคนละชั้นกันโดย server เป็นตัวกลาง — เช่น VVB กด Anchor ในแอป → server เขียน HCS ด้วยบัญชี operator
         → สวมบท gemregistry ไป approve ใน Guardian → Guardian ใช้บัญชี Hedera ของแต่ละฝ่ายทำธุรกรรมจริงบน chain
       </p>
 
       {/* ============ verify chain ============ */}
       <SectionTitle icon={<Link2 size={16} />}>คนนอกตรวจสอบเราได้อย่างไร</SectionTitle>
-      <div className="rounded-2xl border border-ink-200/80 bg-white p-5 shadow-card">
-        <p className="mb-4 text-[13px] leading-relaxed text-ink-600">
-          หัวใจของระบบคือ <span className="font-semibold text-ink-900">ห่วงโซ่ hash ที่ตรวจซ้ำได้ทุกข้อต่อ</span> —
+      <div className="rounded-sheet border border-rule/80 bg-white p-5">
+        <p className="mb-4 text-sm leading-relaxed text-ink-secondary">
+          หัวใจของระบบคือ <span className="font-semibold text-ink">ห่วงโซ่ hash ที่ตรวจซ้ำได้ทุกข้อต่อ</span> —
           ผู้ตรวจอิสระไม่ต้องขอสิทธิ์เข้าระบบเราเลย
         </p>
         <div className="flex flex-col gap-2 md:flex-row md:items-stretch">
           {VERIFY.map((v, i) => (
             <div key={v.title} className="flex flex-1 items-center gap-2">
-              <div className="flex-1 rounded-xl border border-ink-100 bg-ink-50/50 px-3 py-3">
-                <v.icon size={16} className="text-brand-600" />
-                <div className="mt-1.5 text-[13px] font-semibold text-ink-900">{v.title}</div>
-                <div className="mt-0.5 text-[11px] leading-snug text-ink-500">{v.detail}</div>
+              <div className="flex-1 border-b border-rule px-3 py-3">
+                <v.icon size={16} className="text-petrol-600" />
+                <div className="mt-1.5 text-sm font-semibold text-ink">{v.title}</div>
+                <div className="mt-0.5 text-sm leading-snug text-ink-meta">{v.detail}</div>
               </div>
               {i < VERIFY.length - 1 && (
                 <>
-                  <ArrowRight size={14} className="hidden shrink-0 text-ink-300 md:block" />
-                  <ArrowDown size={14} className="mx-auto shrink-0 text-ink-300 md:hidden" />
+                  <ArrowRight size={14} className="hidden shrink-0 text-ink-meta md:block" />
+                  <ArrowDown size={14} className="mx-auto shrink-0 text-ink-meta md:hidden" />
                 </>
               )}
             </div>
           ))}
         </div>
-        <p className="mt-4 border-t border-ink-100 pt-3 text-[12px] leading-relaxed text-ink-400">
+        <p className="mt-4 border-t border-rule pt-3 text-sm leading-relaxed text-ink-meta">
           ภายในองค์กรมีชั้นที่หก: audit log แบบ hash-chain — ทุกแถวผูกกับ hash ของแถวก่อนหน้า
           การแก้ประวัติย้อนหลังจะทำให้โซ่ขาดและตรวจพบทันที
         </p>
@@ -440,13 +437,13 @@ export function HowItWorks() {
         ].map((x) => (
           <a
             key={x.href} href={x.href} target="_blank" rel="noreferrer"
-            className="group rounded-xl border border-ink-200/80 bg-white p-4 shadow-card transition-all hover:-translate-y-0.5 hover:border-brand-300 hover:shadow-lg"
+            className="group rounded-sheet border border-rule/80 bg-white p-4 transition-all hover:border-petrol-100"
           >
-            <div className="flex items-center justify-between text-sm font-semibold text-ink-900">
+            <div className="flex items-center justify-between text-sm font-semibold text-ink">
               {x.t}
-              <ExternalLink size={14} className="text-ink-300 transition-colors group-hover:text-brand-600" />
+              <ExternalLink size={14} className="text-ink-meta transition-colors group-hover:text-petrol-600" />
             </div>
-            <div className="mt-1 text-[12px] text-ink-500">{x.d}</div>
+            <div className="mt-1 text-xs text-ink-meta">{x.d}</div>
           </a>
         ))}
       </div>

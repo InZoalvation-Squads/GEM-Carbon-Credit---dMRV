@@ -70,40 +70,42 @@ export function RecGuide() {
   }
 
   return (
-    <div className="mb-4 rounded-xl border border-ink-200/80 bg-white p-4 shadow-card">
-      <div className="mb-2 text-sm font-semibold text-ink-900">ขั้นตอนขึ้นทะเบียน REC — เตรียมอะไรบ้าง</div>
-      <div className="space-y-2">
+    <div className="mb-4 rounded-sheet border border-rule/80 bg-white p-4">
+      <h2 className="mb-2 text-sm font-semibold text-ink">ขั้นตอนขึ้นทะเบียน REC — เตรียมอะไรบ้าง</h2>
+      <div className="divide-y divide-rule">
         {REC_GUIDE_PHASES.map((phase, idx) => {
           const open = openKeys.has(phase.key);
           const done = phase.items.filter((i) => checked.has(i.id)).length;
           const phasePassed = idx < journeyPhase - 1;
           const isCurrent = idx === journeyPhase - 1;
           return (
-            <div key={phase.key} className={`rounded-lg border ${isCurrent ? 'border-brand-300 bg-brand-50/30' : 'border-ink-100'}`}>
+            <div key={phase.key} className={` ${isCurrent ? 'bg-petrol-50' : ''}`}>
               <button
                 type="button"
+                aria-expanded={open}
+                aria-controls={`rec-guide-${phase.key}`}
                 onClick={() => togglePhase(phase.key)}
-                className="flex w-full items-center gap-2 px-3 py-2 text-left"
+                className="flex min-h-11 w-full items-center gap-2 px-3 py-2 text-left"
               >
-                {phasePassed && <span className="shrink-0 font-bold text-emerald-600">✓</span>}
-                <span className="flex-1 text-[13px] font-medium text-ink-800">{phase.title}</span>
+                {phasePassed && <span className="shrink-0 font-semibold text-petrol-600">✓</span>}
+                <span className="flex-1 text-sm font-medium text-ink">{phase.title}</span>
                 {isCurrent && (
-                  <span className="shrink-0 rounded-full bg-brand-600 px-2 py-0.5 text-[10px] font-semibold text-white">
+                  <span className="shrink-0 rounded-full bg-petrol-600 px-2 py-0.5 text-xs font-semibold text-white">
                     คุณอยู่ขั้นนี้
                   </span>
                 )}
                 {phase.items.length > 0 && (
-                  <span className={`rounded-full px-2 py-0.5 text-[11px] font-semibold ${
-                    done === phase.items.length ? 'bg-brand-50 text-brand-700' : 'bg-ink-100 text-ink-500'}`}>
+                  <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${
+                    done === phase.items.length ? 'bg-petrol-50 text-petrol-700' : 'bg-surface-sunk text-ink-meta'}`}>
                     {done}/{phase.items.length}
                   </span>
                 )}
-                <ChevronDown size={14} className={`shrink-0 text-ink-400 transition-transform ${open ? 'rotate-180' : ''}`} />
+                <ChevronDown size={14} className={`shrink-0 text-ink-meta transition-transform ${open ? 'rotate-180' : ''}`} />
               </button>
               {open && (
-                <div className="border-t border-ink-100 px-3 py-2">
+                <div id={`rec-guide-${phase.key}`} className="border-t border-rule px-3 py-2">
                   {phase.notes.length > 0 && (
-                    <ul className="mb-2 list-disc space-y-0.5 pl-4 text-[12px] text-ink-500">
+                    <ul className="mb-2 list-disc space-y-0.5 pl-4 text-xs text-ink-meta">
                       {phase.notes.map((n, i) => <li key={i}>{n}</li>)}
                     </ul>
                   )}
@@ -115,7 +117,7 @@ export function RecGuide() {
                           href={l.url}
                           target="_blank"
                           rel="noopener noreferrer"
-                          className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50/60 px-2.5 py-1 text-[11px] font-medium text-brand-700 transition-colors hover:border-brand-400 hover:bg-brand-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-petrol-100 bg-petrol-50/60 px-2.5 py-1 text-xs font-medium text-petrol-700 transition-colors hover:border-petrol-600 hover:bg-petrol-50"
                         >
                           <FileDown size={12} aria-hidden />
                           {l.label}
@@ -125,7 +127,7 @@ export function RecGuide() {
                         <button
                           type="button"
                           onClick={() => setLetterOpen(true)}
-                          className="inline-flex items-center gap-1 rounded-full border border-brand-200 bg-brand-50/60 px-2.5 py-1 text-[11px] font-medium text-brand-700 transition-colors hover:border-brand-400 hover:bg-brand-50"
+                          className="inline-flex items-center gap-1 rounded-full border border-petrol-100 bg-petrol-50/60 px-2.5 py-1 text-xs font-medium text-petrol-700 transition-colors hover:border-petrol-600 hover:bg-petrol-50"
                         >
                           <FileText size={12} aria-hidden />
                           ร่างจดหมายนำส่ง
@@ -136,12 +138,12 @@ export function RecGuide() {
                   {phase.items.length > 0 && (
                     <div className="space-y-1">
                       {phase.items.map((item) => (
-                        <label key={item.id} className="flex cursor-pointer items-start gap-2 text-[13px] text-ink-700">
+                        <label key={item.id} className="flex cursor-pointer items-start gap-2 text-sm text-ink-secondary">
                           <input
                             type="checkbox"
                             checked={checked.has(item.id)}
                             onChange={() => toggleItem(item.id)}
-                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-ink-300 accent-brand-600"
+                            className="mt-0.5 h-4 w-4 shrink-0 rounded border-rule-strong accent-petrol-600"
                           />
                           <span>{item.label}</span>
                         </label>

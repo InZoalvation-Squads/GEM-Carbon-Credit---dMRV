@@ -57,14 +57,14 @@ export function RecCoverLetterModal({ checkedIds, onClose }: {
           <Input label="วันที่" type="date" value={date} onChange={(e) => setDate(e.target.value)} />
         </div>
         <Textarea label="ที่อยู่บริษัท" value={companyAddress} onChange={(e) => setCompanyAddress(e.target.value)} />
-        <p className="text-xs text-ink-400">
+        <p className="text-xs text-ink-meta">
           โครงจดหมายตามตัวอย่างทางการใน EGAT Process Guide — ช่อง [.....] ให้กรอกเพิ่มใน Word/กระดาษหัวจดหมายบริษัท
         </p>
         <pre data-testid="cover-letter-preview"
-          className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-lg bg-ink-50 p-4 font-mono text-xs text-ink-800 ring-1 ring-ink-200">
+          className="max-h-72 overflow-y-auto whitespace-pre-wrap rounded-sheet bg-ground p-4 font-sans text-sm text-ink ring-1 ring-rule">
           {letter}
         </pre>
-        <div className="flex justify-end gap-2 border-t border-ink-100 pt-3">
+        <div className="flex justify-end gap-2 border-t border-rule pt-3">
           <Button variant="ghost" onClick={onClose}>Close</Button>
           <Button variant="secondary" onClick={printLetter}><Printer size={15} /> พิมพ์</Button>
           <Button onClick={copy}><Copy size={15} /> {copied ? 'Copied ✓' : 'Copy'}</Button>

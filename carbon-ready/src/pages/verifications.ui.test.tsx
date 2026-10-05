@@ -15,9 +15,10 @@ describe('Verifications list — project name leads each row', () => {
   it('the package cell (always visible) carries the project name, not just the raw id', () => {
     renderPage();
     // VR-1001/VR-1002 (open states) belong to prj-0001 "Pune Rooftop Phase 1" —
-    // the row button itself must name the project so mobile users see it.
-    const rowButtons = screen.getAllByRole('button', { name: /Pune Rooftop Phase 1/ });
-    expect(rowButtons.length).toBeGreaterThan(0);
+    // the row link itself must name the project so mobile users see it.
+    const rowLinks = screen.getAllByRole('link', { name: /Pune Rooftop Phase 1/ });
+    expect(rowLinks.length).toBeGreaterThan(0);
+    expect(rowLinks[0]).toHaveAttribute('href', expect.stringMatching(/^\/verifications\/VR-/));
   });
 });
 

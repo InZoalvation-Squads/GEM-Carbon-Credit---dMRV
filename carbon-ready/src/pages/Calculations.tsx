@@ -4,7 +4,8 @@ import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
 import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { PageHeader } from '../components/layout/PageHeader';
-import { KpiCard } from '../components/ui/KpiCard';
+import { HeadBlock } from '../components/ui/HeadBlock';
+import { Tabs } from '../components/ui/Tabs';
 import { MonthlyReductionChart } from '../components/charts/MonthlyReductionChart';
 import { RegistrationGate } from '../components/project/RegistrationGate';
 import { EmptyState } from '../components/ui/EmptyState';
@@ -13,7 +14,7 @@ import { api } from '../lib/api';
 import { formatNumber } from '../lib/format';
 import { fmtDate, monthLabel } from '../lib/date';
 import type { CalculationOutput } from '../lib/calc';
-import { Calculator, Leaf, Zap } from 'lucide-react';
+import { Calculator } from 'lucide-react';
 
 type Tab = 'daily' | 'monthly' | 'total';
 
@@ -56,7 +57,7 @@ export function Calculations() {
             <span className="font-medium">Emission Factor:</span>{' '}
             {efUsed.country} / {efUsed.source} v{efUsed.version} —{' '}
             <span className="font-mono">{formatNumber(efUsed.factor_kgco2e_per_kwh, 4)} kgCO₂e/kWh</span>{' '}
-            <span className="text-ink-500">(effective {fmtDate(efUsed.effective_date)})</span>
+            <span className="text-ink-meta">(effective {fmtDate(efUsed.effective_date)})</span>
           </Card>
         )}
 
@@ -72,11 +73,11 @@ export function Calculations() {
 
         {result && result.daily.length > 0 && (
           <>
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4 mb-6">
-              <KpiCard label="Total Generation" value={`${formatNumber(result.totals.generation_kwh, 1)} kWh`} icon={<Zap size={20} />} />
-              <KpiCard label="Reduction (kgCO₂e)" value={formatNumber(result.totals.reduction_kgco2e, 1)} icon={<Leaf size={20} />} />
-              <KpiCard label="Reduction (tCO₂e)" value={formatNumber(result.totals.reduction_tco2e, 3)} icon={<Leaf size={20} />} />
-            </div>
+            <HeadBlock className="mb-6" figures={[
+              { label: 'Total Generation', value: `${formatNumber(result.totals.generation_kwh, 1)} kWh`, source: efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—' },
+              { label: 'Reduction (kgCO₂e)', value: formatNumber(result.totals.reduction_kgco2e, 1), source: efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—' },
+              { label: 'Reduction (tCO₂e)', value: formatNumber(result.totals.reduction_tco2e, 3), source: efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—' },
+            ]} />
 
             <Card className="mb-4">
               <CardHeader title="Monthly Reduction Trend" />
@@ -84,43 +85,36 @@ export function Calculations() {
             </Card>
 
             <Card>
-              <div className="px-5 py-4 border-b border-ink-100 flex gap-2">
-                {(['daily', 'monthly', 'total'] as Tab[]).map((t) => (
-                  <button
-                    key={t}
-                    onClick={() => setTab(t)}
-                    className={'px-3 py-1.5 text-sm rounded-md ' + (tab === t ? 'bg-brand-50 text-brand-700' : 'text-ink-500 hover:text-ink-900')}
-                  >{t[0].toUpperCase() + t.slice(1)}</button>
-                ))}
-              </div>
-              <CardBody className="p-0">
-                {tab === 'daily' && (
+              <Tabs className="px-5" label="Calculation period" value={tab} onChange={setTab}
+                items={(['daily', 'monthly', 'total'] as Tab[]).map((t) => ({ value: t, label: t[0].toUpperCase() + t.slice(1), content: <>
+                {t === 'daily' && (
                   <Table>
                     <THead><TR><TH>Date</TH><TH className="text-right">kWh</TH><TH className="text-right">kgCO₂e</TH></TR></THead>
                     <tbody>
                       {result.daily.slice(-90).reverse().map((d) => (
-                        <TR key={d.date}><TD>{fmtDate(d.date)}</TD><TD className="text-right">{formatNumber(d.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(d.reduction_kgco2e, 1)}</TD></TR>
+                        <TR key={d.date}><TD>{fmtDate(d.date)}<div className="text-xs text-ink-meta">{efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—'}</div></TD><TD className="text-right">{formatNumber(d.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(d.reduction_kgco2e, 1)}</TD></TR>
                       ))}
                     </tbody>
                   </Table>
                 )}
-                {tab === 'monthly' && (
+                {t === 'monthly' && (
                   <Table>
                     <THead><TR><TH>Month</TH><TH className="text-right">kWh</TH><TH className="text-right">tCO₂e</TH></TR></THead>
                     <tbody>
                       {result.monthly.map((m) => (
-                        <TR key={m.period}><TD>{monthLabel(m.period)}</TD><TD className="text-right">{formatNumber(m.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(m.reduction_kgco2e / 1000, 3)}</TD></TR>
+                        <TR key={m.period}><TD>{monthLabel(m.period)}<div className="text-xs text-ink-meta">{efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—'}</div></TD><TD className="text-right">{formatNumber(m.generation_kwh, 1)}</TD><TD className="text-right">{formatNumber(m.reduction_kgco2e / 1000, 3)}</TD></TR>
                       ))}
                     </tbody>
                   </Table>
                 )}
-                {tab === 'total' && (
+                {t === 'total' && (
                   <div className="p-6 text-center">
-                    <div className="text-4xl font-semibold">{formatNumber(result.totals.reduction_tco2e, 2)} tCO₂e</div>
-                    <div className="mt-2 text-sm text-ink-500">across {formatNumber(result.totals.generation_kwh, 0)} kWh of generation</div>
+                    <p className="mb-2 text-xs text-ink-meta">{efUsed ? `EF ${efUsed.country}/${efUsed.source} v${efUsed.version}` : '—'}</p>
+                    <div className="text-2xl font-semibold">{formatNumber(result.totals.reduction_tco2e, 2)} tCO₂e</div>
+                    <div className="mt-2 text-sm text-ink-meta">across {formatNumber(result.totals.generation_kwh, 0)} kWh of generation</div>
                   </div>
                 )}
-              </CardBody>
+                </> }))} />
             </Card>
           </>
         )}

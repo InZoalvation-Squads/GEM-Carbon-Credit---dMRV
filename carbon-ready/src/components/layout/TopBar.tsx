@@ -83,7 +83,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
       <div className="flex items-center gap-2 md:gap-3">
         <button
           onClick={onOpenSidebar}
-          className="rail-focus md:hidden grid h-11 w-11 place-items-center rounded-lg text-on-petrol-2 hover:bg-on-petrol/10"
+          className="rail-focus md:hidden grid h-11 w-11 place-items-center rounded-sheet text-on-petrol-2 hover:bg-on-petrol/10"
           aria-label="Toggle menu"
           aria-expanded={sidebarOpen}
           aria-controls="main-navigation"

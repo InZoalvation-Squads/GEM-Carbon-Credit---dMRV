@@ -1,8 +1,8 @@
 import type { ReactNode } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
-import { Button } from '../components/ui/Button';
+import { Button, LinkButton } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
 
 // ============================================================
@@ -184,11 +184,10 @@ export function EvidentSF02({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const isOwner = str('registrant_is_owner') === 'Yes';
 
   return (
-    <div className="mx-auto max-w-4xl">
-      <div className="mb-4 flex items-center justify-between print:hidden">
-        <Link to={`/registration/${pdd.id}/document`}>
-          <Button variant="ghost"><ArrowLeft size={16} /> Back to document</Button>
-        </Link>
+    <div className="mx-auto max-w-4xl rounded-sheet border border-rule bg-surface print:border-0">
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-b border-rule px-4 py-3 print:hidden">
+        <h1 className="w-full text-xl font-semibold text-ink">SF-02</h1>
+        <LinkButton to={`/registration/${pdd.id}/document`} variant="ghost"><ArrowLeft size={16} /> Back to document</LinkButton>
         <Button onClick={() => window.print()}><Printer size={16} /> Print / PDF</Button>
       </div>
 

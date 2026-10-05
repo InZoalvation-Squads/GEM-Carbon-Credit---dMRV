@@ -3,6 +3,7 @@ import { Cable, ExternalLink, Link2, PlugZap, RefreshCw, Trash2, Zap } from 'luc
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Button } from '../components/ui/Button';
+import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { Select } from '../components/ui/Select';
 import { EmptyState } from '../components/ui/EmptyState';
 import { toast } from '../components/layout/Toast';
@@ -166,27 +167,27 @@ export function IotMapping() {
       />
 
       {loading ? (
-        <Card><CardBody className="py-12 text-center text-sm text-ink-400">กำลังโหลด…</CardBody></Card>
+        <Card><CardBody className="py-12 text-center text-sm text-ink-meta">กำลังโหลด…</CardBody></Card>
       ) : !status?.enabled ? (
         <Card><CardBody className="p-0">
           <EmptyState icon={<Cable size={32} />} title="ยังไม่ได้เชื่อมฐานข้อมูล IoT"
             hint="ตั้งค่า IOT_DB_URL ใน server/.env แล้ว restart server — mapping ทั้งหมดจัดการจากหน้านี้ได้เลย ไม่ต้องแก้ .env อีก" />
         </CardBody></Card>
       ) : loadError ? (
-        <Card><CardBody className="py-8 text-center text-sm text-red-600">{loadError}</CardBody></Card>
+        <Card><CardBody className="py-8 text-center text-sm text-state-rejected">{loadError}</CardBody></Card>
       ) : (
         <div className="space-y-4">
-          <Card className="border-brand-200 bg-brand-50/60">
-            <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-[13px] text-ink-600">
-              <span className="inline-flex items-center gap-1.5 font-semibold text-brand-700">
+          <Card className="border-petrol-100 bg-petrol-50/60">
+            <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 py-4 text-sm text-ink-secondary">
+              <span className="inline-flex items-center gap-1.5 font-semibold text-petrol-700">
                 <Zap size={15} /> เชื่อมต่อแล้ว
               </span>
-              <span>ตาราง <code className="rounded bg-white/70 px-1.5 py-0.5 font-mono text-[12px]">{status.table}</code></span>
+              <span>ตาราง <code className="rounded bg-white/70 px-1.5 py-0.5 font-mono text-xs">{status.table}</code></span>
               <span>{devices.length} plant · มีข้อมูล {devices.filter((d) => d.days > 0).length} · map แล้ว {mappedCount}</span>
               <span>หักตามแผน monitoring {status.deduction_pct}%</span>
               <span>ดึงอัตโนมัติทุกชั่วโมง (เฉพาะวันที่จบแล้ว ไม่เขียนทับของเดิม)</span>
               {lastSync && (
-                <span className="font-medium text-brand-700">
+                <span className="font-medium text-petrol-700">
                   ล่าสุด: +{lastSync.inserted} วัน (ข้าม {lastSync.skipped_existing + lastSync.skipped_partial_day})
                 </span>
               )}
@@ -194,65 +195,64 @@ export function IotMapping() {
           </Card>
 
           <Card>
-            <CardHeader title={`อุปกรณ์ / Plant (${devices.length})`} action={<Link2 size={16} className="text-ink-300" />} />
+            <CardHeader title={`อุปกรณ์ / Plant (${devices.length})`} action={<Link2 size={16} className="text-ink-meta" />} />
             <CardBody className="p-0">
               {devices.length === 0 ? (
                 <EmptyState icon={<Cable size={32} />} title="ไม่พบข้อมูลในตารางอ่านค่า" />
               ) : (
-                <div className="overflow-x-auto">
-                  <table className="w-full text-sm">
-                    <thead>
-                      <tr className="border-b border-ink-100 text-left text-[11px] font-semibold uppercase tracking-wide text-ink-400">
-                        <th className="px-5 py-3">Plant</th>
-                        <th className="px-3 py-3 text-right">kWp</th>
-                        <th className="px-3 py-3">ช่วงข้อมูล</th>
-                        <th className="px-3 py-3 text-right">เฉลี่ย/วัน</th>
-                        <th className="px-3 py-3">โปรเจกต์</th>
-                        <th className="px-5 py-3 text-right">จัดการ</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-ink-100">
+                <Table mobileLabels={["Plant", "kWp", "ช่วงข้อมูล", "เฉลี่ย/วัน", "โปรเจกต์", "จัดการ"]}>
+                    <THead>
+                      <TR>
+                        <TH className="px-5 py-3">Plant</TH>
+                        <TH className="px-3 py-3 text-right">kWp</TH>
+                        <TH className="px-3 py-3">ช่วงข้อมูล</TH>
+                        <TH className="px-3 py-3 text-right">เฉลี่ย/วัน</TH>
+                        <TH className="px-3 py-3">โปรเจกต์</TH>
+                        <TH className="px-5 py-3 text-right">จัดการ</TH>
+                      </TR>
+                    </THead>
+                    <tbody className="divide-y divide-rule">
                       {devices.map((d) => {
                         const mapped = d.project_id;
                         const busy = busyDevice === d.device_id;
                         return (
-                          <tr key={d.device_id} className="align-middle">
-                            <td className="px-5 py-3">
-                              <div className="font-medium text-ink-900">{d.name ?? d.device_id}</div>
-                              <div className="font-mono text-[11px] text-ink-400">{d.device_id}</div>
-                            </td>
-                            <td className="px-3 py-3 text-right tabular-nums text-ink-700">
+                          <TR key={d.device_id}>
+                            <TD className="px-5 py-3">
+                              <div className="font-medium text-ink">{d.name ?? d.device_id}</div>
+                              <div className="font-mono text-xs text-ink-meta">{d.device_id}</div>
+                            </TD>
+                            <TD className="px-3 py-3 text-right tabular-nums text-ink-secondary">
                               {d.capacity_kwp != null ? formatNumber(d.capacity_kwp, 1) : '—'}
-                            </td>
-                            <td className="px-3 py-3 whitespace-nowrap text-[12px] text-ink-500">
+                            </TD>
+                            <TD className="px-3 py-3 whitespace-nowrap text-xs text-ink-meta">
                               {d.first_date ? (
                                 <>
                                   {d.first_date} → {d.last_date}
-                                  <span className="ml-1.5 rounded-full bg-ink-100 px-1.5 py-0.5 text-[11px] text-ink-600">{d.days} วัน</span>
+                                  <span className="ml-1.5 rounded-full bg-surface-sunk px-1.5 py-0.5 text-xs text-ink-secondary">{d.days} วัน</span>
                                 </>
                               ) : (
-                                <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] text-ink-500"
+                                <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs text-ink-meta"
                                   title="plant นี้ยังไม่มีค่าอ่านเข้ามาในฐานข้อมูล IoT — ต้องตามที่ระบบเก็บข้อมูลต้นทาง">
                                   ไม่มีข้อมูลใน IoT DB
                                 </span>
                               )}
-                            </td>
-                            <td className="px-3 py-3 text-right tabular-nums text-ink-700">
+                            </TD>
+                            <TD className="px-3 py-3 text-right tabular-nums text-ink-secondary">
                               {d.first_date ? `${formatNumber(d.avg_value, 1)} kWh` : '—'}
-                            </td>
-                            <td className="px-3 py-3">
+                            </TD>
+                            <TD className="px-3 py-3">
                               {mapped ? (
                                 <div className="flex flex-wrap items-center gap-1.5">
-                                  <span className="inline-flex items-center gap-1 rounded-full bg-brand-50 px-2.5 py-1 text-[12px] font-medium text-brand-700 ring-1 ring-brand-600/15">
+                                  <span className="inline-flex items-center gap-1 rounded-full bg-petrol-50 px-2.5 py-1 text-xs font-medium text-petrol-700 ring-1 ring-petrol-600/15">
                                     <ExternalLink size={12} /> {projectName.get(mapped) ?? mapped}
                                   </span>
                                   {d.synced_days != null && (
                                     d.synced_days >= d.days ? (
-                                      <span className="rounded-full bg-emerald-50 px-2 py-0.5 text-[11px] font-medium text-emerald-700 ring-1 ring-emerald-600/15">
+                                      <span className="rounded-full bg-petrol-50 px-2 py-0.5 text-xs font-medium text-petrol-700 ring-1 ring-petrol-600/15">
                                         ครบ {d.synced_days}/{d.days} วัน
                                       </span>
                                     ) : (
-                                      <span className="rounded-full bg-amber-50 px-2 py-0.5 text-[11px] font-medium text-amber-700 ring-1 ring-amber-600/15"
+                                      <span className="rounded-full bg-state-revision/5 px-2 py-0.5 text-xs font-medium text-state-revision ring-1 ring-state-revision/15"
                                         title="กด Sync + backfill เพื่อดึงวันที่เหลือ">
                                         ในระบบ {d.synced_days}/{d.days} วัน
                                       </span>
@@ -261,10 +261,10 @@ export function IotMapping() {
                                 </div>
                               ) : (
                                 <Select
-                                  aria-label={`เลือกโปรเจกต์สำหรับ ${d.name ?? d.device_id}`}
+                                  label={`เลือกโปรเจกต์สำหรับ ${d.name ?? d.device_id}`}
                                   value={selection[d.device_id] ?? ''}
                                   onChange={(e) => setSelection((s) => ({ ...s, [d.device_id]: e.target.value }))}
-                                  className="h-9 min-w-44 text-[13px]"
+                                  className="h-9 min-w-44 text-sm"
                                 >
                                   <option value="">— เลือกโปรเจกต์ —</option>
                                   {projects.map((p) => (
@@ -272,8 +272,8 @@ export function IotMapping() {
                                   ))}
                                 </Select>
                               )}
-                            </td>
-                            <td className="px-5 py-3 text-right">
+                            </TD>
+                            <TD className="px-5 py-3 text-right">
                               {mapped ? (
                                 <Button variant="ghost" size="sm" loading={busy} onClick={() => void handleUnmap(d)}>
                                   <Trash2 size={14} /> ยกเลิก
@@ -290,13 +290,12 @@ export function IotMapping() {
                                   </Button>
                                 </div>
                               )}
-                            </td>
-                          </tr>
+                            </TD>
+                          </TR>
                         );
                       })}
                     </tbody>
-                  </table>
-                </div>
+                  </Table>
               )}
             </CardBody>
           </Card>

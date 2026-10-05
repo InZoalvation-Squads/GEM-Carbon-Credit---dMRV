@@ -1,5 +1,6 @@
 import { Coins, ExternalLink, Gem } from 'lucide-react';
 import { Card, CardBody, CardHeader } from '../ui/Card';
+import { BlockRow, ChainList } from '../ui/BlockRow';
 import { EmptyState } from '../ui/EmptyState';
 import { useStore } from '../../store';
 import { formatNumber } from '../../lib/format';
@@ -32,13 +33,13 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
 
   return (
     <div className="space-y-4">
-      <Card className="border-brand-200 bg-brand-50/60">
+      <Card className="border-petrol-100 bg-petrol-50/60">
         <CardBody className="flex flex-wrap items-center gap-x-8 gap-y-2 py-4">
           <div>
-            <div className="text-[11px] font-semibold uppercase tracking-wide text-brand-700">เครดิตสะสมของโปรเจกต์</div>
-            <div className="mt-0.5 text-2xl font-bold text-ink-900">{formatNumber(total, 2)} <span className="text-base font-medium text-ink-500">tCO₂e</span></div>
+            <div className="text-xs font-semibold text-petrol-700">เครดิตสะสมของโปรเจกต์</div>
+            <div className="mt-0.5 text-2xl font-semibold text-ink">{formatNumber(total, 2)} <span className="text-base font-medium text-ink-meta">tCO₂e</span></div>
           </div>
-          <div className="text-[12px] leading-relaxed text-ink-500">
+          <div className="text-xs leading-relaxed text-ink-meta">
             {tokens.length} batch · บันทึกในทะเบียนใต้ชื่อโปรเจกต์ (แบบบัญชี registry)<br />
             token บน chain อยู่ที่ treasury ของแพลตฟอร์มจนกว่าจะโอน/retire
           </div>
@@ -46,9 +47,9 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
       </Card>
 
       <Card>
-        <CardHeader title={`Batches (${tokens.length})`} action={<Coins size={16} className="text-ink-300" />} />
+        <CardHeader title={`Batches (${tokens.length})`} action={<Coins size={16} className="text-ink-meta" />} />
         <CardBody className="p-0">
-          <ul className="divide-y divide-ink-100">
+          <ChainList framed={false}>
             {tokens.map((t) => {
               const batch = (t.batch ?? null) as {
                 serial_start?: number; serial_end?: number;
@@ -56,33 +57,35 @@ export function ProjectCreditsTab({ projectId }: { projectId: UUID }) {
               } | null;
               const erc = batch?.erc1155;
               return (
-                <li key={t.id} className="px-5 py-3.5">
+                <BlockRow key={t.id} blockId={t.id} state="anchored" figure={`${formatNumber(t.amount_tco2e, 2)} tCO₂e`}
+                  source={`${fmtDate(t.monitoring_period_start)} – ${fmtDate(t.monitoring_period_end)}`}
+                  magnitude={{ value: t.amount_tco2e, visibleValues: tokens.map((row) => row.amount_tco2e) }}>
                   <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-                    <span className="text-base font-bold text-ink-900">{formatNumber(t.amount_tco2e, 2)} tCO₂e</span>
-                    <span className="rounded-full bg-ink-100 px-2 py-0.5 text-[11px] font-medium text-ink-600">batch #{t.serial_number}</span>
-                    <span className="text-[12px] text-ink-500">{fmtDate(t.monitoring_period_start)} – {fmtDate(t.monitoring_period_end)}</span>
-                    <span className="ml-auto text-[11px] text-ink-400">minted {fmtDate(t.minted_at)}</span>
+
+                    <span className="rounded-full bg-surface-sunk px-2 py-0.5 text-xs font-medium text-ink-secondary">batch #{t.serial_number}</span>
+
+                    <span className="ml-auto text-xs text-ink-meta">minted {fmtDate(t.minted_at)}</span>
                   </div>
-                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-[11px] text-ink-500">
+                  <div className="mt-1.5 flex flex-wrap items-center gap-x-4 gap-y-1 font-mono text-xs text-ink-meta">
                     {batch?.serial_start !== undefined && (
                       <span>serials {batch.serial_start!.toLocaleString()}–{batch.serial_end!.toLocaleString()}</span>
                     )}
-                    <a className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                    <a className="inline-flex items-center gap-1 text-petrol-600 hover:underline"
                       href={`https://hashscan.io/testnet/token/${t.token_id}`} target="_blank" rel="noreferrer">
                       HTS {t.token_id} <ExternalLink size={11} />
                     </a>
                     {erc?.address && (
-                      <a className="inline-flex items-center gap-1 text-brand-600 hover:underline"
+                      <a className="inline-flex items-center gap-1 text-petrol-600 hover:underline"
                         href={`https://hashscan.io/testnet/contract/${erc.address}`} target="_blank" rel="noreferrer">
                         ERC-1155 id {erc.id} <ExternalLink size={11} />
                       </a>
                     )}
-                    <span className="truncate text-ink-400">VC {t.credential_id}</span>
+                    <span className="truncate text-ink-meta">VC {t.credential_id}</span>
                   </div>
-                </li>
+                </BlockRow>
               );
             })}
-          </ul>
+          </ChainList>
         </CardBody>
       </Card>
     </div>

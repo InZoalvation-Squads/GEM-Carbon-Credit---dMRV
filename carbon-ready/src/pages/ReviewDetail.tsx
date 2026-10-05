@@ -7,6 +7,7 @@ import { Textarea } from '../components/ui/Textarea';
 import { Modal } from '../components/ui/Modal';
 import { Badge } from '../components/ui/Badge';
 import { StatusBadge, CategoryChip, FileKindIcon } from '../components/ui/StatusBadge';
+import { BlockRow, ChainList } from '../components/ui/BlockRow';
 import { HashChip } from '../components/ui/HashChip';
 import { useStore } from '../store';
 import { api } from '../lib/api';
@@ -58,7 +59,7 @@ export function ReviewDetail() {
   }
 
   if (!v) {
-    return <div className="text-sm text-ink-500">Package not found. <Link to="/verifications" className="text-brand-700 underline">Back to queue</Link></div>;
+    return <div className="text-sm text-ink-meta">Package not found. <Link to="/verifications" className="text-petrol-700 underline">Back to queue</Link></div>;
   }
 
   const pkgEvidence = evidence.filter((e) => v.evidence_ids.includes(e.id));
@@ -92,20 +93,20 @@ export function ReviewDetail() {
   return (
     <div>
       <div className="mb-4">
-        <Link to="/verifications" className="text-sm text-ink-500 hover:text-ink-900 inline-flex items-center gap-1"><ChevronLeft size={14} /> Verifications</Link>
+        <Link to="/verifications" className="text-sm text-ink-meta hover:text-ink inline-flex items-center gap-1"><ChevronLeft size={14} /> Verifications</Link>
       </div>
 
       <div className="flex flex-wrap items-start justify-between gap-4 mb-5">
         <div>
           <div className="flex items-center gap-3">
-            <h1 className="text-2xl font-semibold text-ink-900">
-              {pkgLabel} <span className="font-normal text-ink-500">· {fmtDate(v.monitoring_period_start)} – {fmtDate(v.monitoring_period_end)}</span>
+            <h1 className="text-2xl font-semibold text-ink">
+              {pkgLabel} <span className="font-normal text-ink-meta">· {fmtDate(v.monitoring_period_start)} – {fmtDate(v.monitoring_period_end)}</span>
             </h1>
             <StatusBadge state={v.state} />
           </div>
-          <div className="mt-1 text-sm text-ink-500">
+          <div className="mt-1 text-sm text-ink-meta">
             <span className="font-mono text-xs">{v.id}</span> · Owner {v.owner_name} · Verifier {v.assigned_verifier_name} ·{' '}
-            <span className="font-medium text-ink-900">{formatTco2e(v.reduction_kgco2e)}</span> claimed
+            <span className="font-medium text-ink">{formatTco2e(v.reduction_kgco2e)}</span> claimed
           </div>
         </div>
         {v.state === 'submitted' && (
@@ -114,36 +115,38 @@ export function ReviewDetail() {
       </div>
 
       {locked && (
-        <Card className="mb-5 border-brand-200 bg-brand-50">
-          <CardBody className="flex items-center gap-3 py-3">
-            <Lock size={16} className="text-brand-700" />
-            <div className="text-sm text-brand-800">
+        <ChainList className="mb-5">
+          <BlockRow blockId={v.id} state={v.credential_id ? 'anchored' : v.state} figure={formatTco2e(v.reduction_kgco2e)} source={v.factors_snapshot}>
+          <div className="mt-3 flex items-center gap-3 border-t border-rule pt-3">
+            <Lock size={16} className="text-petrol-700" />
+            <div className="text-sm text-petrol-800">
               {v.state === 'approved' ? (
                 v.credential_id == null ? (
                   <div className="flex flex-wrap items-center gap-3">
                     <span className="inline-flex flex-wrap items-center gap-1">Package <strong>locked</strong> on {v.locked_at ? fmtDate(v.locked_at) : 'approval'} · evidence read-only ·{' '}
-                      {v.hash_value && <HashChip value={v.hash_value} />} · 🔒 anchoring pending.</span>
+                      {v.hash_value && <HashChip value={v.hash_value} />} · <Lock size={14} aria-hidden /> anchoring pending.</span>
                     <Button size="sm" loading={busy === 'anchor'} onClick={() => void track('anchor', () => api.anchorVerification(v.id))}>
                       <Link2 size={14} /> Anchor to Hedera Guardian
                     </Button>
                   </div>
                 ) : (
                   <div>
-                    <div className="flex items-center gap-2 font-medium text-brand-800">⛓ Anchored on Hedera Guardian{credential?.anchor ? '' : ' (simulated)'}</div>
-                    <div className="mt-1 grid gap-0.5 text-xs text-brand-700 font-mono">
+                    <div className="flex items-center gap-2 font-medium text-petrol-800"><Link2 size={16} aria-hidden /> Anchored on Hedera Guardian{credential?.anchor ? '' : ' (simulated)'}</div>
+                    <div className="anchor-provenance mt-1 grid gap-0.5 text-xs text-petrol-700 font-mono">
                       <span className="inline-flex items-center gap-1">credential: <HashChip value={v.credential_id} /></span>
-                      <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {v.anchored_at ? fmtDateTime(v.anchored_at) : ''}</span>
+                      <span>HCS: topic {v.hcs_topic_id} · msg #{v.hcs_sequence_number} · {credential?.anchor?.consensus_timestamp ?? credential?.hcs.consensus_timestamp ?? (v.anchored_at ? fmtDateTime(v.anchored_at) : '')}</span>
                       {credential && <a className="underline" href={displayHcs(credential).explorer_url} target="_blank" rel="noreferrer">View on HashScan{displayHcs(credential).real ? '' : ' (mock)'} ↗</a>}
                     </div>
-                    {!credential?.anchor && <div className="mt-1 text-[11px] text-ink-400">Simulated · not a live Hedera transaction.</div>}
+                    {!credential?.anchor && <div className="mt-1 text-xs text-ink-meta">Simulated · not a live Hedera transaction.</div>}
                   </div>
                 )
               ) : (
                 <>Package was rejected and is closed. {v.rejection_reason && <em>“{v.rejection_reason}”</em>}</>
               )}
             </div>
-          </CardBody>
-        </Card>
+          </div>
+          </BlockRow>
+        </ChainList>
       )}
 
       <div className="grid gap-5 lg:grid-cols-[1fr_1fr]">
@@ -155,8 +158,8 @@ export function ReviewDetail() {
               <Field label="Monitoring period" value={`${fmtDate(v.monitoring_period_start)} – ${fmtDate(v.monitoring_period_end)}`} />
               <Field label="Carbon result" value={formatTco2e(v.reduction_kgco2e)} />
               <div className="col-span-2">
-                <div className="text-xs uppercase tracking-wide text-ink-400">Emission factor snapshot</div>
-                <div className="mt-0.5 font-medium text-ink-900">{v.factors_snapshot}</div>
+                <div className="text-xs text-ink-meta">Emission factor snapshot</div>
+                <div className="mt-0.5 font-medium text-ink">{v.factors_snapshot}</div>
               </div>
             </CardBody>
           </Card>
@@ -165,22 +168,22 @@ export function ReviewDetail() {
             <CardHeader title="Data check — ทวนสอบตัวเลขจากข้อมูลดิบ" />
             <CardBody className="space-y-3">
               {periodRecords.length === 0 ? (
-                <p className="text-sm text-amber-700">ไม่พบข้อมูล monitoring ในช่วงเวลานี้ — ตรวจสอบกับผู้พัฒนาก่อนอนุมัติ</p>
+                <p className="text-sm text-state-revision">ไม่พบข้อมูล monitoring ในช่วงเวลานี้ — ตรวจสอบกับผู้พัฒนาก่อนอนุมัติ</p>
               ) : (
                 <>
-                  <div className="max-h-44 overflow-y-auto rounded-lg border border-ink-100">
+                  <div className="max-h-44 overflow-y-auto rounded-sheet border border-rule">
                     <table className="w-full text-sm">
-                      <thead className="sticky top-0 bg-ink-50 text-left text-[11px] uppercase tracking-wide text-ink-400">
+                      <thead className="sticky top-0 bg-ground text-left text-xs text-ink-meta">
                         <tr><th className="px-3 py-1.5">Date</th><th className="px-3 py-1.5 text-right">kWh</th></tr>
                       </thead>
                       <tbody>
                         {periodRecords.map((r) => (
-                          <tr key={r.id} className="border-t border-ink-50">
-                            <td className="px-3 py-1.5 text-ink-700">{fmtDate(r.record_date)}</td>
-                            <td className="px-3 py-1.5 text-right font-medium text-ink-900">{formatNumber(r.generation_kwh, 1)}</td>
+                          <tr key={r.id} className="border-t border-rule">
+                            <td className="px-3 py-1.5 text-ink-secondary">{fmtDate(r.record_date)}</td>
+                            <td className="px-3 py-1.5 text-right font-medium text-ink">{formatNumber(r.generation_kwh, 1)}</td>
                           </tr>
                         ))}
-                        <tr className="border-t border-ink-200 bg-ink-50/60 font-semibold">
+                        <tr className="border-t border-rule bg-ground/60 font-semibold">
                           <td className="px-3 py-1.5">รวม {periodRecords.length} รายการ</td>
                           <td className="px-3 py-1.5 text-right">{formatNumber(totalKwh, 1)} kWh</td>
                         </tr>
@@ -192,8 +195,8 @@ export function ReviewDetail() {
                     <Field label="คำนวณได้" value={computedKg !== null ? formatTco2e(computedKg) : '—'} />
                   </div>
                   {deltaPct !== null && (
-                    <div data-testid="claim-check" className={'flex items-center gap-2 rounded-lg px-3 py-2 text-sm ' + (claimMatches ? 'bg-emerald-50 text-emerald-800' : 'bg-amber-50 text-amber-800')}>
-                      <CheckCircle2 size={16} className={claimMatches ? 'text-emerald-500' : 'text-amber-500'} />
+                    <div data-testid="claim-check" className={'flex items-center gap-2 rounded-sheet px-3 py-2 text-sm ' + (claimMatches ? 'bg-petrol-50 text-petrol-800' : 'bg-state-revision/5 text-state-revision')}>
+                      <CheckCircle2 size={16} className={claimMatches ? 'text-petrol-600' : 'text-state-revision'} />
                       {claimMatches
                         ? `ตัวเลขที่เคลม (${formatTco2e(v.reduction_kgco2e)}) ตรงกับที่คำนวณจากข้อมูลดิบ (ต่าง ${deltaPct.toFixed(2)}%)`
                         : `ตัวเลขที่เคลมต่างจากที่คำนวณได้ ${deltaPct.toFixed(1)}% — ตรวจสอบก่อนอนุมัติ`}
@@ -206,12 +209,12 @@ export function ReviewDetail() {
 
           <Card>
             <CardHeader title="Required categories" />
-            <CardBody className="grid grid-cols-2 gap-2">
+            <CardBody className="divide-y divide-rule p-0">
               {coverage.map(({ category, present }) => (
                 <div key={category}
-                  className={'flex items-center gap-2 rounded-md border px-3 py-2 text-sm ' +
-                    (present ? 'border-brand-200 bg-brand-50 text-brand-800' : 'border-amber-200 bg-amber-50 text-amber-700')}>
-                  <CheckCircle2 size={16} className={present ? 'text-brand-500' : 'text-amber-400'} />
+                  className={'flex items-center gap-2 px-5 py-3 text-sm ' +
+                    (present ? 'text-petrol-700' : 'text-state-revision')}>
+                  <CheckCircle2 size={16} className={present ? 'text-petrol-600' : 'text-state-revision'} />
                   {CATEGORY_LABEL[category]}
                 </div>
               ))}
@@ -219,21 +222,21 @@ export function ReviewDetail() {
           </Card>
 
           <Card>
-            <CardHeader title={`Evidence (${pkgEvidence.length})`} action={<FileCheck2 size={16} className="text-ink-300" />} />
+            <CardHeader title={`Evidence (${pkgEvidence.length})`} action={<FileCheck2 size={16} className="text-ink-meta" />} />
             <CardBody className="p-0">
-              <ul className="divide-y divide-ink-100">
+              <ul className="divide-y divide-rule">
                 {pkgEvidence.map((e) => (
                   <li key={e.id} className="flex items-center gap-3 px-5 py-3">
                     <FileKindIcon kind={e.kind} />
                     <div className="min-w-0 flex-1">
-                      <div className="truncate text-sm font-medium text-ink-900">{e.file_name}</div>
+                      <div className="truncate text-sm font-medium text-ink">{e.file_name}</div>
                       <div className="mt-0.5"><CategoryChip category={e.category} /></div>
                     </div>
-                    <span className="font-mono text-xs text-ink-400">v{e.version_number}</span>
-                    <CheckCircle2 size={16} className="text-brand-500" />
+                    <span className="font-mono text-xs text-ink-meta">v{e.version_number}</span>
+                    <CheckCircle2 size={16} className="text-petrol-600" />
                   </li>
                 ))}
-                {pkgEvidence.length === 0 && <li className="px-5 py-8 text-center text-sm text-ink-500">No evidence linked.</li>}
+                {pkgEvidence.length === 0 && <li className="px-5 py-8 text-center text-sm text-ink-meta">No evidence linked.</li>}
               </ul>
             </CardBody>
           </Card>
@@ -244,26 +247,26 @@ export function ReviewDetail() {
           <Card>
             <CardHeader title="Conversation" />
             <CardBody className="p-0">
-              <div className="max-h-80 overflow-y-auto px-5 py-4 space-y-3">
-                {comments.length === 0 && <p className="py-4 text-center text-sm text-ink-400">No comments yet.</p>}
+              <div className="max-h-80 divide-y divide-rule overflow-y-auto px-5">
+                {comments.length === 0 && <p className="py-4 text-center text-sm text-ink-meta">No comments yet.</p>}
                 {comments.map((c) => {
                   const isVerifier = c.author_role === 'verifier';
                   return (
-                    <div key={c.id} className={'rounded-md border p-3 ' + (c.reply_to ? 'ml-6 border-ink-100 bg-ink-50' : 'border-ink-200 bg-white')}>
+                    <div key={c.id} className={'py-3 ' + (c.reply_to ? 'ml-6' : '')}>
                       <div className="flex items-center gap-2 text-xs">
-                        <span className="font-semibold text-ink-900">{c.author_name}</span>
+                        <span className="font-semibold text-ink">{c.author_name}</span>
                         <Badge tone={isVerifier ? 'violet' : 'green'}>{ROLE_LABEL[c.author_role]}</Badge>
-                        <span className="text-ink-400">· {fmtDateTime(c.created_at)}</span>
+                        <span className="text-ink-meta">· {fmtDateTime(c.created_at)}</span>
                       </div>
-                      {c.evidence_name && <div className="mt-1 text-xs text-ink-400">on {c.evidence_name}</div>}
-                      <p className="mt-1 text-sm text-ink-700">{c.body}</p>
+                      {c.evidence_name && <div className="mt-1 text-xs text-ink-meta">on {c.evidence_name}</div>}
+                      <p className="mt-1 text-sm text-ink-secondary">{c.body}</p>
                     </div>
                   );
                 })}
               </div>
               {!locked && (
-                <div className="border-t border-ink-100 p-4">
-                  <Textarea rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment…" />
+                <div className="border-t border-rule p-4">
+                  <Textarea label="Comment" rows={2} value={draft} onChange={(e) => setDraft(e.target.value)} placeholder="Write a comment…" />
                   <div className="mt-2 flex justify-end">
                     <Button size="sm" variant="secondary" disabled={!draft.trim()} loading={busy === 'comment'}
                       onClick={() => void track('comment', async () => { await api.addVerificationComment(v.id, draft.trim()); setDraft(''); })}>
@@ -286,26 +289,26 @@ export function ReviewDetail() {
                   <Button variant="secondary" className="flex-1" onClick={() => setAction('revision')}>Request revision</Button>
                   <Button variant="danger" className="flex-1" onClick={() => setAction('reject')}>Reject</Button>
                 </div>
-                {v.state === 'submitted' && <p className="text-xs text-ink-500">Tip: start the review before approving.</p>}
+                {v.state === 'submitted' && <p className="text-xs text-ink-meta">Tip: start the review before approving.</p>}
               </CardBody>
             </Card>
           )}
 
           <Card>
-            <CardHeader title="Activity timeline" action={<Link to="/audit-log" className="text-xs font-medium text-brand-700 hover:underline">Full audit ›</Link>} />
+            <CardHeader title="Activity timeline" action={<Link to="/audit-log" className="text-xs font-medium text-petrol-700 hover:underline">Full audit ›</Link>} />
             <CardBody>
-              <ol className="space-y-3 border-l border-ink-200 pl-4">
+              <ol className="space-y-3 border-l border-rule pl-4">
                 {audit.map((a: AuditLog) => (
                   <li key={a.id} className="relative">
-                    <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-brand-400 ring-4 ring-white" />
-                    <div className="text-sm text-ink-900">
+                    <span className="absolute -left-[21px] top-1 h-2 w-2 rounded-full bg-petrol-600 ring-4 ring-white" />
+                    <div className="text-sm text-ink">
                       <span className="font-medium">{a.user_role ? ROLE_LABEL[a.user_role] : 'User'}</span>{' '}
-                      <span className="text-ink-500">{ACTION_LABEL[a.action] ?? a.action}</span>
+                      <span className="text-ink-meta">{ACTION_LABEL[a.action] ?? a.action}</span>
                     </div>
-                    <div className="text-xs text-ink-400">{fmtDateTime(a.created_at)}</div>
+                    <div className="text-xs text-ink-meta">{fmtDateTime(a.created_at)}</div>
                   </li>
                 ))}
-                {audit.length === 0 && <li className="text-sm text-ink-400">No activity recorded yet.</li>}
+                {audit.length === 0 && <li className="text-sm text-ink-meta">No activity recorded yet.</li>}
               </ol>
             </CardBody>
           </Card>
@@ -318,15 +321,15 @@ export function ReviewDetail() {
       }>
         {action === 'approve' && (
           <div className="space-y-4">
-            <p className="text-sm text-ink-600">This will lock the package. After approval:</p>
-            <ul className="space-y-1.5 text-sm text-ink-700">
-              <li className="flex gap-2"><Lock size={16} className="text-brand-600 shrink-0" /> Evidence versions become read-only.</li>
-              <li className="flex gap-2"><ShieldCheck size={16} className="text-brand-600 shrink-0" /> Carbon claim of {formatTco2e(v.reduction_kgco2e)} is finalized.</li>
-              <li className="flex gap-2"><FileCheck2 size={16} className="text-brand-600 shrink-0" /> A hash-sealed audit record is written, ready for Hedera Guardian (Sprint 3).</li>
+            <p className="text-sm text-ink-secondary">This will lock the package. After approval:</p>
+            <ul className="space-y-1.5 text-sm text-ink-secondary">
+              <li className="flex gap-2"><Lock size={16} className="text-petrol-600 shrink-0" /> Evidence versions become read-only.</li>
+              <li className="flex gap-2"><ShieldCheck size={16} className="text-petrol-600 shrink-0" /> Carbon claim of {formatTco2e(v.reduction_kgco2e)} is finalized.</li>
+              <li className="flex gap-2"><FileCheck2 size={16} className="text-petrol-600 shrink-0" /> A hash-sealed audit record is written, ready for Hedera Guardian (Sprint 3).</li>
             </ul>
             <Textarea label="Approval notes (optional)" rows={2} value={note} onChange={(e) => setNote(e.target.value)} />
-            <label className="flex items-center gap-2 text-sm text-ink-700">
-              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="h-4 w-4 accent-brand-600" />
+            <label className="flex items-center gap-2 text-sm text-ink-secondary">
+              <input type="checkbox" checked={confirmed} onChange={(e) => setConfirmed(e.target.checked)} className="h-4 w-4 accent-petrol-600" />
               I confirm I have reviewed all evidence.
             </label>
             <div className="flex justify-end gap-2">
@@ -337,7 +340,7 @@ export function ReviewDetail() {
         )}
         {action === 'revision' && (
           <div className="space-y-4">
-            <p className="text-sm text-ink-600">The owner will be notified to address your feedback.</p>
+            <p className="text-sm text-ink-secondary">The owner will be notified to address your feedback.</p>
             <Textarea label="What needs to change? (required)" rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={closeModal}>Cancel</Button>
@@ -347,7 +350,7 @@ export function ReviewDetail() {
         )}
         {action === 'reject' && (
           <div className="space-y-4">
-            <p className="text-sm text-ink-600">This terminates the workflow. A reason is recorded in the audit log.</p>
+            <p className="text-sm text-ink-secondary">This terminates the workflow. A reason is recorded in the audit log.</p>
             <Textarea label="Reason for rejection (required)" rows={4} value={note} onChange={(e) => setNote(e.target.value)} />
             <div className="flex justify-end gap-2">
               <Button variant="ghost" onClick={closeModal}>Cancel</Button>
@@ -363,8 +366,8 @@ export function ReviewDetail() {
 function Field({ label, value }: { label: string; value: string }) {
   return (
     <div>
-      <div className="text-xs uppercase tracking-wide text-ink-400">{label}</div>
-      <div className="mt-0.5 font-medium text-ink-900">{value}</div>
+      <div className="text-xs text-ink-meta">{label}</div>
+      <div className="mt-0.5 font-medium text-ink">{value}</div>
     </div>
   );
 }

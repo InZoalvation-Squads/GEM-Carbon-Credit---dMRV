@@ -2,6 +2,7 @@ import { useState } from 'react';
 import { Card, CardBody, CardHeader } from '../components/ui/Card';
 import { Select } from '../components/ui/Select';
 import { Button } from '../components/ui/Button';
+import { StatusBadge } from '../components/ui/StatusBadge';
 import { Badge } from '../components/ui/Badge';
 import { Table, THead, TR, TH, TD } from '../components/ui/Table';
 import { FileDrop } from '../components/ui/FileDrop';
@@ -92,28 +93,36 @@ export function UploadPage() {
               {preview.rejected.length > 0 && (
                 <>
                 <Table>
-                  <THead><TR><TH>Row</TH><TH>Problem</TH><TH>Date</TH><TH>Value</TH></TR></THead>
+                  <THead><TR><TH>Row</TH><TH>Problem</TH><TH>Date</TH><TH>Value</TH><TH>Status</TH></TR></THead>
                   <tbody>
                     {preview.rejected.slice(0, 50).map((r, i) => (
                       <TR key={i}>
                         <TD>{r.row}</TD>
                         <TD>
-                          <div className="text-ink-800">{REJECT_REASON[r.code] ?? r.code}</div>
-                          <div className="font-mono text-[11px] text-ink-400">{r.code}</div>
+                          <div className="text-ink">{REJECT_REASON[r.code] ?? r.code}</div>
+                          <div className="font-mono text-xs text-ink-meta">{r.code}</div>
                         </TD>
                         <TD>{r.date ?? '—'}</TD>
-                        <TD>{r.value ?? '—'}</TD>
+                        <TD>{r.value ?? '—'}</TD><TD><StatusBadge state="rejected" /></TD>
                       </TR>
                     ))}
                   </tbody>
                 </Table>
                 {preview.rejected.length > 50 && (
-                  <div className="mt-2 text-xs text-ink-400">
+                  <div className="mt-2 text-xs text-ink-meta">
                     Showing 50 of {preview.rejected.length} rejected rows — fix the issues above and re-upload to see the rest.
                   </div>
                 )}
                 </>
               )}
+              {preview.accepted.length > 0 && <div className="mt-4">
+                <Table><THead><TR><TH>Date</TH><TH>Value</TH><TH>Status</TH></TR></THead>
+                  <tbody>{preview.accepted.slice(0, 50).map((row) => <TR key={row.record_date}>
+                    <TD className="font-mono">{row.record_date}</TD><TD className="font-mono">{row.generation_kwh} {driverUnit}</TD>
+                    <TD><StatusBadge state="approved" label="accepted" /></TD>
+                  </TR>)}</tbody>
+                </Table>
+              </div>}
               <div className="flex justify-end gap-2 mt-4">
                 <Button variant="secondary" onClick={reset}>Cancel</Button>
                 <Button onClick={confirm} loading={confirming} disabled={preview.accepted.length === 0}>Confirm Upload {preview.accepted.length} rows</Button>
@@ -136,10 +145,10 @@ export function UploadPage() {
         <Card>
           <CardHeader title="CSV Format" />
           <CardBody>
-            <pre className="bg-ink-50 text-xs p-3 rounded-md overflow-x-auto">{`Date,${driverHeader}
+            <pre className="bg-ground text-xs p-3 rounded-md overflow-x-auto">{`Date,${driverHeader}
 2026-01-01,1234.5
 2026-01-02,1180.2`}</pre>
-            <p className="mt-3 text-sm text-ink-500">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Values are in {driverUnit} and must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
+            <p className="mt-3 text-sm text-ink-meta">Dates must be ISO-8601 (<code>YYYY-MM-DD</code>). Values are in {driverUnit} and must be non-negative. Duplicate dates — within the file or against records already on the project — are rejected.</p>
           </CardBody>
         </Card>
       </RegistrationGate>
