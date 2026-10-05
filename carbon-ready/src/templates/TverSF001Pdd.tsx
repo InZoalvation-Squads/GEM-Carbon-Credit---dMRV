@@ -4,7 +4,7 @@ import { Printer, ArrowLeft } from 'lucide-react';
 import { useStore } from '../store';
 import { Button, LinkButton } from '../components/ui/Button';
 import { EmptyState } from '../components/ui/EmptyState';
-import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, bundleCapacityKwp, creditingStartYear } from '../lib/pdd';
+import { computeFinancialTable, computeYearlyTable, computeEcPj, consumerKwh, resolveComputed, documentCapacityKwp, creditingStartYear } from '../lib/pdd';
 import { parseSites, isBundle, sumSiteCapacityKwp, sumSiteYear1Kwh, siteGenerationMatrix } from '../lib/pdd-sites';
 import { serverMode, evidenceApi } from '../lib/server-api';
 import { draftActivityText } from '../lib/pdd-drafts';
@@ -138,15 +138,6 @@ const MAINTENANCE_TOPICS: ReadonlyArray<{ topic: string; items: readonly string[
 
 const fmt = (n: number, d = 2) => n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d });
 const fmtInt = (n: number) => n.toLocaleString('en-US', { maximumFractionDigits: 0 });
-
-/**
- * Total panel degradation accumulated by year `n` (1-based), as a percentage.
- * Degradation compounds off the previous year's output, so the loss by year n is
- * 1 − (1−d)^(n−1) — year 1 is the un-degraded reference and reads 0.
- */
-function cumulativeDegradationPct(ratePct: number, n: number): number {
-  return (1 - (1 - ratePct / 100) ** Math.max(0, n - 1)) * 100;
-}
 
 /**
  * ภาคผนวก per-site equipment block — the appendix lists each site's kit under
@@ -594,7 +585,7 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const sites = parseSites(d.sites);
   const bundle = isBundle(d);
   const formLabel = bundle ? 'แบบควบรวม' : 'แบบเดี่ยว';
-  const totalKwp = bundleCapacityKwp(ctx);
+  const totalKwp = documentCapacityKwp(ctx);
   // The ตารางที่ 1 total specifically: null when no site row carries a capacity,
   // so the รวม cell prints '-' rather than the parent project's capacity — a
   // different physical quantity that no row above it sums to.
@@ -1557,19 +1548,20 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
                 </tr>
               </thead>
               <tbody>
-                {table.rows.map((r, i) => (
+                {table.rows.map((r) => (
                   <tr key={r.year}>
                     <td className="text-center">{r.year}</td>
                     <td className="text-right">{fmtInt(r.generation_kwh)}</td>
-                    <td className="text-center">{fmt(cumulativeDegradationPct(bundleDegradationPct, i + 1))}%</td>
+                    {/* MCRU p.23: every row prints the annual rate (0.40%), not the
+                        loss accumulated since year 1. */}
+                    <td className="text-center">{fmt(bundleDegradationPct)}%</td>
                   </tr>
                 ))}
                 <tr className="font-bold">
                   <td className="text-center">รวม</td>
                   <td className="text-right">{fmtInt(table.rows.reduce((a, r) => a + r.generation_kwh, 0))}</td>
-                  {/* Degradation compounds, so the run's figure is the final year's
-                      cumulative loss — not the per-year rate summed across rows. */}
-                  <td className="text-center">{fmt(cumulativeDegradationPct(bundleDegradationPct, table.rows.length))}%</td>
+                  {/* MCRU p.23 sums the column: 7 × 0.40% = 2.80%. */}
+                  <td className="text-center">{fmt(bundleDegradationPct * table.rows.length)}%</td>
                 </tr>
                 <tr className="font-bold">
                   <td className="text-center">เฉลี่ยต่อปี</td>
