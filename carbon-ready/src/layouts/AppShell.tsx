@@ -1,9 +1,9 @@
 import { Outlet, useLocation } from 'react-router-dom';
-import { Suspense, useEffect, useState } from 'react';
+import { Suspense, useEffect, useRef, useState } from 'react';
 import { RouteSkeleton } from '../components/ui/RouteSkeleton';
 import { Sidebar } from '../components/layout/Sidebar';
 import { TopBar } from '../components/layout/TopBar';
-import { Toaster } from '../components/layout/Toast';
+import { Toaster, toast } from '../components/layout/Toast';
 import { useStore } from '../store';
 import { serverMode } from '../lib/server-api';
 
@@ -18,6 +18,25 @@ export function AppShell() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const isAuthenticated = useStore((s) => s.isAuthenticated);
   const refreshFromServer = useStore((s) => s.refreshFromServer);
+  const hydrateFromServer = useStore((s) => s.hydrateFromServer);
+  const serverLoaded = useStore((s) => s.server_loaded);
+
+  // After a reload in server mode the store holds the last visit's copy.
+  // Load everything from the server (as sign-in does) and show the route
+  // skeleton until it lands, so stale data is never presented as current.
+  // The ref keeps StrictMode's double effect from loading twice.
+  const awaitingServer = serverMode() && isAuthenticated && !serverLoaded;
+  const loadStarted = useRef(false);
+  useEffect(() => {
+    if (!awaitingServer || loadStarted.current) return;
+    loadStarted.current = true;
+    void hydrateFromServer().then(() => {
+      const { isAuthenticated: stillSignedIn, hydration_errors } = useStore.getState();
+      if (stillSignedIn && hydration_errors.length > 0) {
+        toast.error('Some data could not be loaded', `Showing the copy saved in this browser for: ${hydration_errors.join(', ')}.`);
+      }
+    }).finally(() => { loadStarted.current = false; });
+  }, [awaitingServer, hydrateFromServer]);
 
   // Real-time-ish sync: in server mode, re-pull the volatile slices every
   // REFRESH_MS while the tab is visible, plus immediately on refocus — other
@@ -52,7 +71,7 @@ export function AppShell() {
           <div className="mx-auto grid max-w-[1440px] grid-cols-12 gap-6">
             <div className="col-span-12 min-w-0">
               <Suspense fallback={<RouteSkeleton path={pathname} />}>
-                <Outlet />
+                {awaitingServer ? <RouteSkeleton path={pathname} /> : <Outlet />}
               </Suspense>
             </div>
           </div>

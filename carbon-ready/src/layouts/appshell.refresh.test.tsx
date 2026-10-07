@@ -13,7 +13,8 @@ vi.mock('../lib/server-api', async (importOriginal) => {
 beforeEach(() => {
   vi.useFakeTimers();
   seedDemo();
-  useStore.setState({ isAuthenticated: true, refreshFromServer: vi.fn(async () => {}) });
+  // Signed in and already loaded from the server (the post-login state).
+  useStore.setState({ isAuthenticated: true, server_loaded: true, refreshFromServer: vi.fn(async () => {}) });
 });
 afterEach(() => { vi.useRealTimers(); });
 

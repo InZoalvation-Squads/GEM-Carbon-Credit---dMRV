@@ -39,13 +39,19 @@ interface AppState {
   logout: () => void;
   registeredAccounts: Array<User & { password: string }>;
   register: (input: { name: string; email: string; role: UserRole; password: string }) => Promise<{ ok: boolean; error?: string }>;
-  // Server mode: bulk-GET hydration after login. Slices are replaced
-  // wholesale (server is the source of truth); failed slice names land in
-  // hydration_errors — partial hydration is allowed (UI wiring later).
+  // Server mode: bulk-GET hydration after login and after a reload. Slices
+  // are replaced wholesale (server is the source of truth); failed slice
+  // names land in hydration_errors — partial hydration is allowed.
   hydrateFromServer: () => Promise<void>;
   /** Lightweight periodic re-sync of the collaboration-volatile slices only. */
   refreshFromServer: () => Promise<void>;
   hydration_errors: string[];
+  /**
+   * True once this page load has run hydrateFromServer. Never persisted: after
+   * a reload the stored slices are the last visit's copy, so AppShell loads
+   * from the server again before showing them.
+   */
+  server_loaded: boolean;
   organization: Organization;
   projects: Project[];
   records: MonitoringRecord[];
@@ -245,7 +251,7 @@ export const useStore = create<AppState>()(
       logout: () => {
         // Server mode: revoke the refresh token best-effort (session cleared inside).
         if (serverMode()) authApi.logout().catch(() => {});
-        set({ isAuthenticated: false });
+        set({ isAuthenticated: false, server_loaded: false });
       },
       registeredAccounts: [],
       register: async ({ name, email, role, password }) => {
@@ -349,7 +355,7 @@ export const useStore = create<AppState>()(
         });
         // Partial hydration is allowed: successful slices are already applied;
         // failed slice names are kept for later UI wiring (toast/banner).
-        set({ hydration_errors: failed });
+        set({ hydration_errors: failed, server_loaded: true });
       },
       refreshFromServer: async () => {
         // Volatile slices only — reference data (methodologies, factors) and
@@ -371,6 +377,7 @@ export const useStore = create<AppState>()(
         await Promise.allSettled(tasks); // best-effort — a flaky poll never throws
       },
       hydration_errors: [],
+      server_loaded: false,
       organization: seedOrg,
       // App boots with only the imported real solar fleet. Emission factors and the
       // methodology library are kept as reference data; everything else is empty.
@@ -1029,7 +1036,11 @@ export const useStore = create<AppState>()(
         recRoiSettings: EMPTY_REC_ROI_SETTINGS, recRoiProjectSettings: [],
       }),
     }),
-    { name: 'carbon-ready-store-v18' }
+    {
+      name: 'carbon-ready-store-v18',
+      // server_loaded describes this page load only — see AppState.
+      partialize: ({ server_loaded: _loaded, ...persisted }) => persisted,
+    }
   )
 );
 
@@ -1037,4 +1048,4 @@ export const useStore = create<AppState>()(
 // token refresh is dead throws SessionExpiredError, and this callback flips
 // the app to the login screen regardless of which call site hit it. Demo mode
 // never issues server requests, so it stays inert there.
-onSessionExpired(() => useStore.setState({ isAuthenticated: false }));
+onSessionExpired(() => useStore.setState({ isAuthenticated: false, server_loaded: false }));

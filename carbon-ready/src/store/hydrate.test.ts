@@ -196,4 +196,35 @@ describe('hydrateFromServer', () => {
     expect(useStore.getState().recRoiSettings).toEqual(EMPTY_REC_ROI_SETTINGS);
     expect(useStore.getState().recRoiProjectSettings).toEqual([]);
   });
+
+  // ---- reload: this page load must fetch the server copy before showing data ----
+
+  it('marks the page as loaded from the server once hydration settles — even a partial one', async () => {
+    useStore.setState({ server_loaded: false });
+    stubRoutes({ ...HAPPY_ROUTES, '/factors': FAIL });
+
+    await useStore.getState().hydrateFromServer();
+
+    expect(useStore.getState().server_loaded).toBe(true);
+  });
+
+  it('never persists server_loaded, so a reload always starts unloaded', async () => {
+    stubRoutes(HAPPY_ROUTES);
+
+    await useStore.getState().hydrateFromServer();
+
+    const persisted = JSON.parse(localStorage.getItem('carbon-ready-store-v18') ?? '{}');
+    expect(persisted.state.projects).toEqual([project]); // the store does persist
+    expect('server_loaded' in persisted.state).toBe(false);
+  });
+
+  it('logout clears server_loaded so the next sign-in loads again', () => {
+    stubRoutes({});
+    useStore.setState({ server_loaded: true, isAuthenticated: true });
+
+    useStore.getState().logout();
+
+    expect(useStore.getState().server_loaded).toBe(false);
+  });
 });
+
