@@ -665,7 +665,8 @@ export function TverSF001Pdd({ pddId: pddIdProp }: { pddId?: string } = {}) {
   const hasBoundaryDescription = typeof d.boundary_description === 'string' && d.boundary_description.trim() !== '';
   const ecPj = computeEcPj(consumers);
   const consumersHaveNotes = consumers.some((r) => cellStr(r.note) !== '');
-  const years = table?.years ?? Number(str('crediting_years')) ?? 7;
+  // No crediting years entered → 0, never an invented default (blanks beat guesses).
+  const years = table?.years ?? Number(str('crediting_years'));
   const creditingPeriod = creditingPeriodLabel(str('crediting_years'), d.crediting_start);
   const siteImages = pddSiteImages(allEvidence, project.id);
   // Explicitly chosen cover leaves the section-1 figures (the official doc

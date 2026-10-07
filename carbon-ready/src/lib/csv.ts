@@ -14,7 +14,7 @@ export function parseAndValidateCsv(
   csvText: string,
   existingDates: string[]
 ): CsvValidationResult {
-  const trimmed = csvText.replace(/^﻿/, '').trim();
+  const trimmed = csvText.replace(/^\uFEFF/, '').trim();
   if (!trimmed) return { accepted: [], rejected: [] };
 
   const parsed = Papa.parse<string[]>(trimmed, { skipEmptyLines: true });
