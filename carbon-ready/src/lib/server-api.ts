@@ -179,21 +179,25 @@ function tryRefresh(): Promise<boolean> {
 }
 
 /**
- * JSON request against the API. On 401 (auth requests only) it refreshes the
- * token pair once and retries the original request a single time; a failed
- * refresh clears the session and throws SessionExpiredError. Other non-2xx
- * responses throw ApiError with the server's error envelope.
+ * Raw request with the session-refresh rule: on 401 (auth requests only) it
+ * refreshes the token pair once and retries the original request a single
+ * time; a failed refresh clears the session and throws SessionExpiredError.
+ */
+async function requestWithRefresh(path: string, options: ApiFetchOptions): Promise<Response> {
+  const res = await request(path, options);
+  if (res.status !== 401 || !(options.auth ?? true)) return res;
+  const refreshed = await tryRefresh();
+  if (!refreshed) throw sessionExpired();
+  return request(path, options); // single retry — never loops
+}
+
+/**
+ * JSON request against the API (refreshing an expired session — see
+ * requestWithRefresh). Non-2xx responses throw ApiError with the server's
+ * error envelope.
  */
 export async function apiFetch<T>(path: string, options: ApiFetchOptions = {}): Promise<T> {
-  const auth = options.auth ?? true;
-  let res = await request(path, options);
-
-  if (res.status === 401 && auth) {
-    const refreshed = await tryRefresh();
-    if (!refreshed) throw sessionExpired();
-    res = await request(path, options); // single retry — never loops
-  }
-
+  const res = await requestWithRefresh(path, options);
   if (!res.ok) throw await toApiError(res);
   if (res.status === 204) return undefined as T;
   return (await res.json()) as T;
@@ -625,7 +629,7 @@ export const evidenceApi = {
    */
   async fileBlob(id: string): Promise<Blob | null> {
     try {
-      const res = await request(`/evidence/${id}/file`, {});
+      const res = await requestWithRefresh(`/evidence/${id}/file`, {});
       return res.ok ? await res.blob() : null;
     } catch {
       return null;

@@ -9,6 +9,8 @@ import { toast } from '../layout/Toast';
 import { fmtDate } from '../../lib/date';
 import { formatBytes } from '../../lib/format';
 import { hashFileBytes } from '../../lib/hash';
+import { saveBlob } from '../../lib/download';
+import { serverMode, evidenceApi } from '../../lib/server-api';
 import { MAX_SIZE } from './EvidenceUploadModal';
 import type { EvidenceFile } from '../../types';
 
@@ -93,6 +95,18 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
       const content_hash = await hashFileBytes(file).catch(() => undefined);
       await api.replaceEvidence(evidence.id, { file, file_name: file.name, file_size: file.size, content_hash });
     });
+  };
+
+  // Only the server keeps file bytes; demo mode stores the details alone.
+  const onDownload = async () => {
+    setBusy(true);
+    try {
+      const blob = await evidenceApi.fileBlob(evidence.id);
+      if (blob) saveBlob(blob, evidence.file_name);
+      else toast.error('Download failed', `The server has no stored file for ${evidence.file_name}.`);
+    } finally {
+      setBusy(false);
+    }
   };
 
   const isCover = pdd?.section_data.cover_evidence_id === evidence.id;
@@ -187,7 +201,11 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
         )}
 
         <div className="grid grid-cols-2 gap-2 border-t border-rule pt-4">
-          <Button variant="secondary" size="sm" className="w-full whitespace-nowrap"><Download size={14} /> Download</Button>
+          <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={busy || !serverMode()}
+            title={serverMode() ? undefined : 'Demo mode keeps file details only — there is no file to download.'}
+            onClick={() => void onDownload()}>
+            <Download size={14} /> Download
+          </Button>
           <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={busy || isLocked || evidence.status !== 'active'}
             onClick={() => fileRef.current?.click()}>
             <RefreshCw size={14} /> Replace version

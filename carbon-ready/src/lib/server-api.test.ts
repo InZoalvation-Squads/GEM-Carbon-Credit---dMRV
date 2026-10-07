@@ -453,6 +453,21 @@ describe('data endpoint groups — response envelopes match the server routes', 
     expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/projects/prj-1/evidence`);
   });
 
+  it('evidenceApi.fileBlob refreshes an expired access token once and retries (Download after 15 min)', async () => {
+    setSession({ access_token: 'stale', refresh_token: 'ref-old' });
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(401, { error: { code: 'UNAUTHORIZED', message: 'expired' } }))
+      .mockResolvedValueOnce(jsonResponse(200, { access_token: 'acc-new', refresh_token: 'ref-new' }))
+      .mockResolvedValueOnce(new Response('meter,2026-01-01,1234', { status: 200 }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const blob = await evidenceApi.fileBlob('ev-1');
+
+    expect(await blob?.text()).toBe('meter,2026-01-01,1234');
+    expect(fetchMock.mock.calls[0][0]).toBe(`${BASE}/api/v1/evidence/ev-1/file`);
+    expect(fetchMock.mock.calls[2][1].headers.authorization).toBe('Bearer acc-new');
+  });
+
   it('credentialsApi.list and tokensApi.list unwrap {credentials} / {tokens}', async () => {
     const credentials = [{ id: 'vc-1' }];
     const tokens = [{ id: 'tok-1' }];

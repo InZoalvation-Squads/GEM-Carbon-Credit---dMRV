@@ -11,18 +11,12 @@ import { Drawer } from '../components/layout/Drawer';
 import { toast } from '../components/layout/Toast';
 import { CATEGORY_LABEL } from '../lib/labels';
 import { methodologyToJson } from '../lib/methodology-schema';
+import { saveBlob } from '../lib/download';
 import type { Methodology } from '../types';
 
 function exportMethodology(m: Methodology) {
   const blob = new Blob([methodologyToJson(m)], { type: 'application/json' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = `${m.code}-v${m.version.replace(/^v/i, '')}.json`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  saveBlob(blob, `${m.code}-v${m.version.replace(/^v/i, '')}.json`);
 }
 
 export function Methodologies() {
