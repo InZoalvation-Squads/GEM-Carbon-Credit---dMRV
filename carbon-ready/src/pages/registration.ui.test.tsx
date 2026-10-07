@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach } from 'vitest';
-import { render, screen, fireEvent } from '@testing-library/react';
+import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { RegistrationGate } from '../components/project/RegistrationGate';
 import { PddDocument } from '../pages/PddDocument';
@@ -404,5 +404,29 @@ describe('New-PDD prefill & clone-from-previous', () => {
     expect(pdd.section_data.before_project).toBeUndefined();        // draftable → ว่าง (ให้กด ✨ ร่างใหม่)
     expect(pdd.section_data.technology).toBe('Solar PV rooftop');   // defaults ยังเติมส่วนที่ clone ไม่มี
     expect(pdd.evidence_ids).toEqual([]);                           // evidence ไม่ copy
+  });
+});
+
+describe('PDD editor — methodology arriving after the first render', () => {
+  // The editor used to call its auto-save hooks after the "methodology not
+  // found" early return, so the hook count changed when the methodology
+  // appeared (e.g. a server load landing) and React crashed the page.
+  it('renders the editor once the methodology shows up, without crashing', () => {
+    const all = useStore.getState().methodologies;
+    const pdd = useStore.getState().pdds.find((p) => p.id === 'PDD-2000')!;
+    useStore.setState({ methodologies: all.filter((m) => m.id !== pdd.methodology_id) });
+    render(
+      <MemoryRouter initialEntries={['/registration/PDD-2000']}>
+        <Routes>
+          <Route path="/registration/:pddId" element={<Registration />} />
+        </Routes>
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('Methodology not found')).toBeInTheDocument();
+
+    act(() => { useStore.setState({ methodologies: all }); });
+
+    expect(screen.queryByText('Methodology not found')).toBeNull();
+    expect(screen.getByRole('list', { name: 'Registration steps' })).toBeInTheDocument();
   });
 });

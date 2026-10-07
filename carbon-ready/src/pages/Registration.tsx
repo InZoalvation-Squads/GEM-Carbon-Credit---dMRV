@@ -333,16 +333,11 @@ function PddEditor({ pddId }: { pddId: string }) {
   const sections = methodology?.pdd_sections ?? [];
   const ctx = useMemo(() => ({ project, factors, sectionData: data }), [project, factors, data]);
   const capacityWarning = capacityMismatch(ctx);
-
-  if (!methodology) return <EmptyState title="Methodology not found" hint="This PDD references a methodology that no longer exists." />;
-
   const readonly = pdd.state === 'submitted' || pdd.state === 'under_validation' || pdd.state === 'registered';
-  const isReview = step >= sections.length;
 
-  function setField(key: string, value: unknown) {
-    setData((d) => ({ ...d, [key]: value }));
-  }
   // ---- Auto-save: debounce after the last edit; no manual Save-draft button. ----
+  // Every hook runs before the "methodology not found" return below, so the
+  // hook count never changes when the methodology appears or disappears.
   const [saveState, setSaveState] = useState<'idle' | 'saving' | 'saved' | 'error'>('idle');
   const lastSavedRef = useRef(JSON.stringify(pdd.section_data));
   const dataRef = useRef(data);
@@ -377,6 +372,14 @@ function PddEditor({ pddId }: { pddId: string }) {
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
+
+  if (!methodology) return <EmptyState title="Methodology not found" hint="This PDD references a methodology that no longer exists." />;
+
+  const isReview = step >= sections.length;
+
+  function setField(key: string, value: unknown) {
+    setData((d) => ({ ...d, [key]: value }));
+  }
 
   async function next() { await save(); setStep((s) => Math.min(s + 1, sections.length)); }
   function back() { setStep((s) => Math.max(s - 1, 0)); }
