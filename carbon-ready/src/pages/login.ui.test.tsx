@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { render, screen, fireEvent, act } from '@testing-library/react';
 import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { Login } from './Login';
@@ -163,5 +163,25 @@ describe('Login carousel accessibility', () => {
       expect(screen.getByText('โทเคไนซ์เครดิตคาร์บอน T-VER อย่างมั่นใจ')).toBeInTheDocument();
       expect(screen.getByRole('button', { name: 'Carousel paused for reduced motion' })).toBeDisabled();
     } finally { view.unmount(); vi.unstubAllGlobals(); vi.useRealTimers(); }
+  });
+});
+
+describe('Login page — server mode', () => {
+  afterEach(() => { vi.unstubAllEnvs(); });
+
+  // Real accounts live on the server: the bundled demo password must not be
+  // offered there (it would either fail, or — if seeded — open admin to anyone).
+  it('hides the demo accounts and their password', () => {
+    vi.stubEnv('VITE_API_BASE_URL', 'http://api.test');
+    renderLogin();
+    expect(screen.queryByText(/demo1234/)).toBeNull();
+    expect(screen.queryByText('proponent@gem.demo')).toBeNull();
+    expect(screen.getByLabelText('อีเมล')).toBeInTheDocument();
+  });
+
+  it('demo mode still offers the demo accounts', () => {
+    renderLogin();
+    expect(screen.getByText('proponent@gem.demo')).toBeInTheDocument();
+    expect(screen.getByText(/demo1234/)).toBeInTheDocument();
   });
 });

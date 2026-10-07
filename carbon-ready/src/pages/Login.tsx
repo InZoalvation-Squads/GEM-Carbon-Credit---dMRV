@@ -4,6 +4,7 @@ import { Check, ChevronLeft, ChevronRight, Eye, EyeOff, Globe, Pause, Play } fro
 import clsx from 'clsx';
 import { useStore } from '../store';
 import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../data/accounts';
+import { serverMode } from '../lib/server-api';
 import { ROLE_LABEL } from '../lib/labels';
 
 type Lang = 'th' | 'en';
@@ -237,6 +238,9 @@ export function Login() {
                   placeholder="you@gem.demo"
                   className="block h-11 w-full rounded-xl border border-ink-200 bg-white px-4 text-sm shadow-xs transition-colors placeholder:text-ink-500 hover:border-ink-300 focus:border-petrol-500 focus:outline-none focus:ring-4 focus:ring-petrol-500/10"
                 />
+                {/* Demo mode only: in server mode accounts live on the server, and the
+                    bundled demo password must never be offered there. */}
+                {!serverMode() && (<>
                 <div className="mt-3 grid grid-cols-2 gap-2">
                   {DEMO_ACCOUNTS.map((a) => (
                     <button
@@ -253,6 +257,7 @@ export function Login() {
                 <p className="mt-2 text-[11px] text-ink-500">
                   {t.demoHint} · {t.demoPassword} <span className="font-mono">{DEMO_PASSWORD}</span>
                 </p>
+                </>)}
               </div>
             )}
 

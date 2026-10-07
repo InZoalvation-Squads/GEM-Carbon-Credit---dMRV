@@ -5,7 +5,6 @@ import { Menu, Check, ChevronDown, ShieldCheck, FolderKanban, Gauge, Settings, L
 import type { UserRole } from '../../types';
 import { ROLE_LABEL } from '../../lib/labels';
 import { serverMode } from '../../lib/server-api';
-import { DEMO_ACCOUNTS, DEMO_PASSWORD } from '../../data/accounts';
 import { toast } from './Toast';
 import clsx from 'clsx';
 
@@ -21,7 +20,6 @@ const ROLES: { value: UserRole; label: string; desc: string; icon: typeof Shield
 export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: () => void; sidebarOpen?: boolean }) {
   const user = useStore((s) => s.currentUser);
   const setRole = useStore((s) => s.setRole);
-  const login = useStore((s) => s.login);
   const logout = useStore((s) => s.logout);
   const navigate = useNavigate();
   const initials = user.name.split(' ').map((p) => p[0]).slice(0, 2).join('').toUpperCase();
@@ -58,21 +56,10 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
 
   const current = ROLES.find((r) => r.value === user.role);
 
-  async function pick(role: UserRole) {
+  function pick(role: UserRole) {
     setOpen(false);
     if (role === user.role) return;
     const label = ROLES.find((r) => r.value === role)?.label;
-    // Server mode: the API authorizes from the JWT, so flipping client state
-    // alone leaves the old role's token behind (every action would 403).
-    // Re-authenticate as the demo account that really holds the target role.
-    if (serverMode()) {
-      const demo = DEMO_ACCOUNTS.find((a) => a.role === role);
-      if (!demo) return;
-      const res = await login(demo.email, DEMO_PASSWORD);
-      if (res.ok) toast.info('Role switched', `Signed in as ${demo.name} — ${label}.`);
-      else toast.error('Role switch failed', res.error ?? 'Could not sign in to the demo account.');
-      return;
-    }
     setRole(role);
     toast.info('Role switched', `You are now acting as ${label}.`);
   }
@@ -132,6 +119,10 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
                 <div className="text-sm font-semibold text-ink-900">{user.name}</div>
                 <div className="text-xs text-ink-500">{user.email}</div>
               </div>
+              {/* Demo mode only. In server mode the role comes from the signed-in
+                  account; switching would mean signing in to a demo account with
+                  the bundled password, which must never be offered there. */}
+              {!serverMode() && (<>
               <div className="my-1 h-px bg-ink-100" />
               <div className="px-2.5 pb-1 pt-1 text-[11px] font-semibold uppercase tracking-[0.12em] text-ink-500">
                 Switch role
@@ -169,6 +160,7 @@ export function TopBar({ onOpenSidebar, sidebarOpen = false }: { onOpenSidebar: 
                   </button>
                 );
               })}
+              </>)}
               <div className="my-1 h-px bg-ink-100" />
               <button
                 role="menuitem"

@@ -1,20 +1,21 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
-import { render, screen, fireEvent, waitFor } from '@testing-library/react';
+import { render, screen, fireEvent } from '@testing-library/react';
 import { MemoryRouter } from 'react-router-dom';
 import { TopBar } from './TopBar';
 import { seedDemo } from '../../test/demoFixtures';
 import { useStore } from '../../store';
-import { toast } from './Toast';
-import { DEMO_PASSWORD } from '../../data/accounts';
 
-// Server mode ON for this file: the switcher must re-authenticate, not just
-// flip client state (a stale JWT keeps the old role and the API 403s).
+const mode = vi.hoisted(() => ({ server: false }));
+
 vi.mock('../../lib/server-api', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../../lib/server-api')>();
-  return { ...actual, serverMode: () => true };
+  return { ...actual, serverMode: () => mode.server };
 });
 
-beforeEach(() => seedDemo());
+beforeEach(() => {
+  mode.server = false;
+  seedDemo();
+});
 afterEach(() => { vi.restoreAllMocks(); });
 
 // The role switcher must show the same Guardian terminology as the rest of the app.
@@ -38,22 +39,22 @@ describe('TopBar role switcher — Guardian labels', () => {
   });
 });
 
-describe('TopBar role switcher — server mode re-authenticates', () => {
-  it('switching role signs in as the matching demo account instead of only flipping client state', async () => {
-    const login = vi.fn(async () => ({ ok: true }));
-    useStore.setState({ login });
+describe('TopBar in server mode', () => {
+  // Roles come from the signed-in server account. Switching would mean signing
+  // in to a demo account with the bundled password — never offered there.
+  it('hides the role switcher but keeps Sign out', () => {
+    mode.server = true;
     openRoleMenu();
-    fireEvent.click(screen.getByRole('menuitemradio', { name: /VVB/ }));
-    await waitFor(() => expect(login).toHaveBeenCalledWith('vvb@gem.demo', DEMO_PASSWORD));
+    expect(screen.queryByRole('menuitemradio')).toBeNull();
+    expect(screen.queryByText('Switch role')).toBeNull();
+    expect(screen.getByRole('menuitem', { name: /sign out/i })).toBeInTheDocument();
   });
+});
 
-  it('a failed re-login shows an error toast and keeps the current role', async () => {
-    const login = vi.fn(async () => ({ ok: false, error: 'Invalid email or password' }));
-    useStore.setState({ login });
-    const error = vi.spyOn(toast, 'error');
+describe('TopBar role switcher — demo mode', () => {
+  it('switching role flips the local demo role', () => {
     openRoleMenu();
     fireEvent.click(screen.getByRole('menuitemradio', { name: /VVB/ }));
-    await waitFor(() => expect(error).toHaveBeenCalled());
-    expect(useStore.getState().currentUser.role).toBe('esg_manager'); // seed user unchanged
+    expect(useStore.getState().currentUser.role).toBe('verifier');
   });
 });
