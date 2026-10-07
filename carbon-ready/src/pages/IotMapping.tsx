@@ -169,13 +169,15 @@ export function IotMapping() {
 
       {loading ? (
         <Card role="status"><span className="sr-only">กำลังโหลด…</span><SkeletonRows columns={6} entity /></Card>
+      ) : loadError ? (
+        // Checked before `enabled`: a failed request leaves no status, which
+        // would otherwise read as "IoT not configured" and send people to .env.
+        <Card><CardBody className="py-8 text-center text-sm text-state-rejected">โหลดข้อมูล IoT ไม่สำเร็จ: {loadError}</CardBody></Card>
       ) : !status?.enabled ? (
         <Card><CardBody className="p-0">
           <EmptyState icon={<Cable size={32} />} illustration="/illustrations/empty-iot.webp" title="ยังไม่ได้เชื่อมฐานข้อมูล IoT"
             hint="ตั้งค่า IOT_DB_URL ใน server/.env แล้ว restart server — mapping ทั้งหมดจัดการจากหน้านี้ได้เลย ไม่ต้องแก้ .env อีก" />
         </CardBody></Card>
-      ) : loadError ? (
-        <Card><CardBody className="py-8 text-center text-sm text-state-rejected">{loadError}</CardBody></Card>
       ) : (
         <div className="space-y-4">
           <Card className="border-brand-100 bg-brand-50/60">

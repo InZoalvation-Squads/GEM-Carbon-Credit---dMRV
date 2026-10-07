@@ -118,4 +118,12 @@ describe('IotMapping page', () => {
     render(<MemoryRouter><IotMapping /></MemoryRouter>);
     expect(await screen.findByText('ยังไม่ได้เชื่อมฐานข้อมูล IoT')).toBeInTheDocument();
   });
+
+  it('shows the real error when the backend cannot be reached, not the "not configured" setup hint', async () => {
+    statusMock.mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    render(<MemoryRouter><IotMapping /></MemoryRouter>);
+    expect(await screen.findByText(/Failed to fetch/)).toBeInTheDocument();
+    expect(screen.queryByText('ยังไม่ได้เชื่อมฐานข้อมูล IoT')).toBeNull();
+  });
 });
+
