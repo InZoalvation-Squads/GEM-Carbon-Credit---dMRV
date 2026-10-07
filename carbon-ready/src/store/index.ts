@@ -832,14 +832,23 @@ export const useStore = create<AppState>()(
           // rejects duplicates and audits; the stored document is read back so
           // the library holds exactly what the server keeps.
           async () => {
+            let id: string;
             try {
-              const { id } = await methodologiesApi.import(json);
-              const m: Methodology = { ...(await methodologiesApi.exportDoc(id)), id };
-              set((s) => ({ methodologies: [...s.methodologies.filter((x) => x.id !== id), m] }));
-              return { ok: true, methodology: m };
+              ({ id } = await methodologiesApi.import(json));
             } catch (err) {
               return { ok: false, error: err instanceof Error ? err.message : String(err) };
             }
+            // Imported — from here on the answer is ok, or a retry would 409.
+            // If the read-back fails, the server stored exactly what the shared
+            // parser makes of this file, so parse it here under the server id.
+            const doc = await methodologiesApi.exportDoc(id).catch(() => {
+              const parsed = parseMethodologyJson(json);
+              return parsed.ok ? parsed.methodology : null;
+            });
+            if (!doc) return { ok: false, error: 'Imported on the server, but it could not be loaded here — reload the page to see it.' };
+            const m: Methodology = { ...doc, id };
+            set((s) => ({ methodologies: [...s.methodologies.filter((x) => x.id !== id), m] }));
+            return { ok: true, methodology: m };
           },
         );
       },

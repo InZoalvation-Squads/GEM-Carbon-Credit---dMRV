@@ -257,4 +257,26 @@ describe('server-mode write-through', () => {
     expect(r).toEqual({ ok: false, error: 'Methodology X v1 is already in the library.' });
     expect(useStore.getState().methodologies).toBe(before);
   });
+
+  it('importMethodology reports success when the server imported it but the read-back failed', async () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'admin' } }));
+    const doc = JSON.parse(methodologyToJson(useStore.getState().methodologies[0]));
+    doc.code = 'TEST-SRV-2';
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(jsonResponse(201, { methodology: {
+        id: 'mth-srv-2', code: 'TEST-SRV-2', name: doc.name, standard: doc.standard,
+        version: doc.version, sectoral_scope: doc.sectoral_scope, status: doc.status,
+      } }))
+      .mockResolvedValueOnce(jsonResponse(500, { error: { code: 'INTERNAL', message: 'boom' } })));
+
+    const r = await useStore.getState().importMethodology(JSON.stringify(doc));
+
+    // The server has it — saying "failed" would make a retry hit 409.
+    expect(r.ok).toBe(true);
+    expect(r.methodology?.id).toBe('mth-srv-2');
+    expect(r.methodology?.code).toBe('TEST-SRV-2');
+    expect(useStore.getState().methodologies.find((m) => m.id === 'mth-srv-2')?.pdd_sections)
+      .toEqual(doc.pdd_sections);
+  });
 });
+

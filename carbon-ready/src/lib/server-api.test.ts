@@ -468,6 +468,16 @@ describe('data endpoint groups — response envelopes match the server routes', 
     expect(fetchMock.mock.calls[2][1].headers.authorization).toBe('Bearer acc-new');
   });
 
+  it('evidenceApi.file returns the bytes, and throws the server error instead of hiding it', async () => {
+    setSession({ access_token: 'acc-1', refresh_token: 'ref-1' });
+    vi.stubGlobal('fetch', vi.fn()
+      .mockResolvedValueOnce(new Response('bytes', { status: 200 }))
+      .mockResolvedValueOnce(jsonResponse(404, { error: { code: 'NOT_FOUND', message: 'Stored file not found' } })));
+
+    expect(await (await evidenceApi.file('ev-1')).text()).toBe('bytes');
+    await expect(evidenceApi.file('ev-1')).rejects.toMatchObject({ name: 'ApiError', status: 404 });
+  });
+
   it('credentialsApi.list and tokensApi.list unwrap {credentials} / {tokens}', async () => {
     const credentials = [{ id: 'vc-1' }];
     const tokens = [{ id: 'tok-1' }];

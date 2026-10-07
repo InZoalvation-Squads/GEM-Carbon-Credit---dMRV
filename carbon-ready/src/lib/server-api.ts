@@ -623,14 +623,22 @@ export const evidenceApi = {
     return (await apiFetch<{ evidence: EvidenceFile }>(`/evidence/${id}/archive`, { method: 'POST' })).evidence;
   },
   /**
-   * GET /evidence/:id/file → raw bytes as a Blob (authed). Best-effort for
-   * inline document figures: any failure (404, no stored blob, network)
-   * resolves to null rather than throwing.
+   * GET /evidence/:id/file → raw bytes as a Blob (authed). Throws what went
+   * wrong — ApiError (404 = no stored bytes), SessionExpiredError, or a
+   * network error — so a download can say so.
+   */
+  async file(id: string): Promise<Blob> {
+    const res = await requestWithRefresh(`/evidence/${id}/file`, {});
+    if (!res.ok) throw await toApiError(res);
+    return res.blob();
+  },
+  /**
+   * Best-effort file() for inline document figures: any failure resolves to
+   * null rather than throwing.
    */
   async fileBlob(id: string): Promise<Blob | null> {
     try {
-      const res = await requestWithRefresh(`/evidence/${id}/file`, {});
-      return res.ok ? await res.blob() : null;
+      return await evidenceApi.file(id);
     } catch {
       return null;
     }

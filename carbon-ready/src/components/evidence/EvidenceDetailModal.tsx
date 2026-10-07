@@ -10,7 +10,7 @@ import { fmtDate } from '../../lib/date';
 import { formatBytes } from '../../lib/format';
 import { hashFileBytes } from '../../lib/hash';
 import { saveBlob } from '../../lib/download';
-import { serverMode, evidenceApi } from '../../lib/server-api';
+import { serverMode, evidenceApi, ApiError, SessionExpiredError } from '../../lib/server-api';
 import { MAX_SIZE } from './EvidenceUploadModal';
 import type { EvidenceFile } from '../../types';
 
@@ -101,9 +101,15 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
   const onDownload = async () => {
     setBusy(true);
     try {
-      const blob = await evidenceApi.fileBlob(evidence.id);
-      if (blob) saveBlob(blob, evidence.file_name);
-      else toast.error('Download failed', `The server has no stored file for ${evidence.file_name}.`);
+      saveBlob(await evidenceApi.file(evidence.id), evidence.file_name);
+    } catch (e) {
+      // An expired session has already sent the app to sign-in (and taken the
+      // toast area with it) — nothing to say here. Otherwise name the real
+      // cause: a missing file and a network failure need different next steps.
+      if (e instanceof SessionExpiredError) return;
+      toast.error('Download failed', e instanceof ApiError && e.status === 404
+        ? `The server has no stored file for ${evidence.file_name}.`
+        : `Could not download ${evidence.file_name}: ${e instanceof Error ? e.message : String(e)}`);
     } finally {
       setBusy(false);
     }

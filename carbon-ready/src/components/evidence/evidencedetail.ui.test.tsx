@@ -3,7 +3,7 @@ import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import { EvidenceDetailModal } from './EvidenceDetailModal';
 import { useStore } from '../../store';
 import { seedDemo } from '../../test/demoFixtures';
-import { evidenceApi } from '../../lib/server-api';
+import { evidenceApi, ApiError, SessionExpiredError } from '../../lib/server-api';
 import { toast } from '../layout/Toast';
 import type { EvidenceFile } from '../../types';
 
@@ -26,7 +26,7 @@ vi.mock('../../lib/server-api', async (importOriginal) => {
     serverMode: () => mode.server,
     evidenceApi: {
       ...actual.evidenceApi,
-      fileBlob: vi.fn(async (): Promise<Blob | null> => new Blob(['inverter,2026-02-01,999'])),
+      file: vi.fn(async (): Promise<Blob> => new Blob(['inverter,2026-02-01,999'])),
       replace: vi.fn(async (id: string, file: File): Promise<EvidenceFile> => ({
         ...active, id: 'ev-server-2', parent_id: id, file_name: file.name,
         file_size: file.size, version_number: 2, content_hash: 'sha256-new',
@@ -43,7 +43,7 @@ beforeEach(() => {
   useStore.setState({ evidence: [active] });
   vi.mocked(evidenceApi.replace).mockClear();
   vi.mocked(evidenceApi.archive).mockClear();
-  vi.mocked(evidenceApi.fileBlob).mockClear();
+  vi.mocked(evidenceApi.file).mockClear();
 });
 
 afterEach(() => {
@@ -117,20 +117,43 @@ describe('EvidenceDetailModal in server mode', () => {
     fireEvent.click(screen.getByRole('button', { name: /download/i }));
 
     await waitFor(() => expect(saved).toEqual(['log.xlsx@blob:evidence']));
-    expect(evidenceApi.fileBlob).toHaveBeenCalledWith('ev-active');
+    expect(evidenceApi.file).toHaveBeenCalledWith('ev-active');
     expect(createObjectURL).toHaveBeenCalledWith(expect.any(Blob));
     expect(revokeObjectURL).toHaveBeenCalledWith('blob:evidence');
   });
 
   it('Download says so when the server has no stored file', async () => {
-    vi.mocked(evidenceApi.fileBlob).mockResolvedValueOnce(null);
+    vi.mocked(evidenceApi.file).mockRejectedValueOnce(new ApiError('NOT_FOUND', 'Stored file not found', 404));
     const error = vi.spyOn(toast, 'error');
     const click = vi.spyOn(HTMLAnchorElement.prototype, 'click');
     render(<EvidenceDetailModal evidence={active} onClose={() => {}} />);
     fireEvent.click(screen.getByRole('button', { name: /download/i }));
 
-    await waitFor(() => expect(error).toHaveBeenCalled());
+    await waitFor(() => expect(error).toHaveBeenCalledWith('Download failed', expect.stringMatching(/no stored file/)));
     expect(click).not.toHaveBeenCalled();
+  });
+
+  it('Download after the session expired shows no misleading toast — the app is already going to sign-in', async () => {
+    // sessionExpired() flips the store to signed-out before the error reaches
+    // the dialog; the toast area unmounts with the app shell, so a toast here
+    // would only surface after the next sign-in.
+    vi.mocked(evidenceApi.file).mockRejectedValueOnce(new SessionExpiredError());
+    const error = vi.spyOn(toast, 'error');
+    render(<EvidenceDetailModal evidence={active} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /download/i }));
+
+    await waitFor(() => expect(evidenceApi.file).toHaveBeenCalled());
+    await waitFor(() => expect(screen.getByRole('button', { name: /download/i })).not.toBeDisabled());
+    expect(error).not.toHaveBeenCalled();
+  });
+
+  it('Download names other failures as they are (e.g. the network)', async () => {
+    vi.mocked(evidenceApi.file).mockRejectedValueOnce(new TypeError('Failed to fetch'));
+    const error = vi.spyOn(toast, 'error');
+    render(<EvidenceDetailModal evidence={active} onClose={() => {}} />);
+    fireEvent.click(screen.getByRole('button', { name: /download/i }));
+
+    await waitFor(() => expect(error).toHaveBeenCalledWith('Download failed', expect.stringMatching(/Failed to fetch/)));
   });
 });
 
@@ -139,6 +162,6 @@ describe('EvidenceDetailModal in demo mode', () => {
     mode.server = false;
     render(<EvidenceDetailModal evidence={active} onClose={() => {}} />);
     expect(screen.getByRole('button', { name: /download/i })).toBeDisabled();
-    expect(evidenceApi.fileBlob).not.toHaveBeenCalled();
+    expect(evidenceApi.file).not.toHaveBeenCalled();
   });
 });
