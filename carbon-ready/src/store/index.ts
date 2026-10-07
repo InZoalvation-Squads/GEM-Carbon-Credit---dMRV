@@ -70,6 +70,7 @@ interface AppState {
   saveRecRoiProjectSetting: (project_id: UUID, input: RecRoiProjectSettingInput) => void;
 
   // Methodology-as-data: import a validated JSON document into the library.
+  // Server mode returns a promise (see dual()) — callers await the result.
   importMethodology: (json: string) => { ok: boolean; error?: string; methodology?: Methodology };
 
   // Registration (Gate 1)
@@ -111,7 +112,8 @@ interface AppState {
   uploadEvidence: (project_id: UUID, input: { file_name: string; kind: EvidenceFile['kind']; file_size: number; category: EvidenceCategory; description?: string; content_hash?: string }) => EvidenceFile;
   /** Insert a server-created evidence row (already persisted remotely) into the local store. */
   ingestEvidence: (file: EvidenceFile) => void;
-  replaceEvidence: (evidence_id: UUID, input: { file_name?: string; file_size: number; content_hash?: string }) => EvidenceFile | undefined;
+  /** `file` carries the real bytes — required in server mode, ignored in demo mode. */
+  replaceEvidence: (evidence_id: UUID, input: { file?: File; file_name?: string; file_size: number; content_hash?: string }) => EvidenceFile | undefined;
   archiveEvidence: (evidence_id: UUID) => void;
 
   // Sprint 2 — Verification workflow
@@ -530,26 +532,44 @@ export const useStore = create<AppState>()(
       replaceEvidence: (evidence_id, input) => {
         const prev = get().evidence.find((e) => e.id === evidence_id && e.status === 'active');
         if (!prev) return undefined;
-        const next: EvidenceFile = {
-          ...prev, id: uid('ev'), parent_id: prev.id,
-          file_name: input.file_name ?? prev.file_name, file_size: input.file_size,
-          version_number: prev.version_number + 1, status: 'active',
-          content_hash: input.content_hash ?? shortHash((input.file_name ?? prev.file_name) + input.file_size + Date.now()),
-          uploaded_by: get().currentUser.id, uploaded_by_name: get().currentUser.name,
-          uploaded_at: new Date().toISOString(),
+        const apply = (next: EvidenceFile) => {
+          set((s) => ({
+            evidence: [next, ...s.evidence
+              .filter((e) => e.id !== next.id)
+              .map((e) => (e.id === prev.id ? { ...e, status: 'superseded' as const } : e))],
+          }));
+          get().audit_write('EVIDENCE_REPLACED', 'evidence', next.id, { file_name: next.file_name },
+            { previous_value: { version_number: prev.version_number, content_hash: prev.content_hash }, new_value: { version_number: next.version_number, content_hash: next.content_hash } });
+          return next;
         };
-        set((s) => ({
-          evidence: [next, ...s.evidence.map((e) => (e.id === prev.id ? { ...e, status: 'superseded' as const } : e))],
-        }));
-        get().audit_write('EVIDENCE_REPLACED', 'evidence', next.id, { file_name: next.file_name },
-          { previous_value: { version_number: prev.version_number, content_hash: prev.content_hash }, new_value: { version_number: next.version_number, content_hash: next.content_hash } });
-        return next;
+        return dual<EvidenceFile | undefined>(
+          () => apply({
+            ...prev, id: uid('ev'), parent_id: prev.id,
+            file_name: input.file_name ?? prev.file_name, file_size: input.file_size,
+            version_number: prev.version_number + 1, status: 'active',
+            content_hash: input.content_hash ?? shortHash((input.file_name ?? prev.file_name) + input.file_size + Date.now()),
+            uploaded_by: get().currentUser.id, uploaded_by_name: get().currentUser.name,
+            uploaded_at: new Date().toISOString(),
+          }),
+          async () => {
+            // The server stores the bytes — a metadata-only version would exist nowhere but this tab.
+            if (!input.file) throw new Error('Replacing evidence needs the new file.');
+            return apply(await evidenceApi.replace(evidence_id, input.file, { client_hash: input.content_hash }));
+          },
+        );
       },
 
-      archiveEvidence: (evidence_id) => {
-        set((s) => ({ evidence: s.evidence.map((e) => (e.id === evidence_id ? { ...e, status: 'archived' as const } : e)) }));
-        get().audit_write('EVIDENCE_ARCHIVED', 'evidence', evidence_id, {}, { new_value: { status: 'archived' } });
-      },
+      archiveEvidence: (evidence_id) =>
+        dual(
+          () => {
+            set((s) => ({ evidence: s.evidence.map((e) => (e.id === evidence_id ? { ...e, status: 'archived' as const } : e)) }));
+            get().audit_write('EVIDENCE_ARCHIVED', 'evidence', evidence_id, {}, { new_value: { status: 'archived' } });
+          },
+          async () => {
+            const row = await evidenceApi.archive(evidence_id);
+            set((s) => ({ evidence: s.evidence.map((e) => (e.id === row.id ? row : e)) }));
+          },
+        ),
 
       // ---------------- Sprint 2: Verification ----------------
       createVerification: (input) => {
@@ -780,23 +800,41 @@ export const useStore = create<AppState>()(
         if (get().currentUser.role !== 'admin') {
           return { ok: false, error: 'Only the Standard Registry can import methodologies.' };
         }
-        const parsed = parseMethodologyJson(json);
-        if (!parsed.ok) {
-          // Cap the message at the first few issues — a malformed document can carry dozens.
-          const shown = parsed.errors.slice(0, 3);
-          const extra = parsed.errors.length - shown.length;
-          return { ok: false, error: shown.join('; ') + (extra > 0 ? ` … and ${extra} more issue(s)` : '') };
-        }
-        const doc = parsed.methodology;
-        if (get().methodologies.some((x) => x.code === doc.code && x.version === doc.version)) {
-          return { ok: false, error: `Methodology ${doc.code} ${doc.version} is already in the library.` };
-        }
-        const m: Methodology = { id: uid('mth'), ...doc };
-        set((s) => ({ methodologies: [...s.methodologies, m] }));
-        get().audit_write('METHODOLOGY_IMPORTED', 'methodology', m.id,
-          { code: m.code, version: m.version },
-          { new_value: { code: m.code, version: m.version } });
-        return { ok: true, methodology: m };
+        type ImportResult = { ok: boolean; error?: string; methodology?: Methodology };
+        return dual<ImportResult>(
+          () => {
+            const parsed = parseMethodologyJson(json);
+            if (!parsed.ok) {
+              // Cap the message at the first few issues — a malformed document can carry dozens.
+              const shown = parsed.errors.slice(0, 3);
+              const extra = parsed.errors.length - shown.length;
+              return { ok: false, error: shown.join('; ') + (extra > 0 ? ` … and ${extra} more issue(s)` : '') };
+            }
+            const doc = parsed.methodology;
+            if (get().methodologies.some((x) => x.code === doc.code && x.version === doc.version)) {
+              return { ok: false, error: `Methodology ${doc.code} ${doc.version} is already in the library.` };
+            }
+            const m: Methodology = { id: uid('mth'), ...doc };
+            set((s) => ({ methodologies: [...s.methodologies, m] }));
+            get().audit_write('METHODOLOGY_IMPORTED', 'methodology', m.id,
+              { code: m.code, version: m.version },
+              { new_value: { code: m.code, version: m.version } });
+            return { ok: true, methodology: m };
+          },
+          // Server mode: the server validates (same parser, same error format),
+          // rejects duplicates and audits; the stored document is read back so
+          // the library holds exactly what the server keeps.
+          async () => {
+            try {
+              const { id } = await methodologiesApi.import(json);
+              const m: Methodology = { ...(await methodologiesApi.exportDoc(id)), id };
+              set((s) => ({ methodologies: [...s.methodologies.filter((x) => x.id !== id), m] }));
+              return { ok: true, methodology: m };
+            } catch (err) {
+              return { ok: false, error: err instanceof Error ? err.message : String(err) };
+            }
+          },
+        );
       },
 
       // ---------------- Registration: Gate 1 (PDD validation) ----------------

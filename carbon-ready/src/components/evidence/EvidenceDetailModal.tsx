@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { Download, RefreshCw, Archive, FileText, Image as ImageIcon } from 'lucide-react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
@@ -7,6 +8,8 @@ import { api } from '../../lib/api';
 import { toast } from '../layout/Toast';
 import { fmtDate } from '../../lib/date';
 import { formatBytes } from '../../lib/format';
+import { hashFileBytes } from '../../lib/hash';
+import { MAX_SIZE } from './EvidenceUploadModal';
 import type { EvidenceFile } from '../../types';
 
 function Preview({ ev }: { ev: EvidenceFile }) {
@@ -57,12 +60,40 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
   const allEvidence = useStore((s) => s.evidence);
   const verifications = useStore((s) => s.verifications);
   const comments = useStore((s) => s.comments);
-  const archiveEvidence = useStore((s) => s.archiveEvidence);
-  const replaceEvidence = useStore((s) => s.replaceEvidence);
-
   const pdd = useStore((s) => s.pdds.find((p) => p.project_id === evidence?.project_id));
+  const fileRef = useRef<HTMLInputElement>(null);
+  const [busy, setBusy] = useState(false);
 
   if (!evidence) return null;
+
+  // Both go through api.ts, which writes to the server in server mode — the
+  // dialog only closes once the write has landed, and stays open on failure.
+  const run = async (label: string, write: () => Promise<unknown>) => {
+    setBusy(true);
+    try {
+      await write();
+      onClose();
+    } catch (e) {
+      toast.error(`${label} failed`, e instanceof Error ? e.message : String(e));
+    } finally {
+      setBusy(false);
+    }
+  };
+
+  const onReplaceFile = async (file: File | undefined) => {
+    if (fileRef.current) fileRef.current.value = '';
+    if (!file) return;
+    if (file.size > MAX_SIZE) {
+      toast.error('File too large', `${file.name} exceeds 25 MB.`);
+      return;
+    }
+    await run('Replace', async () => {
+      // Same rule as the upload dialog: hash the real bytes, fall back to the
+      // store's metadata hash if the file cannot be read.
+      const content_hash = await hashFileBytes(file).catch(() => undefined);
+      await api.replaceEvidence(evidence.id, { file, file_name: file.name, file_size: file.size, content_hash });
+    });
+  };
 
   const isCover = pdd?.section_data.cover_evidence_id === evidence.id;
 
@@ -157,10 +188,15 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
 
         <div className="grid grid-cols-2 gap-2 border-t border-rule pt-4">
           <Button variant="secondary" size="sm" className="w-full whitespace-nowrap"><Download size={14} /> Download</Button>
-          <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={isLocked || evidence.status !== 'active'}
-            onClick={() => { replaceEvidence(evidence.id, { file_size: evidence.file_size + 120_000 }); onClose(); }}>
+          <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={busy || isLocked || evidence.status !== 'active'}
+            onClick={() => fileRef.current?.click()}>
             <RefreshCw size={14} /> Replace version
           </Button>
+          <input
+            ref={fileRef} type="file" accept=".pdf,.jpg,.jpeg,.png,.xlsx" className="hidden"
+            aria-label={`Choose a new version of ${evidence.file_name}`}
+            onChange={(e) => void onReplaceFile(e.target.files?.[0])}
+          />
           {evidence.kind === 'image' && evidence.status === 'active' && pdd && (
             <Button variant="secondary" size="sm" className="w-full whitespace-nowrap" disabled={isCover}
               onClick={() => void api.savePddDraft(pdd.id, { ...pdd.section_data, cover_evidence_id: evidence.id }, pdd.evidence_ids).catch(() => toast.error('Cannot set cover', 'PDD ล็อกแล้ว (แก้ได้เฉพาะสถานะ draft)'))}>
@@ -168,8 +204,8 @@ export function EvidenceDetailModal({ evidence, onClose }: { evidence: EvidenceF
             </Button>
           )}
           {evidence.status === 'active' && !isLocked && (
-            <Button variant="ghost" size="sm" className="w-full whitespace-nowrap text-ink-meta"
-              onClick={() => { archiveEvidence(evidence.id); onClose(); }}>
+            <Button variant="ghost" size="sm" className="w-full whitespace-nowrap text-ink-meta" disabled={busy}
+              onClick={() => void run('Archive', () => api.archiveEvidence(evidence.id))}>
               <Archive size={14} /> Archive
             </Button>
           )}

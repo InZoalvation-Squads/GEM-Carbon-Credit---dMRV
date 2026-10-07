@@ -1,7 +1,8 @@
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest';
 import { useStore } from './index';
 import { setSession, projectsApi, SessionExpiredError } from '../lib/server-api';
-import type { EmissionFactor, Project } from '../types';
+import { methodologyToJson } from '../lib/methodology-schema';
+import type { EmissionFactor, EvidenceFile, Project } from '../types';
 
 // ============================================================
 // Server-mode write-through (plan Task 2): every write action calls the
@@ -151,5 +152,109 @@ describe('server-mode write-through', () => {
 
     // the store's module-init onSessionExpired registration fired
     expect(useStore.getState().isAuthenticated).toBe(false);
+  });
+
+  // ---------------- Evidence versions + methodology import ----------------
+
+  const activeEvidence: EvidenceFile = {
+    id: 'ev-prev', project_id: 'prj-local-1', parent_id: null,
+    category: 'maintenance_report', file_name: 'log.xlsx', kind: 'xlsx',
+    file_size: 20, version_number: 1, status: 'active',
+    content_hash: 'sha256-old', uploaded_by: 'usr-1', uploaded_by_name: 'Asha',
+    uploaded_at: '2026-07-01T00:00:00.000Z',
+  };
+
+  it('replaceEvidence uploads the real file and applies the server version (previous one superseded)', async () => {
+    useStore.setState({ evidence: [activeEvidence] });
+    const serverRow: EvidenceFile = {
+      ...activeEvidence, id: 'ev-srv-2', parent_id: 'ev-prev', file_name: 'log-v2.xlsx',
+      file_size: 23, version_number: 2, content_hash: 'sha256-new',
+      uploaded_at: '2026-10-07T00:00:00.000Z',
+    };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(201, { evidence: serverRow }));
+    vi.stubGlobal('fetch', fetchMock);
+    const file = new File(['inverter,2026-02-01,999'], 'log-v2.xlsx');
+
+    const next = await useStore.getState().replaceEvidence('ev-prev', {
+      file, file_name: file.name, file_size: file.size, content_hash: 'sha256-new',
+    });
+
+    expect(next).toEqual(serverRow);
+    const evidence = useStore.getState().evidence;
+    expect(evidence[0]).toEqual(serverRow);
+    expect(evidence.find((e) => e.id === 'ev-prev')?.status).toBe('superseded');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api.test/api/v1/evidence/ev-prev/replace');
+    expect(init.method).toBe('POST');
+    const form = init.body as FormData;
+    expect((form.get('file') as File).name).toBe('log-v2.xlsx');
+    expect(form.get('client_hash')).toBe('sha256-new');
+  });
+
+  it('replaceEvidence refuses to make a local-only version in server mode (no file bytes)', async () => {
+    useStore.setState({ evidence: [activeEvidence] });
+    const fetchMock = vi.fn();
+    vi.stubGlobal('fetch', fetchMock);
+
+    await expect(
+      Promise.resolve(useStore.getState().replaceEvidence('ev-prev', { file_size: 99 })),
+    ).rejects.toThrow();
+
+    expect(fetchMock).not.toHaveBeenCalled();
+    expect(useStore.getState().evidence).toEqual([activeEvidence]);
+  });
+
+  it('archiveEvidence posts to the server and applies the archived row', async () => {
+    useStore.setState({ evidence: [activeEvidence] });
+    const archived: EvidenceFile = { ...activeEvidence, status: 'archived' };
+    const fetchMock = vi.fn().mockResolvedValue(jsonResponse(200, { evidence: archived }));
+    vi.stubGlobal('fetch', fetchMock);
+
+    await useStore.getState().archiveEvidence('ev-prev');
+
+    expect(useStore.getState().evidence).toEqual([archived]);
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api.test/api/v1/evidence/ev-prev/archive');
+    expect(init.method).toBe('POST');
+  });
+
+  it('importMethodology posts the raw document and stores the server copy under the server id', async () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'admin' } }));
+    const doc = JSON.parse(methodologyToJson(useStore.getState().methodologies[0]));
+    doc.code = 'TEST-SRV-1';
+    const text = JSON.stringify(doc);
+    const fetchMock = vi.fn()
+      .mockResolvedValueOnce(jsonResponse(201, { methodology: {
+        id: 'mth-srv-1', code: 'TEST-SRV-1', name: doc.name, standard: doc.standard,
+        version: doc.version, sectoral_scope: doc.sectoral_scope, status: doc.status,
+      } }))
+      .mockResolvedValueOnce(jsonResponse(200, doc));
+    vi.stubGlobal('fetch', fetchMock);
+
+    const r = await useStore.getState().importMethodology(text);
+
+    expect(r.ok).toBe(true);
+    expect(r.methodology?.id).toBe('mth-srv-1');
+    expect(r.methodology?.code).toBe('TEST-SRV-1');
+    const stored = useStore.getState().methodologies.find((m) => m.code === 'TEST-SRV-1');
+    expect(stored?.id).toBe('mth-srv-1');
+    const [url, init] = fetchMock.mock.calls[0];
+    expect(url).toBe('http://api.test/api/v1/methodologies/import');
+    expect(init.method).toBe('POST');
+    expect(JSON.parse(init.body)).toBe(text); // the raw document, parsed server-side
+    expect(fetchMock.mock.calls[1][0]).toBe('http://api.test/api/v1/methodologies/mth-srv-1/export');
+  });
+
+  it('importMethodology returns the server rejection as {ok:false, error} and leaves the library alone', async () => {
+    useStore.setState((s) => ({ currentUser: { ...s.currentUser, role: 'admin' } }));
+    const before = useStore.getState().methodologies;
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(jsonResponse(409, {
+      error: { code: 'CONFLICT', message: 'Methodology X v1 is already in the library.' },
+    })));
+
+    const r = await useStore.getState().importMethodology('{"any":"doc"}');
+
+    expect(r).toEqual({ ok: false, error: 'Methodology X v1 is already in the library.' });
+    expect(useStore.getState().methodologies).toBe(before);
   });
 });

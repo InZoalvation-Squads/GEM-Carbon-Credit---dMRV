@@ -371,6 +371,17 @@ export const methodologiesApi = {
     const { schema_version: _v, ...methodology } = doc;
     return methodology;
   },
+  /**
+   * POST /methodologies/import → { methodology } (summary, admin only). The
+   * body is the raw file text; the server parses and validates it with the
+   * same schema as the SPA (422 invalid, 409 duplicate code+version).
+   */
+  async import(json: string): Promise<MethodologySummary> {
+    return (await apiFetch<{ methodology: MethodologySummary }>('/methodologies/import', {
+      method: 'POST',
+      body: json,
+    })).methodology;
+  },
 };
 
 export const pddsApi = {
@@ -589,6 +600,23 @@ export const evidenceApi = {
       body: form,
     });
     return res.evidence;
+  },
+  /**
+   * POST /evidence/:id/replace (multipart) → the new version row. The server
+   * marks the replaced version superseded; category/description carry over.
+   */
+  async replace(id: string, file: File, fields: { client_hash?: string } = {}): Promise<EvidenceFile> {
+    const form = new FormData();
+    if (fields.client_hash) form.append('client_hash', fields.client_hash);
+    form.append('file', file, file.name);
+    return (await apiFetch<{ evidence: EvidenceFile }>(`/evidence/${id}/replace`, {
+      method: 'POST',
+      body: form,
+    })).evidence;
+  },
+  /** POST /evidence/:id/archive → the archived row. */
+  async archive(id: string): Promise<EvidenceFile> {
+    return (await apiFetch<{ evidence: EvidenceFile }>(`/evidence/${id}/archive`, { method: 'POST' })).evidence;
   },
   /**
    * GET /evidence/:id/file → raw bytes as a Blob (authed). Best-effort for

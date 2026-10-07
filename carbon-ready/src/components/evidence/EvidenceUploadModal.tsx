@@ -14,7 +14,7 @@ import { toast } from '../layout/Toast';
 import { useStore } from '../../store';
 import type { EvidenceCategory, FileKind, UUID } from '../../types';
 
-const MAX_SIZE = 25 * 1024 * 1024; // matches the server multipart cap (MAX_UPLOAD_BYTES)
+export const MAX_SIZE = 25 * 1024 * 1024; // matches the server multipart cap (MAX_UPLOAD_BYTES)
 
 interface Staged {
   key: string;

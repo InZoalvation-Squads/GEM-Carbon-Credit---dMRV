@@ -36,7 +36,7 @@ export function Methodologies() {
     if (!file) return;
     try {
       const text = await file.text();
-      const r = importMethodology(text);
+      const r = await importMethodology(text); // server mode: resolves after the server import
       if (r.ok && r.methodology) {
         const m = r.methodology;
         toast.success('Methodology imported', `${m.code} ${m.version} (${m.status}) added to the library.`);

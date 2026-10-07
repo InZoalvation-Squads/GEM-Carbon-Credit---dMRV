@@ -109,13 +109,14 @@ export const api = {
     toast.success('Evidence uploaded', file.file_name);
     return tick(file);
   },
-  async replaceEvidence(evidence_id: UUID, input: { file_name?: string; file_size: number; content_hash?: string }): Promise<EvidenceFile | undefined> {
-    const file = useStore.getState().replaceEvidence(evidence_id, input);
+  // Server mode: `input.file` (the real bytes) is required; both resolve after the server write lands.
+  async replaceEvidence(evidence_id: UUID, input: { file?: File; file_name?: string; file_size: number; content_hash?: string }): Promise<EvidenceFile | undefined> {
+    const file = await useStore.getState().replaceEvidence(evidence_id, input);
     toast.success('New version uploaded', file ? `${file.file_name} · v${file.version_number}` : undefined);
     return tick(file);
   },
   async archiveEvidence(evidence_id: UUID): Promise<void> {
-    useStore.getState().archiveEvidence(evidence_id);
+    await useStore.getState().archiveEvidence(evidence_id);
     toast.info('Evidence archived');
     return tick(undefined);
   },
