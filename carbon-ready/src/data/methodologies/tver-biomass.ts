@@ -24,4 +24,6 @@ export const TVER_BIOMASS_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual reduction', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'EG_PJ — net electricity to grid.',
+  source_path: 'carbon-ready/src/data/methodologies/tver-biomass.ts',
+  usage: 'Use for TGO T-VER registration of a grid-connected biomass power plant (rice husk, bagasse, wood chips, palm residue) that displaces Thai grid electricity.',
 });

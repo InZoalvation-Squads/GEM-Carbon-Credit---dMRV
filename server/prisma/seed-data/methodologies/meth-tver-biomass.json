@@ -201,5 +201,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for TGO T-VER registration of a grid-connected biomass power plant (rice husk, bagasse, wood chips, palm residue) that displaces Thai grid electricity.",
+  "source_path": "carbon-ready/src/data/methodologies/tver-biomass.ts"
 }

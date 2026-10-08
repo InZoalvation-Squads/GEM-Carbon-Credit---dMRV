@@ -439,6 +439,10 @@ export interface Methodology {
   monitoring_params: MonitoringParam[];
   /** Official-form renderer registered for this methodology (template-per-form). */
   document_template?: DocumentTemplate;
+  /** 1–2 line onboarding note: when this methodology applies / what projects it fits. */
+  usage?: string;
+  /** Repo-relative path to the bundled file that defines this methodology. Absent on imported JSON methodologies (methodologyToJson/parseMethodologyJson strip it). */
+  source_path?: string;
 }
 
 /** Official-form renderers registered per methodology (template-per-form). */
