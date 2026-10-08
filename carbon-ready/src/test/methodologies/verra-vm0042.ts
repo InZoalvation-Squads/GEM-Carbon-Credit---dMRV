@@ -24,4 +24,5 @@ export const VERRA_VM0042_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual reduction', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'ER_soc — net reduction in tCO₂e, entered per verification period.',
+  usage: 'Use for Verra VCS registration of an Improved Agricultural Land Management (ALM) project — reduced tillage, cover cropping, nutrient management, or improved grazing — quantified by soil sampling or modeling.',
 });

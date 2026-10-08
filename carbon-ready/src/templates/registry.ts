@@ -9,6 +9,9 @@ export interface OfficialFormMeta {
   badgeLabel: string;
   /** Button label on the PDD document page. */
   buttonLabel: string;
+  /** Repo-relative path to the component source — surfaced on the methodology
+   *  detail panel so developers can jump straight into the renderer. */
+  componentPath: string;
 }
 
 /** Template-per-form registry — single source for route + button + badge. */
@@ -17,10 +20,12 @@ export const OFFICIAL_FORMS: Record<DocumentTemplate, OfficialFormMeta> = {
     component: TverSF001Pdd,
     badgeLabel: 'ฟอร์ม อบก.',
     buttonLabel: 'เอกสารฟอร์ม อบก.',
+    componentPath: 'carbon-ready/src/templates/TverSF001Pdd.tsx',
   },
   'EVIDENT-SF-02': {
     component: EvidentSF02,
     badgeLabel: 'ฟอร์ม Evident',
     buttonLabel: 'เอกสารฟอร์ม Evident SF-02',
+    componentPath: 'carbon-ready/src/templates/EvidentSF02.tsx',
   },
 };

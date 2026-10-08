@@ -12,6 +12,8 @@ export const TVER_SOLAR_METHODOLOGY: Methodology = {
   version: '03',
   sectoral_scope: '01 – Energy Industries',
   status: 'active',
+  source_path: 'carbon-ready/src/data/methodology-tver-solar.ts',
+  usage: 'Use for TGO T-VER registration of a grid-connected renewable-electricity project (solar PV rooftop or ground-mounted) that displaces Thai grid electricity. Supports single-site and bundled (แบบควบรวม) projects on the official T-VER-S-F001 PDD form.',
   calculation: { formula: 'grid_displacement', input_param: 'EG_PJ', input_unit: 'kWh' },
   required_evidence: ['commissioning_report', 'site_photo', 'supporting_evidence'],
   monitoring_params: [

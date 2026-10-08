@@ -32,4 +32,5 @@ export const VERRA_VM0047_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_removal_estimate', label: 'Estimated annual net removal', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'dCO2_removals — annual net GHG removals in tCO₂e per verification period, net of the dynamic performance benchmark.',
+  usage: 'Use for Verra VCS registration of Afforestation, Reforestation, or Revegetation (ARR) projects that quantify removals against a dynamic performance benchmark (matched control plots) rather than a static baseline.',
 });

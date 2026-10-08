@@ -46,6 +46,10 @@ export interface MethodologyConfig {
   /** Section D fields (ex-ante estimate as plain inputs — no computed). */
   ghgFields: PddFieldSchema[];
   monitoredParamHelp: string;
+  /** 1–2 line onboarding note. See Methodology.usage. */
+  usage?: string;
+  /** Repo-relative path to this methodology's definition file. */
+  source_path?: string;
 }
 
 // Assembles the standard A–E PDD for a non-Solar methodology.
@@ -78,5 +82,7 @@ export function buildStandardMethodology(c: MethodologyConfig): Methodology {
     sectoral_scope: c.sectoral_scope, status: 'active', calculation: c.calculation,
     required_evidence: c.required_evidence, monitoring_params: c.monitoring_params,
     pdd_sections: [projectInfo, baseline, stdAdditionalitySection, ghg, stdMonitoringSection(c.monitoredParamHelp)],
+    ...(c.usage ? { usage: c.usage } : {}),
+    ...(c.source_path ? { source_path: c.source_path } : {}),
   };
 }

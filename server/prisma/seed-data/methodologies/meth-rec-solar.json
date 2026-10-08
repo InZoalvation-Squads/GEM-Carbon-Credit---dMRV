@@ -6,6 +6,7 @@
   "version": "v1.4.1",
   "sectoral_scope": "Renewable electricity generation",
   "document_template": "EVIDENT-SF-02",
+  "usage": "Use when registering a renewable-electricity production facility (solar, wind, biomass, hydro) with EGAT as Local Issuer under the I-REC(E) standard, so the facility can later issue I-REC certificates for its metered output.",
   "status": "active",
   "calculation": {
     "formula": "grid_displacement",
@@ -405,5 +406,6 @@
         }
       ]
     }
-  ]
+  ],
+  "source_path": "carbon-ready/src/data/methodologies/rec-solar.ts"
 }
