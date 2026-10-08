@@ -10,6 +10,9 @@ import { seedMethodologies } from '../src/data/seed';
 
 const outDir = resolve(dirname(fileURLToPath(import.meta.url)), '../../server/prisma/seed-data/methodologies');
 for (const m of seedMethodologies) {
-  writeFileSync(resolve(outDir, `${m.id}.json`), methodologyToJson(m) + '\n');
+  // Seeds are bundled definitions, so they keep their source_path code pointer
+  // (methodologyToJson strips it from portable exports).
+  const doc = { ...JSON.parse(methodologyToJson(m)), ...(m.source_path ? { source_path: m.source_path } : {}) };
+  writeFileSync(resolve(outDir, `${m.id}.json`), JSON.stringify(doc, null, 2) + '\n');
   console.log(`wrote ${m.id}.json`);
 }

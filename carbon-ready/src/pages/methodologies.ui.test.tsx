@@ -5,6 +5,7 @@ import { Methodologies } from './Methodologies';
 import { seedDemo } from '../test/demoFixtures';
 import { useStore } from '../store';
 import { REC_SOLAR_METHODOLOGY } from '../data/methodologies';
+import { methodologyToJson } from '../lib/methodology-schema';
 import type { Methodology } from '../types';
 
 beforeEach(() => seedDemo());
@@ -139,6 +140,9 @@ describe('Methodologies — detail panel (developer handoff)', () => {
       screen.getByText(/No official-form template bound/i),
     ).toBeInTheDocument();
     expect(screen.queryByText('Methodology definition:')).not.toBeInTheDocument();
+    expect(screen.getByTestId('no-code-definition').textContent).toMatch(
+      /No bundled code definition — this methodology is defined by its imported JSON document/,
+    );
     // The generic editor path is linked so onboarding devs still land somewhere real.
     expect(
       screen.getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
@@ -150,6 +154,29 @@ describe('Methodologies — detail panel (developer handoff)', () => {
     expect(
       within(impl).getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
     ).toBeInTheDocument();
+  });
+
+  it('an imported methodology keeps its usage line but never claims a bundled source file', () => {
+    useStore.setState({ currentUser: { ...useStore.getState().currentUser, role: 'admin' } });
+    const exported = JSON.parse(methodologyToJson(REC_SOLAR_METHODOLOGY)) as Record<string, unknown>;
+    expect(exported).not.toHaveProperty('source_path');
+    const legacy = JSON.stringify({
+      ...exported,
+      code: 'SF-02-IMPORTED',
+      source_path: REC_SOLAR_METHODOLOGY.source_path,
+    });
+    const r = useStore.getState().importMethodology(legacy);
+    expect(r.ok).toBe(true);
+    expect(r.methodology?.source_path).toBeUndefined();
+
+    renderMethodologies();
+    openPanelFor('SF-02-IMPORTED');
+    expect(screen.getByTestId('methodology-usage').textContent).toBe(REC_SOLAR_METHODOLOGY.usage);
+    expect(screen.queryByText('Methodology definition:')).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole('link', { name: /carbon-ready\/src\/data\/methodologies\/rec-solar\.ts/ }),
+    ).not.toBeInTheDocument();
+    expect(screen.getByTestId('no-code-definition')).toBeInTheDocument();
   });
 
   it('every bundled methodology carries a usage line and a source_path', () => {

@@ -98,7 +98,6 @@ const MethodologyDocSchema = z.strictObject({
   // Developer-handoff metadata — optional so pre-schema JSON exports still import,
   // and so hand-maintained text next to each methodology travels with its JSON.
   usage: z.string().min(1).optional(),
-  source_path: z.string().min(1).optional(),
 }).superRefine((doc, ctx) => {
   // --- calculation ↔ monitoring_params ---
   const driver = doc.monitoring_params.find((p) => p.key === doc.calculation.input_param);
@@ -213,6 +212,7 @@ export function parseMethodologyJson(text: string): ParseResult {
         errors: [`This file uses methodology format version ${v ?? 'unknown'}; this app requires version ${METHODOLOGY_SCHEMA_VERSION}.`],
       };
     }
+    delete (raw as Record<string, unknown>).source_path;
   }
   const result = MethodologyDocSchema.safeParse(raw);
   if (!result.success) {
@@ -226,8 +226,8 @@ export function parseMethodologyJson(text: string): ParseResult {
   return { ok: true, methodology };
 }
 
-/** Serialize a methodology to its JSON document: id stripped, schema_version stamped. */
+/** Serialize a methodology to its JSON document: id and source_path stripped, schema_version stamped. */
 export function methodologyToJson(m: Methodology): string {
-  const { id: _id, ...rest } = m;
+  const { id: _id, source_path: _src, ...rest } = m;
   return JSON.stringify({ schema_version: METHODOLOGY_SCHEMA_VERSION, ...rest }, null, 2);
 }

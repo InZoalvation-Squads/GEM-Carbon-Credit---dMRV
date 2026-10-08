@@ -139,6 +139,11 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
       <div>
         <div className="mb-2 text-xs font-semibold text-ink-meta">Code references</div>
         <ul className="space-y-1.5 text-sm">
+          {!m.source_path && (
+            <li data-testid="no-code-definition" className="text-xs text-ink-meta">
+              No bundled code definition — this methodology is defined by its imported JSON document.
+            </li>
+          )}
           {refs.map((r) => (
             <li key={r.kind} className="flex flex-wrap items-baseline gap-x-2">
               <span className="text-xs font-medium text-ink-secondary">{r.kind}:</span>
