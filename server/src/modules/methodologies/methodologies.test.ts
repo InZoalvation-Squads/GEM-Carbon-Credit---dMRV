@@ -140,6 +140,10 @@ describe('methodologies module', () => {
     it('roundtrips an export: changed code imports as a new methodology + audit row', async () => {
       const countBefore = await prisma.methodology.count();
       const doc = await exportSolarDoc(app, admin.token);
+      expect(doc).toMatchObject({
+        usage: expect.any(String),
+        source_path: 'carbon-ready/src/data/methodology-tver-solar.ts',
+      });
       const res = await app.inject({
         method: 'POST', url: '/api/v1/methodologies/import',
         headers: auth(admin.token), payload: { ...doc, code: 'T-VER-S-99' },

@@ -236,5 +236,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for Verra VCS registration of Afforestation, Reforestation, or Revegetation (ARR) projects that quantify removals against a dynamic performance benchmark (matched control plots) rather than a static baseline.",
+  "source_path": "carbon-ready/src/data/methodologies/verra-vm0047.ts"
 }

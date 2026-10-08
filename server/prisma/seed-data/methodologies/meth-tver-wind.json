@@ -197,5 +197,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for TGO T-VER registration of a grid-connected wind power project (onshore or offshore) that displaces Thai grid electricity.",
+  "source_path": "carbon-ready/src/data/methodologies/tver-wind.ts"
 }

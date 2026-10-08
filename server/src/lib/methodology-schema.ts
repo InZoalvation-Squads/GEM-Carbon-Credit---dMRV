@@ -100,6 +100,10 @@ const MethodologyDocSchema = z.strictObject({
   required_evidence: z.array(z.enum(EVIDENCE_CATEGORIES)).min(1),
   monitoring_params: z.array(MonitoringParamSchema).min(1),
   document_template: z.enum(DOCUMENT_TEMPLATES).optional(),
+  // Developer-handoff metadata — optional so pre-schema JSON exports still import,
+  // and so hand-maintained text next to each methodology travels with its JSON.
+  usage: z.string().min(1).optional(),
+  source_path: z.string().min(1).optional(),
 }).superRefine((doc, ctx) => {
   // --- calculation ↔ monitoring_params ---
   const driver = doc.monitoring_params.find((p) => p.key === doc.calculation.input_param);

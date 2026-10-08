@@ -202,5 +202,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for TGO T-VER registration of a landfill-gas, wastewater-biogas, or composting project that captures and destroys methane that would otherwise vent uncontrolled.",
+  "source_path": "carbon-ready/src/data/methodologies/tver-waste-lfg.ts"
 }

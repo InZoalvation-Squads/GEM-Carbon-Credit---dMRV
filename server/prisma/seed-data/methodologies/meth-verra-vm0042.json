@@ -203,5 +203,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for Verra VCS registration of an Improved Agricultural Land Management (ALM) project — reduced tillage, cover cropping, nutrient management, or improved grazing — quantified by soil sampling or modeling.",
+  "source_path": "carbon-ready/src/data/methodologies/verra-vm0042.ts"
 }

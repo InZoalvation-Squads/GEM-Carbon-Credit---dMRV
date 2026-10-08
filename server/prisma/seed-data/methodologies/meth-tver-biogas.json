@@ -206,5 +206,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for TGO T-VER registration of a biogas-to-power plant that captures methane from livestock manure, wastewater, or food waste and feeds electricity into the Thai grid.",
+  "source_path": "carbon-ready/src/data/methodologies/tver-biogas.ts"
 }

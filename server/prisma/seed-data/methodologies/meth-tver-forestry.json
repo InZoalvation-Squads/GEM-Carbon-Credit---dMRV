@@ -193,5 +193,7 @@
         }
       ]
     }
-  ]
+  ],
+  "usage": "Use for TGO T-VER AFOLU registration of an afforestation or reforestation project on previously non-forest land, with per-plot biomass surveys driving annual carbon-stock change.",
+  "source_path": "carbon-ready/src/data/methodologies/tver-forestry.ts"
 }
