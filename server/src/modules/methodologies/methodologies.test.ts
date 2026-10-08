@@ -175,7 +175,7 @@ describe('methodologies module', () => {
       });
       const res = await app.inject({
         method: 'POST', url: '/api/v1/methodologies/import',
-        headers: auth(admin.token), payload: { ...doc, code: 'T-VER-S-98' },
+        headers: auth(admin.token), payload: { ...doc, code: 'T-VER-S-96' },
       });
       expect(res.statusCode).toBe(201);
       const row = await prisma.methodology.findUniqueOrThrow({
