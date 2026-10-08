@@ -2,10 +2,10 @@ import type { Methodology, MethodologyCalculation } from '../types';
 import { OFFICIAL_FORMS } from '../templates/registry';
 
 // Single source of truth for the "jump into the repo" links the methodology
-// detail panel surfaces to onboarding developers. Branch is the default branch
-// per docs/README; one place to change if the default branch ever moves.
+// detail panel surfaces to onboarding developers.
+export const GITHUB_DEFAULT_BRANCH = 'feat/sprint-1-mvp';
 export const GITHUB_REPO_BASE =
-  'https://github.com/InZoalvation-Squads/GEM-Carbon-Credit---dMRV/blob/main/';
+  `https://github.com/InZoalvation-Squads/GEM-Carbon-Credit---dMRV/blob/${GITHUB_DEFAULT_BRANCH}/`;
 
 export function codeUrl(repoRelPath: string): string {
   // Leading './' or '/' would double-up the base and 404; strip them here.
@@ -14,7 +14,7 @@ export function codeUrl(repoRelPath: string): string {
 
 /** A code reference row rendered on the methodology detail panel. */
 export interface CodeReference {
-  /** Short label — "Policy / schema", "Official form". */
+  /** Short label — "Methodology definition", "Official form". */
   kind: string;
   /** Repo-relative path shown inline so the user can copy without clicking. */
   path: string;
@@ -28,29 +28,64 @@ export interface CodeReference {
  *
  *  Only returns entries whose source actually exists in the repo — we don't
  *  manufacture links for methodologies that lack a source_path (such as a
- *  user-imported JSON methodology) or that have no official-form renderer. */
+ *  user-imported JSON methodology) or that have no official-form renderer.
+ *  There is no Guardian policy file in this repo, so none is linked. */
 export function codeReferencesFor(m: Methodology): CodeReference[] {
   const refs: CodeReference[] = [];
   if (m.source_path) {
     refs.push({
-      kind: 'Policy / schema',
+      kind: 'Methodology definition',
       path: m.source_path,
       url: codeUrl(m.source_path),
-      note: 'Methodology definition (Guardian-policy equivalent) and its field/section schema',
+      note: 'PDD sections, fields, monitoring parameters and calculation config',
     });
   }
-  if (m.document_template) {
-    const form = OFFICIAL_FORMS[m.document_template];
-    if (form?.componentPath) {
-      refs.push({
-        kind: 'Official form',
-        path: form.componentPath,
-        url: codeUrl(form.componentPath),
-        note: m.document_template,
-      });
-    }
-  }
+  const form = officialFormRef(m);
+  if (form) refs.push(form);
+  refs.push(
+    {
+      kind: 'Guardian schema',
+      path: GUARDIAN_SCHEMA_PATH,
+      url: codeUrl(GUARDIAN_SCHEMA_PATH),
+      note: 'PDD_REGISTRATION_SCHEMA_V1 — the credential schema the PDD is issued against',
+    },
+    {
+      kind: 'Guardian issuance',
+      path: GUARDIAN_ISSUANCE_PATH,
+      url: codeUrl(GUARDIAN_ISSUANCE_PATH),
+      note: 'buildPddSubject / issueCredential',
+    },
+  );
   return refs;
+}
+
+function officialFormRef(m: Methodology): CodeReference | null {
+  const form = m.document_template ? OFFICIAL_FORMS[m.document_template] : undefined;
+  if (!form) return null;
+  return {
+    kind: 'Official form',
+    path: form.componentPath,
+    url: codeUrl(form.componentPath),
+    note: m.document_template,
+  };
+}
+
+/** The code that implements every PDD section of a methodology: where the
+ *  user fills its fields and what renders it as a document. Sections have no
+ *  per-section components of their own, so `renderer` is the official-form
+ *  template when one is bound, else null (the generic editor renders it). */
+export function sectionImplementationFor(m: Methodology): {
+  entry: CodeReference;
+  renderer: CodeReference | null;
+} {
+  return {
+    entry: {
+      kind: 'Filled in',
+      path: PDD_ENTRY_EDITOR_PATH,
+      url: codeUrl(PDD_ENTRY_EDITOR_PATH),
+    },
+    renderer: officialFormRef(m),
+  };
 }
 
 /** True when there's no document_template bound — the generic PDD editor renders. */
@@ -59,6 +94,9 @@ export function usesGenericPddEditor(m: Methodology): boolean {
 }
 
 export const GENERIC_PDD_EDITOR_PATH = 'carbon-ready/src/pages/PddDocument.tsx';
+export const PDD_ENTRY_EDITOR_PATH = 'carbon-ready/src/pages/Registration.tsx';
+export const GUARDIAN_SCHEMA_PATH = 'carbon-ready/src/lib/guardian-schema.ts';
+export const GUARDIAN_ISSUANCE_PATH = 'carbon-ready/src/lib/guardian.ts';
 
 export interface CalculationDescription {
   /** Human-readable formula, e.g. "ER (tCO₂e) = Σ(EG_PJ_kWh × EF_grid) ÷ 1000". */

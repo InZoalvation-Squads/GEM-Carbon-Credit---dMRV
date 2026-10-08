@@ -17,7 +17,9 @@ import {
   describeCalculation,
   GENERIC_PDD_EDITOR_PATH,
   paramRoleInCalculation,
+  sectionImplementationFor,
   usesGenericPddEditor,
+  type CodeReference,
 } from '../lib/methodology-source';
 import { saveBlob } from '../lib/download';
 import type { Methodology, PddFieldSchema, PddSectionSchema } from '../types';
@@ -33,12 +35,28 @@ function fieldStateLabel(f: PddFieldSchema): { tone: 'green' | 'gray' | 'violet'
   return { tone: 'gray', text: 'optional' };
 }
 
+function CodeLink({ path, url }: { path: string; url: string }) {
+  return (
+    <a
+      href={url}
+      target="_blank"
+      rel="noreferrer"
+      className="inline-flex items-baseline gap-1 font-mono text-xs text-brand-700 hover:underline"
+    >
+      {path}
+      <ExternalLink size={11} aria-hidden className="translate-y-0.5" />
+    </a>
+  );
+}
+
 function SectionChip({
   section,
+  impl,
   expanded,
   onToggle,
 }: {
   section: PddSectionSchema;
+  impl: { entry: CodeReference; renderer: CodeReference | null };
   expanded: boolean;
   onToggle: () => void;
 }) {
@@ -60,6 +78,23 @@ function SectionChip({
       {expanded && (
         <div id={`meth-section-${section.key}`} className="border-t border-rule px-2.5 py-2 text-xs">
           {section.help && <p className="mb-2 text-ink-meta">{section.help}</p>}
+          <div data-testid={`section-impl-${section.key}`} className="mb-2 space-y-0.5">
+            <div className="flex flex-wrap items-baseline gap-x-1.5">
+              <span className="text-ink-meta">{impl.entry.kind}:</span>
+              <CodeLink path={impl.entry.path} url={impl.entry.url} />
+            </div>
+            {impl.renderer ? (
+              <div className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="text-ink-meta">{impl.renderer.kind} ({impl.renderer.note}):</span>
+                <CodeLink path={impl.renderer.path} url={impl.renderer.url} />
+              </div>
+            ) : (
+              <div className="flex flex-wrap items-baseline gap-x-1.5">
+                <span className="text-ink-meta">No dedicated renderer for this section — the generic PDD editor renders it:</span>
+                <CodeLink path={GENERIC_PDD_EDITOR_PATH} url={codeUrl(GENERIC_PDD_EDITOR_PATH)} />
+              </div>
+            )}
+          </div>
           <ul className="space-y-1">
             {section.fields.map((f) => {
               const state = fieldStateLabel(f);
@@ -83,6 +118,7 @@ function SectionChip({
 function DetailPanel({ methodology: m }: { methodology: Methodology }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
   const refs = codeReferencesFor(m);
+  const sectionImpl = sectionImplementationFor(m);
   const calc = describeCalculation(m.calculation);
   return (
     <div className="space-y-5 p-1">
@@ -102,52 +138,24 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
 
       <div>
         <div className="mb-2 text-xs font-semibold text-ink-meta">Code references</div>
-        {refs.length === 0 && usesGenericPddEditor(m) ? (
-          <p className="text-xs text-ink-meta">
-            No bundled policy file or official-form renderer. The PDD renders through the generic editor at{' '}
-            <a
-              href={codeUrl(GENERIC_PDD_EDITOR_PATH)}
-              target="_blank"
-              rel="noreferrer"
-              className="font-mono text-brand-700 hover:underline"
-            >
-              {GENERIC_PDD_EDITOR_PATH}
-            </a>
-            .
-          </p>
-        ) : (
-          <ul className="space-y-1.5 text-sm">
-            {refs.map((r) => (
-              <li key={r.kind} className="flex flex-wrap items-baseline gap-x-2">
-                <span className="text-xs font-medium text-ink-secondary">{r.kind}:</span>
-                <a
-                  href={r.url}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="inline-flex items-baseline gap-1 font-mono text-xs text-brand-700 hover:underline"
-                >
-                  {r.path}
-                  <ExternalLink size={11} aria-hidden className="translate-y-0.5" />
-                </a>
-                {r.note && <span className="text-xs text-ink-meta">— {r.note}</span>}
-              </li>
-            ))}
-            {usesGenericPddEditor(m) && (
-              <li className="text-xs text-ink-meta">
-                No official-form template bound — the PDD renders through the generic editor at{' '}
-                <a
-                  href={codeUrl(GENERIC_PDD_EDITOR_PATH)}
-                  target="_blank"
-                  rel="noreferrer"
-                  className="font-mono text-brand-700 hover:underline"
-                >
-                  {GENERIC_PDD_EDITOR_PATH}
-                </a>
-                .
-              </li>
-            )}
-          </ul>
-        )}
+        <ul className="space-y-1.5 text-sm">
+          {refs.map((r) => (
+            <li key={r.kind} className="flex flex-wrap items-baseline gap-x-2">
+              <span className="text-xs font-medium text-ink-secondary">{r.kind}:</span>
+              <CodeLink path={r.path} url={r.url} />
+              {r.note && <span className="text-xs text-ink-meta">— {r.note}</span>}
+            </li>
+          ))}
+          {usesGenericPddEditor(m) && (
+            <li className="text-xs text-ink-meta">
+              No official-form template bound — the PDD renders through the generic editor at{' '}
+              <CodeLink path={GENERIC_PDD_EDITOR_PATH} url={codeUrl(GENERIC_PDD_EDITOR_PATH)} />
+            </li>
+          )}
+          <li data-testid="no-guardian-policy" className="text-xs text-ink-meta">
+            Guardian policy: no Guardian policy file in this repo.
+          </li>
+        </ul>
       </div>
 
       <div>
@@ -158,6 +166,7 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
             <SectionChip
               key={s.key}
               section={s}
+              impl={sectionImpl}
               expanded={expandedKey === s.key}
               onToggle={() => setExpandedKey((cur) => (cur === s.key ? null : s.key))}
             />

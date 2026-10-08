@@ -34,11 +34,13 @@ describe('Methodologies — detail panel (developer handoff)', () => {
     renderMethodologies();
     openPanelFor('SF-02');
 
+    expect(screen.getByText('Methodology definition:')).toBeInTheDocument();
+    expect(screen.queryByText(/Policy \/ schema|Guardian-policy equivalent/)).not.toBeInTheDocument();
     const schemaLink = screen.getByRole('link', {
       name: /carbon-ready\/src\/data\/methodologies\/rec-solar\.ts/i,
     });
     expect(schemaLink.getAttribute('href')).toMatch(
-      /github\.com\/InZoalvation-Squads\/GEM-Carbon-Credit---dMRV\/blob\/main\/carbon-ready\/src\/data\/methodologies\/rec-solar\.ts$/,
+      /github\.com\/InZoalvation-Squads\/GEM-Carbon-Credit---dMRV\/blob\/feat\/sprint-1-mvp\/carbon-ready\/src\/data\/methodologies\/rec-solar\.ts$/,
     );
 
     const formLink = screen.getByRole('link', {
@@ -49,6 +51,35 @@ describe('Methodologies — detail panel (developer handoff)', () => {
     );
     // The template code travels alongside the link so devs recognize the renderer.
     expect(screen.getByText(/EVIDENT-SF-02/)).toBeInTheDocument();
+  });
+
+  it('links the Guardian schema and issuance code and states there is no Guardian policy file', () => {
+    renderMethodologies();
+    openPanelFor('SF-02');
+
+    expect(
+      screen.getByRole('link', { name: /carbon-ready\/src\/lib\/guardian-schema\.ts/ }).getAttribute('href'),
+    ).toMatch(/\/blob\/feat\/sprint-1-mvp\/carbon-ready\/src\/lib\/guardian-schema\.ts$/);
+    expect(screen.getByText(/PDD_REGISTRATION_SCHEMA_V1/)).toBeInTheDocument();
+    expect(
+      screen.getByRole('link', { name: /carbon-ready\/src\/lib\/guardian\.ts/ }).getAttribute('href'),
+    ).toMatch(/\/carbon-ready\/src\/lib\/guardian\.ts$/);
+    expect(screen.getByTestId('no-guardian-policy').textContent).toMatch(/no Guardian policy file in this repo/);
+  });
+
+  it('an expanded section chip links the code that implements that section', () => {
+    renderMethodologies();
+    openPanelFor('SF-02');
+    fireEvent.click(screen.getByRole('button', { name: /2\. Registrant Contact Details/i }));
+
+    const impl = screen.getByTestId(/^section-impl-/);
+    expect(
+      within(impl).getByRole('link', { name: /carbon-ready\/src\/templates\/EvidentSF02\.tsx/ }),
+    ).toBeInTheDocument();
+    expect(
+      within(impl).getByRole('link', { name: /carbon-ready\/src\/pages\/Registration\.tsx/ }),
+    ).toBeInTheDocument();
+    expect(within(impl).queryByText(/No dedicated renderer/)).not.toBeInTheDocument();
   });
 
   it('renders the ER formula and tags the driver monitoring parameter', () => {
@@ -105,11 +136,19 @@ describe('Methodologies — detail panel (developer handoff)', () => {
 
     expect(screen.queryByTestId('methodology-usage')).not.toBeInTheDocument();
     expect(
-      screen.getByText(/No bundled policy file or official-form renderer/i),
+      screen.getByText(/No official-form template bound/i),
     ).toBeInTheDocument();
+    expect(screen.queryByText('Methodology definition:')).not.toBeInTheDocument();
     // The generic editor path is linked so onboarding devs still land somewhere real.
     expect(
       screen.getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
+    ).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole('button', { name: /2\. Registrant Contact Details/i }));
+    const impl = screen.getByTestId(/^section-impl-/);
+    expect(within(impl).getByText(/No dedicated renderer for this section/)).toBeInTheDocument();
+    expect(
+      within(impl).getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
     ).toBeInTheDocument();
   });
 
