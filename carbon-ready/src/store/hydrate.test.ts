@@ -213,7 +213,7 @@ describe('hydrateFromServer', () => {
 
     await useStore.getState().hydrateFromServer();
 
-    const persisted = JSON.parse(localStorage.getItem('carbon-ready-store-v18') ?? '{}');
+    const persisted = JSON.parse(localStorage.getItem('carbon-ready-store-v19') ?? '{}');
     expect(persisted.state.projects).toEqual([project]); // the store does persist
     expect('server_loaded' in persisted.state).toBe(false);
   });

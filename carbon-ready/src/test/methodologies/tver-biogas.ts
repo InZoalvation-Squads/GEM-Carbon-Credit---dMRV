@@ -1,4 +1,4 @@
-import { buildStandardMethodology } from './shared';
+import { buildStandardMethodology } from '../../data/methodologies/shared';
 
 export const TVER_BIOGAS_METHODOLOGY = buildStandardMethodology({
   id: 'meth-tver-biogas',

@@ -1,4 +1,4 @@
-import { buildStandardMethodology } from './shared';
+import { buildStandardMethodology } from '../../data/methodologies/shared';
 
 export const VERRA_VM0042_METHODOLOGY = buildStandardMethodology({
   id: 'meth-verra-vm0042',

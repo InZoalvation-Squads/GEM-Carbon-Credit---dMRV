@@ -1046,7 +1046,7 @@ export const useStore = create<AppState>()(
       }),
     }),
     {
-      name: 'carbon-ready-store-v18',
+      name: 'carbon-ready-store-v19',
       // server_loaded describes this page load only — see AppState.
       partialize: ({ server_loaded: _loaded, ...persisted }) => persisted,
     }

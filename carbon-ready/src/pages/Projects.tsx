@@ -12,6 +12,8 @@ import { Drawer } from '../components/layout/Drawer';
 import { PageHeader } from '../components/layout/PageHeader';
 import { EmptyState } from '../components/ui/EmptyState';
 import { api } from '../lib/api';
+import { serverMode } from '../lib/server-api';
+import { SerwizPlants } from '../components/projects/SerwizPlants';
 import { useStore } from '../store';
 import { fmtDate } from '../lib/date';
 import { formatNumber } from '../lib/format';
@@ -68,6 +70,8 @@ export function Projects() {
           <ProjectRows projects={filtered} uploads={uploads} onEdit={setEditing} />
         )}
       </Card>
+
+      {serverMode() && <SerwizPlants search={deferredSearch} />}
 
       {creating && <CreateProjectModal onClose={() => setCreating(false)} />}
       {editing && <EditProjectDrawer project={editing} onClose={() => setEditing(null)} />}

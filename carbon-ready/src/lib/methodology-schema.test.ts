@@ -1,10 +1,15 @@
 import { describe, it, expect } from 'vitest';
 import { parseMethodologyJson, methodologyToJson } from './methodology-schema';
 import { seedMethodologies } from '../data/seed';
+import { TVER_WASTE_LFG_METHODOLOGY } from '../test/methodologies';
 import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
 import { buildDefaults } from './pdd-prefill';
 
 describe('methodology JSON schema v2', () => {
+  it('bundles exactly the registry catalog: T-VER solar, T-VER forestry, REC SF-02', () => {
+    expect(seedMethodologies.map((m) => m.code)).toEqual(['T-VER-S-METH-01-01', 'T-VER-F-01', 'SF-02']);
+  });
+
   it('accepts every bundled methodology (export → import parity)', () => {
     for (const m of seedMethodologies) {
       const r = parseMethodologyJson(methodologyToJson(m));
@@ -38,8 +43,8 @@ describe('methodology JSON schema v2', () => {
   });
 
   it('requires gwp_ch4 for ch4_avoidance and rejects it on other formulas', () => {
-    // T-VER-W-01 (landfill gas) is the bundled ch4_avoidance methodology.
-    const lfg = seedMethodologies.find((m) => m.calculation.formula === 'ch4_avoidance')!;
+    // No catalog methodology uses ch4_avoidance; the retired T-VER-W-01 (landfill gas) still does.
+    const lfg = TVER_WASTE_LFG_METHODOLOGY;
     const missing = JSON.parse(methodologyToJson(lfg));
     delete missing.calculation.gwp_ch4;
     expect(parseMethodologyJson(JSON.stringify(missing)).ok).toBe(false);

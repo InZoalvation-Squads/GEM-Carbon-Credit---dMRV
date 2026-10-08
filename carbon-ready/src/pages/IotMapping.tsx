@@ -10,6 +10,7 @@ import { SkeletonRows } from '../components/ui/Skeleton';
 import { toast } from '../components/layout/Toast';
 import { useStore } from '../store';
 import { formatNumber } from '../lib/format';
+import { backfillPlant, createProjectFromPlant } from '../lib/iot-plants';
 import {
   iotApi, serverMode,
   type IotDevice, type IotStatus, type IotSyncStats,
@@ -66,16 +67,8 @@ export function IotMapping() {
     );
   }
 
-  /** Backfill window reaching the device's first data day (+2 days slack, server caps at 400 days). */
-  function backfillHoursFor(firstDate: string): number {
-    const days = Math.ceil((Date.now() - new Date(`${firstDate}T00:00:00`).getTime()) / 86_400_000) + 2;
-    return Math.min(days, 400) * 24;
-  }
-
-  /** After a new mapping, pull the plant's ENTIRE history so coverage hits 100% without extra clicks. */
-  async function autoBackfill(device: IotDevice) {
-    if (!device.first_date) return; // no readings at the source yet — cron will pick them up when they appear
-    const stats = await iotApi.sync(backfillHoursFor(device.first_date));
+  function reportBackfill(stats: IotSyncStats | null) {
+    if (!stats) return;
     setLastSync(stats);
     toast.success('ดึงข้อมูลย้อนหลังแล้ว', `เพิ่ม ${stats.inserted} วันเข้าระบบ`);
   }
@@ -87,7 +80,7 @@ export function IotMapping() {
     try {
       await iotApi.map(device.device_id, projectId, device.name ?? undefined);
       toast.success('Map สำเร็จ', `${device.name ?? device.device_id} → ${projectName.get(projectId) ?? projectId}`);
-      await autoBackfill(device);
+      reportBackfill(await backfillPlant(device));
       await Promise.all([refreshFromServer(), reload()]);
     } catch (err) {
       toast.error('Map ไม่สำเร็จ', err instanceof Error ? err.message : String(err));
@@ -112,15 +105,9 @@ export function IotMapping() {
   async function handleCreateProject(device: IotDevice) {
     setBusyDevice(device.device_id);
     try {
-      const project = await iotApi.createProject({
-        device_id: device.device_id,
-        name: device.name ?? device.device_id,
-        capacity_kwp: device.capacity_kwp ?? 1,
-        location: device.location ?? 'Thailand',
-        commission_date: device.commission_date ?? device.first_date ?? new Date().toISOString().slice(0, 10),
-      });
+      const project = await createProjectFromPlant(device);
       toast.success('สร้างโปรเจกต์ + map แล้ว', project.name);
-      await autoBackfill(device);
+      reportBackfill(await backfillPlant(device));
       await Promise.all([refreshFromServer(), reload()]);
     } catch (err) {
       toast.error('สร้างโปรเจกต์ไม่สำเร็จ', err instanceof Error ? err.message : String(err));

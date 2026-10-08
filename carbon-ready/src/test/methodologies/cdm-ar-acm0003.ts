@@ -1,4 +1,4 @@
-import { buildStandardMethodology } from './shared';
+import { buildStandardMethodology } from '../../data/methodologies/shared';
 
 export const CDM_ARACM0003_METHODOLOGY = buildStandardMethodology({
   id: 'meth-cdm-aracm0003',

@@ -5,7 +5,7 @@ import type {
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from './methodology-tver-solar';
-import { ALL_METHODOLOGIES, VERRA_VM0047_METHODOLOGY } from './methodologies';
+import { ALL_METHODOLOGIES } from './methodologies';
 
 const uid = (p: string, n: number) => `${p}-${String(n).padStart(5, '0')}`;
 
@@ -57,10 +57,6 @@ const CSV_SOLAR_PLANTS: Array<{ id: string; name: string; province: string; capa
   { id: 'e2d96e17-57b3-4552-952d-be6bbda494be', name: 'Phichit Community College (Pho Thale)', province: 'Phichit', capacity_kwp: 134.75, updated_at: '2026-05-25T10:28:03Z' },
 ];
 
-// A single non-solar sample so the library's AFOLU removals path (VM0047 ARR) is
-// exercised end-to-end alongside the solar fleet. Census-based agroforestry.
-const VM0047_PROJECT_ID = 'prj-vm0047-0001';
-
 export const seedProjects: Project[] = [
   ...CSV_SOLAR_PLANTS.map((p) => ({
     id: p.id, organization_id: seedOrg.id, name: p.name,
@@ -68,12 +64,6 @@ export const seedProjects: Project[] = [
     commission_date: CSV_CREATED_AT.slice(0, 10), status: 'active' as const,
     lifecycle_stage: 'registered' as const, created_at: CSV_CREATED_AT, updated_at: p.updated_at ?? CSV_CREATED_AT,
   })),
-  {
-    id: VM0047_PROJECT_ID, organization_id: seedOrg.id, name: 'Mae Chaem Agroforestry ARR',
-    location: 'Chiang Mai, Thailand', capacity_kwp: 0,
-    commission_date: '2024-09-01', status: 'active', lifecycle_stage: 'registered',
-    created_at: '2024-09-01T00:00:00Z', updated_at: '2024-09-01T00:00:00Z',
-  },
 ];
 
 // ---- Registration: one registered T-VER-S-METH-01-01 PDD per plant ----
@@ -98,21 +88,6 @@ const SOLAR_SECTION_DATA = {
   monitoring_frequency: 'Monthly', qaqc_procedure: 'Monthly meter reads cross-checked against utility bill.',
 };
 
-// VM0047 ARR PDD — every A–E field filled so it passes validatePdd().
-const VM0047_SECTION_DATA = {
-  quantification_approach: 'Census-based', arr_activity: 'Revegetation', area_hectares: 450,
-  land_use_change: false,
-  baseline_scenario: 'Non-forest / degraded land vs dynamic performance benchmark (matched control plots)',
-  barrier_type: 'Institutional',
-  barrier_explanation: 'Dispersed smallholder plots lack finance without carbon revenue.',
-  common_practice: false, stocking_index_baseline: 0.18, soc_included: true,
-  biomass_burning_emissions: 40, n_fertilizer_emissions: 55, leakage_estimate: 120,
-  annual_removal_estimate: 5400, monitored_parameter: 'dCO2_removals',
-  measurement_method: 'Census of planted stems + allometric models, net of dynamic benchmark',
-  monitoring_frequency: 'Annually',
-  qaqc_procedure: 'Independent re-census of 10% of plots; control-plot SI re-measured each verification.',
-};
-
 export const seedPdds: ProjectDesignDocument[] = [
   ...CSV_SOLAR_PLANTS.map((p, i) => ({
     id: `PDD-S${String(i + 1).padStart(2, '0')}`,
@@ -124,15 +99,6 @@ export const seedPdds: ProjectDesignDocument[] = [
     content_hash: shortHash(`${p.id}-registered`),
     ipfs_cid: null, credential_id: null,
   })),
-  {
-    id: 'PDD-VM0047-01', project_id: VM0047_PROJECT_ID, methodology_id: VERRA_VM0047_METHODOLOGY.id,
-    methodology_snapshot: `${VERRA_VM0047_METHODOLOGY.code} ${VERRA_VM0047_METHODOLOGY.version}`,
-    state: 'registered', section_data: VM0047_SECTION_DATA, evidence_ids: [],
-    assigned_validator_name: VALIDATOR,
-    submitted_at: '2024-09-02T00:00:00Z', validated_at: '2024-09-22T00:00:00Z',
-    content_hash: shortHash(`${VM0047_PROJECT_ID}-registered`),
-    ipfs_cid: null, credential_id: null,
-  },
 ];
 
 // ---- Daily generation for the reporting period (2025-12-01 … 2026-06-30) ----
@@ -173,27 +139,7 @@ function buildFleetRecords(): MonitoringRecord[] {
   return out;
 }
 
-// Monthly tCO₂e driver records for the VM0047 ARR sample. generation_kwh holds the
-// period driver value in the methodology's input_unit (tCO₂e → biomass_stock_change).
-function buildVm0047Records(): MonitoringRecord[] {
-  const out: MonitoringRecord[] = [];
-  const start = new Date('2025-01-01');
-  for (let i = 0; i < 4; i++) {
-    const d = new Date(start);
-    d.setMonth(d.getMonth() + i);
-    out.push({
-      id: uid('mon-vm0047', i + 1),
-      project_id: VM0047_PROJECT_ID,
-      record_date: d.toISOString().slice(0, 10),
-      generation_kwh: 450,
-      source: 'seed_direct',
-      uploaded_at: '2026-07-01T00:00:00Z',
-    });
-  }
-  return out;
-}
-
-export const seedRecords: MonitoringRecord[] = [...buildFleetRecords(), ...buildVm0047Records()];
+export const seedRecords: MonitoringRecord[] = buildFleetRecords();
 
 // No verification packages, credentials or audit history yet — these accrue as the
 // operator builds and anchors verification packages from the generation above.

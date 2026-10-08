@@ -4,7 +4,7 @@ import { MemoryRouter, Routes, Route } from 'react-router-dom';
 import { RegistrationGate } from '../components/project/RegistrationGate';
 import { PddDocument } from '../pages/PddDocument';
 import { Registration } from '../pages/Registration';
-import { VERRA_VM0042_METHODOLOGY } from '../data/methodologies';
+import { VERRA_VM0042_METHODOLOGY } from '../test/methodologies';
 import { seedDemo } from '../test/demoFixtures';
 import { useStore } from '../store';
 

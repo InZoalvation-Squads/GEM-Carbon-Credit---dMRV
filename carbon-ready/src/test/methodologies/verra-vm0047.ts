@@ -1,4 +1,4 @@
-import { buildStandardMethodology } from './shared';
+import { buildStandardMethodology } from '../../data/methodologies/shared';
 
 // VM0047 is a Verra removals methodology distinct from AR-ACM0003: it adds the
 // area-based vs census-based quantification choice and a dynamic performance

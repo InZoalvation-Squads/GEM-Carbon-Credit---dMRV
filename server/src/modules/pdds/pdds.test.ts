@@ -16,7 +16,7 @@ import { pddContentHash, verifyDisclosedValue } from '../../lib/pdd.js';
 import { projectTopicId, toIpfsCid } from '../../lib/guardian-sim.js';
 
 const SOLAR = 'meth-tver-solar';
-const WIND = 'meth-tver-wind';
+const FORESTRY = 'meth-tver-forestry';
 
 // Same shape as the SPA seed's SOLAR_SECTION_DATA — passes validatePdd for
 // T-VER-S-METH-01-01 03 and publishes both sensitive fields (investment_metric via
@@ -185,23 +185,23 @@ describe('pdds module', () => {
       const created = await selectMethodology(projectId);
       const pddId = created.json().pdd.id as string;
 
-      const switched = await selectMethodology(projectId, WIND);
+      const switched = await selectMethodology(projectId, FORESTRY);
       expect(switched.statusCode).toBe(200);
-      expect(switched.json().pdd).toMatchObject({ id: pddId, methodology_id: WIND });
+      expect(switched.json().pdd).toMatchObject({ id: pddId, methodology_id: FORESTRY });
       const audit = await latestAudit(prisma);
       expect(audit).toMatchObject({
         action: 'METHODOLOGY_SELECTED',
         entity_id: pddId,
-        payload: { project_id: projectId, methodology_id: WIND },
+        payload: { project_id: projectId, methodology_id: FORESTRY },
         previous_value: { methodology_id: SOLAR },
-        new_value: { methodology_id: WIND },
+        new_value: { methodology_id: FORESTRY },
       });
 
       // Unchanged methodology → returns existing, writes no audit.
       const before = await prisma.auditLog.count();
-      const same = await selectMethodology(projectId, WIND);
+      const same = await selectMethodology(projectId, FORESTRY);
       expect(same.statusCode).toBe(200);
-      expect(same.json().pdd).toMatchObject({ id: pddId, methodology_id: WIND });
+      expect(same.json().pdd).toMatchObject({ id: pddId, methodology_id: FORESTRY });
       expect(await prisma.auditLog.count()).toBe(before);
     });
 
@@ -213,7 +213,7 @@ describe('pdds module', () => {
       await post(`/api/v1/pdds/${pddId}/submit`, owner.token);
 
       const before = await prisma.auditLog.count();
-      const res = await selectMethodology(projectId, WIND);
+      const res = await selectMethodology(projectId, FORESTRY);
       expect(res.statusCode).toBe(200);
       // SPA behavior: returns the existing PDD untouched, no audit.
       expect(res.json().pdd).toMatchObject({ id: pddId, methodology_id: SOLAR, state: 'submitted' });

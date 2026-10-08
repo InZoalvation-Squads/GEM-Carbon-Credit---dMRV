@@ -15,12 +15,13 @@ import type {
 } from '../types';
 import { shortHash } from '../lib/hash';
 import { TVER_SOLAR_METHODOLOGY } from '../data/methodology-tver-solar';
+import { TVER_FORESTRY_METHODOLOGY, REC_SOLAR_METHODOLOGY } from '../data/methodologies';
 import {
   TVER_WIND_METHODOLOGY, TVER_BIOMASS_METHODOLOGY, TVER_BIOGAS_METHODOLOGY,
-  TVER_FORESTRY_METHODOLOGY, TVER_WASTE_LFG_METHODOLOGY,
+  TVER_WASTE_LFG_METHODOLOGY,
   VERRA_VM0042_METHODOLOGY, VERRA_VM0047_METHODOLOGY, CDM_ARACM0003_METHODOLOGY,
-  REC_SOLAR_METHODOLOGY,
-} from '../data/methodologies';
+  TEST_ONLY_METHODOLOGIES,
+} from './methodologies';
 import { auditRowHash } from '../store/audit';
 import { DEFAULT_GUARDIAN_CONFIG } from '../lib/guardian';
 import { EMPTY_REC_ROI_SETTINGS } from '../lib/rec-roi';
@@ -641,7 +642,8 @@ export function seedDemo() {
     credentials: demoCredentials,
     tokens: [],
     guardianConfig: DEFAULT_GUARDIAN_CONFIG,
-    methodologies: seedMethodologies,
+    // The fixture world also uses the retired methodologies (see ./methodologies).
+    methodologies: [...seedMethodologies, ...TEST_ONLY_METHODOLOGIES],
     pdds: demoPdds,
     recIssues: demoRecIssues,
     recRoiSettings: EMPTY_REC_ROI_SETTINGS,
