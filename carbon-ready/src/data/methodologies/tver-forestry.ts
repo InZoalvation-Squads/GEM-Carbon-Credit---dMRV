@@ -24,4 +24,6 @@ export const TVER_FORESTRY_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual reduction', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'dC_tree — annual change in tree carbon stock (already in tCO₂e).',
+  source_path: 'carbon-ready/src/data/methodologies/tver-forestry.ts',
+  usage: 'Use for TGO T-VER AFOLU registration of an afforestation or reforestation project on previously non-forest land, with per-plot biomass surveys driving annual carbon-stock change.',
 });

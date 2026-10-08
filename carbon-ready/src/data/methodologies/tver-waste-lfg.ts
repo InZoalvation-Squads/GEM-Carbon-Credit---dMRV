@@ -24,4 +24,6 @@ export const TVER_WASTE_LFG_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual reduction', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'M_CH4 — tonnes of methane captured and destroyed.',
+  source_path: 'carbon-ready/src/data/methodologies/tver-waste-lfg.ts',
+  usage: 'Use for TGO T-VER registration of a landfill-gas, wastewater-biogas, or composting project that captures and destroys methane that would otherwise vent uncontrolled.',
 });

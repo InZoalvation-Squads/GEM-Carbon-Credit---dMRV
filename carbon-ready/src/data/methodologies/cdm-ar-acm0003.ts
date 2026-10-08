@@ -24,4 +24,6 @@ export const CDM_ARACM0003_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual net removal', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'dC_actual — annual net GHG removals (already in tCO₂e).',
+  source_path: 'carbon-ready/src/data/methodologies/cdm-ar-acm0003.ts',
+  usage: 'Use for UNFCCC CDM A/R registration of an afforestation or reforestation project on land that was non-forest since 31 Dec 1989, with permanent sample plots quantifying net GHG removals.',
 });

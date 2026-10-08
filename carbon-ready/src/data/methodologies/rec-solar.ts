@@ -20,6 +20,8 @@ export const REC_SOLAR_METHODOLOGY: Methodology = {
   version: 'v1.4.1',
   sectoral_scope: 'Renewable electricity generation',
   document_template: 'EVIDENT-SF-02',
+  source_path: 'carbon-ready/src/data/methodologies/rec-solar.ts',
+  usage: 'Use when registering a renewable-electricity production facility (solar, wind, biomass, hydro) with EGAT as Local Issuer under the I-REC(E) standard, so the facility can later issue I-REC certificates for its metered output.',
   status: 'active',
   // Facility generation is metered in kWh; issuance (1 REC = 1 MWh) is out of
   // scope this round — grid_displacement keeps the SPA treating the track as a

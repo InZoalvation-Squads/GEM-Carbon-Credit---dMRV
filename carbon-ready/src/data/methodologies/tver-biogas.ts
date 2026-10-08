@@ -24,4 +24,6 @@ export const TVER_BIOGAS_METHODOLOGY = buildStandardMethodology({
     { key: 'annual_er_estimate', label: 'Estimated annual reduction', type: 'number', unit: 'tCO₂e/yr', required: true },
   ],
   monitoredParamHelp: 'EG_PJ — net electricity to grid.',
+  source_path: 'carbon-ready/src/data/methodologies/tver-biogas.ts',
+  usage: 'Use for TGO T-VER registration of a biogas-to-power plant that captures methane from livestock manure, wastewater, or food waste and feeds electricity into the Thai grid.',
 });
