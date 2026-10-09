@@ -52,7 +52,7 @@ Monitoring data (CSV)  →  Carbon calculation  →  Evidence package  →  Veri
 
 ## 3. Tech Stack
 
-Vite 5 · React 18 · TypeScript 5 (strict) · Tailwind 3 · React Router 6 · Recharts 2 · **Zustand 4 (persist)** · PapaParse 5 · date-fns 3 · Lucide React · Vitest 1.
+Vite 8 · React 18 · TypeScript 5 (strict) · Tailwind 3 · React Router 6 · Recharts 2 · **Zustand 4 (persist)** · PapaParse 5 · date-fns 3 · Lucide React · Vitest 4.
 
 ฟอนต์/สี: Inter + emerald `brand` + slate `ink` (โทนเดียวกันทั้ง Sprint 1 และ 2).
 
