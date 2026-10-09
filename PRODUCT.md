@@ -35,7 +35,7 @@ Carbon Ready (GEM Carbon Credit dMRV) is a digital Monitoring, Reporting and Ver
 - Routes and nav groups are fixed: Registration (Methodologies, Register Project), Overview (Dashboard, How it works), Measure & Report (Projects, Upload, IoT Mapping, Calculations), Verify & Anchor (Verifications, REC Issuance), plus Validation, Guardian, Audit Log, Emission Factors, Login, and Register.
 - **Workflow and page structure must be preserved.** Keep the same routes, nav groups, and step order; a redesign changes look and layout within pages only.
 - The bodies of the official TGO form templates (`src/templates/`) reproduce government documents and stay faithful to the reference; only the app chrome around them can change.
-- The stack is React 18, Vite 5, Tailwind 3, Recharts, lucide-react, and Zustand. There are about 30 UI test files (`*.ui.test.tsx`) that query by text and role.
+- The stack is React 18, Vite 8, Tailwind 3, Recharts, lucide-react, and Zustand. There are about 30 UI test files (`*.ui.test.tsx`) that query by text and role.
 
 ## Brand Commitments
 
