@@ -1,5 +1,5 @@
 import { useRef, useState } from 'react';
-import { ChevronDown, ChevronRight, Download, ExternalLink, Upload } from 'lucide-react';
+import { ChevronDown, ChevronRight, Download, Upload } from 'lucide-react';
 import { useStore } from '../store';
 import { PageHeader } from '../components/layout/PageHeader';
 import { Card } from '../components/ui/Card';
@@ -11,16 +11,7 @@ import { Drawer } from '../components/layout/Drawer';
 import { toast } from '../components/layout/Toast';
 import { CATEGORY_LABEL } from '../lib/labels';
 import { methodologyToJson } from '../lib/methodology-schema';
-import {
-  codeReferencesFor,
-  codeUrl,
-  describeCalculation,
-  GENERIC_PDD_EDITOR_PATH,
-  paramRoleInCalculation,
-  sectionImplementationFor,
-  usesGenericPddEditor,
-  type CodeReference,
-} from '../lib/methodology-source';
+import { describeCalculation, paramRoleInCalculation } from '../lib/methodology-source';
 import { saveBlob } from '../lib/download';
 import type { Methodology, PddFieldSchema, PddSectionSchema } from '../types';
 
@@ -30,40 +21,24 @@ function exportMethodology(m: Methodology) {
 }
 
 function fieldStateLabel(f: PddFieldSchema): { tone: 'green' | 'gray' | 'violet'; text: string } {
-  if (f.type === 'computed') return { tone: 'violet', text: 'computed' };
-  if (f.required) return { tone: 'green', text: 'required' };
-  return { tone: 'gray', text: 'optional' };
-}
-
-function CodeLink({ path, url }: { path: string; url: string }) {
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noreferrer"
-      className="inline-flex items-baseline gap-1 font-mono text-xs text-brand-700 hover:underline"
-    >
-      {path}
-      <ExternalLink size={11} aria-hidden className="translate-y-0.5" />
-    </a>
-  );
+  if (f.type === 'computed') return { tone: 'violet', text: 'Filled in automatically' };
+  if (f.required) return { tone: 'green', text: 'Required' };
+  return { tone: 'gray', text: 'Optional' };
 }
 
 function SectionChip({
   section,
-  impl,
   expanded,
   onToggle,
 }: {
   section: PddSectionSchema;
-  impl: { entry: CodeReference; renderer: CodeReference | null };
   expanded: boolean;
   onToggle: () => void;
 }) {
   const sectionShortTitle = section.title.split(' / ')[0];
   const Icon = expanded ? ChevronDown : ChevronRight;
   return (
-    <div className="rounded-md ring-1 ring-rule bg-ground">
+    <div className={`rounded-md ring-1 ring-rule bg-ground ${expanded ? 'sm:col-span-2' : ''}`}>
       <button
         type="button"
         onClick={onToggle}
@@ -73,38 +48,22 @@ function SectionChip({
       >
         <Icon size={12} aria-hidden className="translate-y-0.5 text-ink-meta" />
         <span className="font-medium text-ink">{sectionShortTitle}</span>
-        <span className="text-ink-meta">· {section.fields.length}</span>
+        <span className="text-ink-meta">· {section.fields.length} {section.fields.length === 1 ? 'item' : 'items'}</span>
       </button>
       {expanded && (
         <div id={`meth-section-${section.key}`} className="border-t border-rule px-2.5 py-2 text-xs">
           {section.help && <p className="mb-2 text-ink-meta">{section.help}</p>}
-          <div data-testid={`section-impl-${section.key}`} className="mb-2 space-y-0.5">
-            <div className="flex flex-wrap items-baseline gap-x-1.5">
-              <span className="text-ink-meta">{impl.entry.kind}:</span>
-              <CodeLink path={impl.entry.path} url={impl.entry.url} />
-            </div>
-            {impl.renderer ? (
-              <div className="flex flex-wrap items-baseline gap-x-1.5">
-                <span className="text-ink-meta">{impl.renderer.kind} ({impl.renderer.note}):</span>
-                <CodeLink path={impl.renderer.path} url={impl.renderer.url} />
-              </div>
-            ) : (
-              <div className="flex flex-wrap items-baseline gap-x-1.5">
-                <span className="text-ink-meta">No dedicated renderer for this section — the generic PDD editor renders it:</span>
-                <CodeLink path={GENERIC_PDD_EDITOR_PATH} url={codeUrl(GENERIC_PDD_EDITOR_PATH)} />
-              </div>
-            )}
-          </div>
-          <ul className="space-y-1">
+          <ul className="space-y-1.5">
             {section.fields.map((f) => {
               const state = fieldStateLabel(f);
               return (
-                <li key={f.key} className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-mono text-[11px] text-ink">{f.key}</span>
-                  <span className="text-ink-secondary">{f.label}</span>
-                  {f.unit && <span className="text-ink-meta">({f.unit})</span>}
-                  <Badge tone={state.tone}>{state.text}</Badge>
-                  <span className="text-ink-meta">· {f.type}{f.source ? ` (${f.source})` : ''}</span>
+                <li key={f.key}>
+                  <div className="flex flex-wrap items-baseline gap-x-2">
+                    <span className="text-ink">{f.label}</span>
+                    {f.unit && <span className="text-ink-meta">({f.unit})</span>}
+                    <Badge tone={state.tone}>{state.text}</Badge>
+                  </div>
+                  {f.help && <p className="mt-0.5 text-ink-meta">{f.help}</p>}
                 </li>
               );
             })}
@@ -117,9 +76,7 @@ function SectionChip({
 
 function DetailPanel({ methodology: m }: { methodology: Methodology }) {
   const [expandedKey, setExpandedKey] = useState<string | null>(null);
-  const refs = codeReferencesFor(m);
-  const sectionImpl = sectionImplementationFor(m);
-  const calc = describeCalculation(m.calculation);
+  const calc = describeCalculation(m);
   return (
     <div className="space-y-5 p-1">
       <div>
@@ -128,50 +85,27 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
       </div>
 
       {m.usage && (
-        <p
-          data-testid="methodology-usage"
-          className="rounded-md bg-brand-50 px-3 py-2 text-sm leading-snug text-brand-800 ring-1 ring-brand-100"
-        >
-          {m.usage}
-        </p>
+        <div>
+          <div className="mb-2 text-xs font-semibold text-ink-meta">What this methodology is for</div>
+          <p
+            data-testid="methodology-usage"
+            className="rounded-md bg-brand-50 px-3 py-2 text-sm leading-snug text-brand-800 ring-1 ring-brand-100"
+          >
+            {m.usage}
+          </p>
+        </div>
       )}
 
       <div>
-        <div className="mb-2 text-xs font-semibold text-ink-meta">Code references</div>
-        <ul className="space-y-1.5 text-sm">
-          {!m.source_path && (
-            <li data-testid="no-code-definition" className="text-xs text-ink-meta">
-              No bundled code definition — this methodology is defined by its imported JSON document.
-            </li>
-          )}
-          {refs.map((r) => (
-            <li key={r.kind} className="flex flex-wrap items-baseline gap-x-2">
-              <span className="text-xs font-medium text-ink-secondary">{r.kind}:</span>
-              <CodeLink path={r.path} url={r.url} />
-              {r.note && <span className="text-xs text-ink-meta">— {r.note}</span>}
-            </li>
-          ))}
-          {usesGenericPddEditor(m) && (
-            <li className="text-xs text-ink-meta">
-              No official-form template bound — the PDD renders through the generic editor at{' '}
-              <CodeLink path={GENERIC_PDD_EDITOR_PATH} url={codeUrl(GENERIC_PDD_EDITOR_PATH)} />
-            </li>
-          )}
-          <li data-testid="no-guardian-policy" className="text-xs text-ink-meta">
-            Guardian policy: no Guardian policy file in this repo.
-          </li>
-        </ul>
-      </div>
-
-      <div>
-        <div className="mb-2 text-xs font-semibold text-ink-meta">PDD sections</div>
-        <p className="mb-2 text-xs text-ink-meta">Click a section to see the fields the user must fill.</p>
+        <div className="mb-2 text-xs font-semibold text-ink-meta">What you will fill in</div>
+        <p className="mb-2 text-xs text-ink-meta">
+          The project design document (PDD) has {m.pdd_sections.length} {m.pdd_sections.length === 1 ? 'section' : 'sections'}. Open a section to see what it asks for.
+        </p>
         <div className="grid gap-1.5 sm:grid-cols-2">
           {m.pdd_sections.map((s) => (
             <SectionChip
               key={s.key}
               section={s}
-              impl={sectionImpl}
               expanded={expandedKey === s.key}
               onToggle={() => setExpandedKey((cur) => (cur === s.key ? null : s.key))}
             />
@@ -180,7 +114,8 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
       </div>
 
       <div>
-        <div className="mb-2 text-xs font-semibold text-ink-meta">Required evidence</div>
+        <div className="mb-2 text-xs font-semibold text-ink-meta">Evidence to prepare</div>
+        <p className="mb-2 text-xs text-ink-meta">Have these documents ready to upload for the project.</p>
         <div className="flex flex-wrap gap-1.5">
           {m.required_evidence.map((c) => (
             <Badge key={c} tone="blue">{CATEGORY_LABEL[c] ?? c}</Badge>
@@ -189,17 +124,10 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
       </div>
 
       <div>
-        <div className="mb-2 text-xs font-semibold text-ink-meta">Monitoring parameters &amp; formula</div>
-        <div
-          data-testid="methodology-formula"
-          className="mb-2 rounded-md bg-ground px-3 py-2 text-sm ring-1 ring-rule"
-        >
-          <div className="font-mono text-xs text-ink">{calc.formula}</div>
-          <div className="mt-1 text-xs text-ink-meta">{calc.rationale}</div>
-        </div>
+        <div className="mb-2 text-xs font-semibold text-ink-meta">What will be measured</div>
         <ul className="space-y-1.5 text-sm text-ink-secondary">
           {m.monitoring_params.map((p) => {
-            const role = paramRoleInCalculation(p.key, m.calculation);
+            const role = paramRoleInCalculation(p.key, m);
             return (
               <li
                 key={p.key}
@@ -207,12 +135,11 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
                 className="rounded-md bg-ground px-2.5 py-1.5 ring-1 ring-rule"
               >
                 <div className="flex flex-wrap items-baseline gap-x-2">
-                  <span className="font-mono text-xs text-ink">{p.key}</span>
-                  <span className="text-ink-secondary">— {p.label}</span>
-                  <span className="text-xs text-ink-meta">({p.unit}, {p.frequency})</span>
+                  <span className="text-ink">{p.label}</span>
+                  <span className="font-mono text-xs text-ink-meta">{p.key}</span>
                 </div>
                 <div className="mt-0.5 text-xs text-ink-meta">
-                  Measured by: {p.method}
+                  Measured in {p.unit} · {p.frequency} · How: {p.method}
                 </div>
                 {role && (
                   <div className="mt-0.5 text-xs font-medium text-brand-700">{role}</div>
@@ -221,6 +148,17 @@ function DetailPanel({ methodology: m }: { methodology: Methodology }) {
             );
           })}
         </ul>
+      </div>
+
+      <div>
+        <div className="mb-2 text-xs font-semibold text-ink-meta">How the emission reduction is calculated</div>
+        <div
+          data-testid="methodology-formula"
+          className="rounded-md bg-ground px-3 py-2 text-sm ring-1 ring-rule"
+        >
+          <div className="font-mono text-xs text-ink">{calc.formula}</div>
+          <div className="mt-1 text-xs text-ink-meta">{calc.explanation}</div>
+        </div>
       </div>
     </div>
   );
