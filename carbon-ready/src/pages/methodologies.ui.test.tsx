@@ -22,105 +22,29 @@ function openPanelFor(code: string) {
   fireEvent.click(screen.getByRole('button', { name: code }));
 }
 
-describe('Methodologies — detail panel (developer handoff)', () => {
-  it('shows the hand-written usage line next to the methodology name for SF-02', () => {
+describe('Methodologies — detail panel (project owner view)', () => {
+  it('shows what the methodology is for next to its name for SF-02', () => {
     renderMethodologies();
     openPanelFor('SF-02');
+    expect(screen.getByText('What this methodology is for')).toBeInTheDocument();
     const usage = screen.getByTestId('methodology-usage');
     expect(usage.textContent).toMatch(/I-REC\(E\)/);
     expect(usage.textContent).toMatch(/EGAT/);
   });
 
-  it('links the official-form renderer and the methodology source file', () => {
-    renderMethodologies();
-    openPanelFor('SF-02');
-
-    expect(screen.getByText('Methodology definition:')).toBeInTheDocument();
-    expect(screen.queryByText(/Policy \/ schema|Guardian-policy equivalent/)).not.toBeInTheDocument();
-    const schemaLink = screen.getByRole('link', {
-      name: /carbon-ready\/src\/data\/methodologies\/rec-solar\.ts/i,
-    });
-    expect(schemaLink.getAttribute('href')).toMatch(
-      /github\.com\/InZoalvation-Squads\/GEM-Carbon-Credit---dMRV\/blob\/feat\/sprint-1-mvp\/carbon-ready\/src\/data\/methodologies\/rec-solar\.ts$/,
-    );
-
-    const formLink = screen.getByRole('link', {
-      name: /carbon-ready\/src\/templates\/EvidentSF02\.tsx/i,
-    });
-    expect(formLink.getAttribute('href')).toMatch(
-      /\/carbon-ready\/src\/templates\/EvidentSF02\.tsx$/,
-    );
-    // The template code travels alongside the link so devs recognize the renderer.
-    expect(screen.getByText(/EVIDENT-SF-02/)).toBeInTheDocument();
-  });
-
-  it('links the Guardian schema and issuance code and states there is no Guardian policy file', () => {
-    renderMethodologies();
-    openPanelFor('SF-02');
-
-    expect(
-      screen.getByRole('link', { name: /carbon-ready\/src\/lib\/guardian-schema\.ts/ }).getAttribute('href'),
-    ).toMatch(/\/blob\/feat\/sprint-1-mvp\/carbon-ready\/src\/lib\/guardian-schema\.ts$/);
-    expect(screen.getByText(/PDD_REGISTRATION_SCHEMA_V1/)).toBeInTheDocument();
-    expect(
-      screen.getByRole('link', { name: /carbon-ready\/src\/lib\/guardian\.ts/ }).getAttribute('href'),
-    ).toMatch(/\/carbon-ready\/src\/lib\/guardian\.ts$/);
-    expect(screen.getByTestId('no-guardian-policy').textContent).toMatch(/no Guardian policy file in this repo/);
-  });
-
-  it('an expanded section chip links the code that implements that section', () => {
+  it('shows no code links, source paths or developer notes', () => {
     renderMethodologies();
     openPanelFor('SF-02');
     fireEvent.click(screen.getByRole('button', { name: /2\. Registrant Contact Details/i }));
 
-    const impl = screen.getByTestId(/^section-impl-/);
-    expect(
-      within(impl).getByRole('link', { name: /carbon-ready\/src\/templates\/EvidentSF02\.tsx/ }),
-    ).toBeInTheDocument();
-    expect(
-      within(impl).getByRole('link', { name: /carbon-ready\/src\/pages\/Registration\.tsx/ }),
-    ).toBeInTheDocument();
-    expect(within(impl).queryByText(/No dedicated renderer/)).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryAllByRole('link')).toHaveLength(0);
+    expect(dialog.textContent).not.toMatch(
+      /carbon-ready\/|\.tsx?\b|github|Code references|Guardian (policy|schema|issuance)|buildPddSubject|issueCredential|generic (PDD )?editor|bundled code definition/i,
+    );
   });
 
-  it('renders the ER formula and tags the driver monitoring parameter', () => {
-    renderMethodologies();
-    openPanelFor('SF-02');
-
-    const formula = screen.getByTestId('methodology-formula');
-    expect(formula.textContent).toMatch(/EG_PJ/);
-    expect(formula.textContent).toMatch(/EF_grid/);
-    expect(formula.textContent).toMatch(/÷ 1000/);
-
-    const egPj = screen.getByTestId('monitoring-param-EG_PJ');
-    expect(within(egPj).getByText(/Driver/)).toBeInTheDocument();
-  });
-
-  it('expands a PDD section chip to reveal its fields and keeps others collapsed', () => {
-    renderMethodologies();
-    openPanelFor('SF-02');
-
-    // Collapsed by default — fields are not in the DOM.
-    expect(screen.queryByText(/organisation_name/)).not.toBeInTheDocument();
-
-    const toggle = screen.getByRole('button', {
-      name: /2\. Registrant Contact Details/i,
-    });
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'true');
-    // Field keys from the SF-02 "Registrant Contact Details" section render verbatim.
-    expect(screen.getByText('organisation_name')).toBeInTheDocument();
-    expect(screen.getByText('evident_org_id')).toBeInTheDocument();
-
-    // Click again to collapse.
-    fireEvent.click(toggle);
-    expect(toggle).toHaveAttribute('aria-expanded', 'false');
-    expect(screen.queryByText('organisation_name')).not.toBeInTheDocument();
-  });
-
-  it('falls back to the generic PDD editor path for a methodology without usage or document_template', () => {
+  it('an imported methodology without bundled files opens with no developer notes', () => {
     const bare: Methodology = {
       ...REC_SOLAR_METHODOLOGY,
       id: 'meth-fixture-bare',
@@ -136,27 +60,65 @@ describe('Methodologies — detail panel (developer handoff)', () => {
     openPanelFor('FIX-BARE');
 
     expect(screen.queryByTestId('methodology-usage')).not.toBeInTheDocument();
-    expect(
-      screen.getByText(/No official-form template bound/i),
-    ).toBeInTheDocument();
-    expect(screen.queryByText('Methodology definition:')).not.toBeInTheDocument();
-    expect(screen.getByTestId('no-code-definition').textContent).toMatch(
-      /No bundled code definition — this methodology is defined by its imported JSON document/,
-    );
-    // The generic editor path is linked so onboarding devs still land somewhere real.
-    expect(
-      screen.getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
-    ).toBeInTheDocument();
-
-    fireEvent.click(screen.getByRole('button', { name: /2\. Registrant Contact Details/i }));
-    const impl = screen.getByTestId(/^section-impl-/);
-    expect(within(impl).getByText(/No dedicated renderer for this section/)).toBeInTheDocument();
-    expect(
-      within(impl).getByRole('link', { name: /carbon-ready\/src\/pages\/PddDocument\.tsx/ }),
-    ).toBeInTheDocument();
+    expect(screen.queryByText('What this methodology is for')).not.toBeInTheDocument();
+    const dialog = screen.getByRole('dialog');
+    expect(within(dialog).queryAllByRole('link')).toHaveLength(0);
+    expect(dialog.textContent).not.toMatch(/bundled code definition|Guardian policy|generic (PDD )?editor/i);
+    expect(within(dialog).getByText('What you will fill in')).toBeInTheDocument();
   });
 
-  it('an imported methodology keeps its usage line but never claims a bundled source file', () => {
+  it('explains the formula in plain words and marks the reading that drives it', () => {
+    renderMethodologies();
+    openPanelFor('SF-02');
+
+    const formula = screen.getByTestId('methodology-formula');
+    expect(formula.textContent).toMatch(/EG_PJ/);
+    expect(formula.textContent).toMatch(/EF_grid/);
+    expect(formula.textContent).toMatch(/÷ 1000/);
+    expect(formula.textContent).toMatch(
+      /Each reading of net electricity produced by the facility \(EG_PJ\), in kWh, is multiplied by the grid emission factor/,
+    );
+    expect(formula.textContent).toMatch(/divided by 1,000 to turn kilograms into tonnes of CO₂e/);
+
+    const egPj = screen.getByTestId('monitoring-param-EG_PJ');
+    expect(egPj.textContent).toMatch(/Measured in kWh · Monthly · How: Revenue-grade meter/);
+    expect(within(egPj).getByText('Used to calculate the emission reduction')).toBeInTheDocument();
+  });
+
+  it('describes a stock-change methodology as a total of the reported values', () => {
+    renderMethodologies();
+    openPanelFor('T-VER-F-01');
+
+    expect(screen.getByTestId('methodology-formula').textContent).toMatch(
+      /Change in tree carbon stock \(dC_tree\) is already reported in tCO₂e for each reporting period/,
+    );
+    expect(within(screen.getByTestId('monitoring-param-A_planted')).queryByText(/Used to calculate/)).not.toBeInTheDocument();
+  });
+
+  it('expands a PDD section to list what it asks for, in plain labels, and keeps others collapsed', () => {
+    renderMethodologies();
+    openPanelFor('SF-02');
+
+    const toggle = screen.getByRole('button', {
+      name: /2\. Registrant Contact Details/i,
+    });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const section = document.getElementById(toggle.getAttribute('aria-controls')!)!;
+    // Field labels render; internal field keys and input types do not.
+    expect(within(section).getByText('Organisation name')).toBeInTheDocument();
+    expect(section.textContent).not.toMatch(/organisation_name|evident_org_id/);
+    expect(within(section).getAllByText(/^(Required|Optional|Filled in automatically)$/).length).toBeGreaterThan(0);
+
+    // Click again to collapse.
+    fireEvent.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(document.getElementById(toggle.getAttribute('aria-controls')!)).toBeNull();
+  });
+
+  it('an imported methodology keeps its usage line', () => {
     useStore.setState({ currentUser: { ...useStore.getState().currentUser, role: 'admin' } });
     const exported = JSON.parse(methodologyToJson(REC_SOLAR_METHODOLOGY)) as Record<string, unknown>;
     expect(exported).not.toHaveProperty('source_path');
@@ -172,11 +134,6 @@ describe('Methodologies — detail panel (developer handoff)', () => {
     renderMethodologies();
     openPanelFor('SF-02-IMPORTED');
     expect(screen.getByTestId('methodology-usage').textContent).toBe(REC_SOLAR_METHODOLOGY.usage);
-    expect(screen.queryByText('Methodology definition:')).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: /carbon-ready\/src\/data\/methodologies\/rec-solar\.ts/ }),
-    ).not.toBeInTheDocument();
-    expect(screen.getByTestId('no-code-definition')).toBeInTheDocument();
   });
 
   it('every bundled methodology carries a usage line and a source_path', () => {
