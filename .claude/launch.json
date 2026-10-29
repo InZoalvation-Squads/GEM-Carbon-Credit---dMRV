@@ -1,0 +1,43 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "carbon-ready-server",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "VITE_API_BASE_URL=http://localhost:4100 npm --prefix carbon-ready run dev -- --port 5180 --strictPort"
+      ],
+      "port": 5180
+    },
+    {
+      "name": "server-api",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "PORT=4100 CORS_ORIGIN=http://localhost:5180 npm --prefix server run dev"
+      ],
+      "port": 4100
+    },
+    {
+      "name": "carbon-ready-demo",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "VITE_API_BASE_URL= npm --prefix carbon-ready run dev -- --port \"${PORT:-5173}\" --strictPort"
+      ],
+      "port": 5173,
+      "autoPort": true
+    },
+    {
+      "name": "carbon-ready-demo-alt",
+      "runtimeExecutable": "sh",
+      "runtimeArgs": [
+        "-c",
+        "VITE_API_BASE_URL= npm --prefix carbon-ready run dev -- --port \"${PORT:-5174}\" --strictPort"
+      ],
+      "port": 5174,
+      "autoPort": true
+    }
+  ]
+}
