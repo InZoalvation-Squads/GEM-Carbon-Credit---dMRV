@@ -21,12 +21,31 @@ export async function createOrg(
   await prisma.organization.create({ data: { id, name, country: 'IN' } });
 }
 
-/** Register a user through the real API; returns their id + access token. */
+/**
+ * Create a user of `role` and return their id + access token. project_owner
+ * goes through the real register API; verifier/esg_manager cannot
+ * self-register (by design), so they are inserted directly like createAdmin.
+ */
 export async function registerUser(
   app: FastifyInstance,
   role: 'project_owner' | 'esg_manager' | 'verifier',
   email = `${role}-${uid('u')}@example.com`,
 ): Promise<{ id: string; token: string }> {
+  if (role !== 'project_owner') {
+    const org = await app.prisma.organization.findFirst({ orderBy: { created_at: 'asc' } });
+    const id = uid('usr');
+    await app.prisma.user.create({
+      data: {
+        id,
+        organization_id: org!.id,
+        email,
+        name: `Test ${role}`,
+        role,
+        password_hash: 'not-a-real-hash',
+      },
+    });
+    return { id, token: app.jwt.sign({ sub: id, role, org: org!.id }) };
+  }
   const res = await app.inject({
     method: 'POST',
     url: '/api/v1/auth/register',

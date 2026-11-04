@@ -3,6 +3,7 @@ import { PrismaClient } from '@prisma/client';
 import type { FastifyInstance } from 'fastify';
 import { setupTestDatabase, resetDatabase } from '../../test/db.js';
 import { buildApp } from '../../app.js';
+import { auth, createAdmin } from '../../test/fixtures.js';
 
 describe('users module', () => {
   let prisma: PrismaClient;
@@ -25,7 +26,7 @@ describe('users module', () => {
       payload: {
         name: 'Mia Chen',
         email: 'mia@example.com',
-        role: 'esg_manager',
+        role: 'project_owner',
         password: 'password-123',
       },
     });
@@ -69,7 +70,7 @@ describe('users module', () => {
         organization_id: 'org-0001',
         email: 'mia@example.com',
         name: 'Mia Chen',
-        role: 'esg_manager',
+        role: 'project_owner',
         created_at: expect.any(String),
       });
       expect(user).not.toHaveProperty('password_hash');
@@ -84,7 +85,7 @@ describe('users module', () => {
         payload: {
           name: 'Ghost',
           email: 'ghost@example.com',
-          role: 'verifier',
+          role: 'project_owner',
           password: 'password-123',
         },
       });
@@ -99,6 +100,63 @@ describe('users module', () => {
       });
       expect(res.statusCode).toBe(401);
       expect(res.json().error.code).toBe('UNAUTHORIZED');
+    });
+  });
+
+  describe('POST /api/v1/users (admin provisioning)', () => {
+    const body = {
+      name: 'Daniel Okoye',
+      email: 'vvb@example.com',
+      role: 'verifier',
+      password: 'password-123',
+    };
+
+    it('SECURITY: rejects non-admin callers with 403', async () => {
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/users',
+        headers: auth(accessToken),
+        payload: body,
+      });
+      expect(res.statusCode).toBe(403);
+      expect(await prisma.user.count({ where: { email: body.email } })).toBe(0);
+    });
+
+    it('rejects provisioning an admin with 400', async () => {
+      const admin = await createAdmin(app, prisma);
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/users',
+        headers: auth(admin.token),
+        payload: { ...body, email: 'new-admin@example.com', role: 'admin' },
+      });
+      expect(res.statusCode).toBe(400);
+    });
+
+    it('lets an admin provision a verifier in their org, audited', async () => {
+      const admin = await createAdmin(app, prisma);
+      const res = await app.inject({
+        method: 'POST',
+        url: '/api/v1/users',
+        headers: auth(admin.token),
+        payload: body,
+      });
+      expect(res.statusCode).toBe(201);
+      const user = res.json().user;
+      expect(user).toMatchObject({ email: body.email, role: 'verifier', organization_id: 'org-0001' });
+      expect(user).not.toHaveProperty('password_hash');
+
+      const audit = await prisma.auditLog.findFirst({
+        where: { action: 'USER_PROVISIONED', entity_id: user.id },
+      });
+      expect(audit?.user_id).toBe(admin.id);
+
+      const login = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/login',
+        payload: { email: body.email, password: body.password },
+      });
+      expect(login.statusCode).toBe(200);
     });
   });
 });

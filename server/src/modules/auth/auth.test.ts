@@ -108,6 +108,17 @@ describe('auth module', () => {
       expect(res.json().error.code).toBe('VALIDATION_ERROR');
     });
 
+    it.each(['verifier', 'esg_manager'])(
+      'SECURITY: refuses to self-register a privileged %s (400)',
+      async (role) => {
+        const email = `wannabe-${role}@example.com`;
+        const res = await registerUser(app, { email, role });
+        expect(res.statusCode).toBe(400);
+        expect(res.json().error.code).toBe('VALIDATION_ERROR');
+        expect(await prisma.user.count({ where: { email } })).toBe(0);
+      },
+    );
+
     it('SECURITY: refuses to self-register an admin (400)', async () => {
       const res = await registerUser(app, { email: 'wannabe-admin@example.com', role: 'admin' });
       expect(res.statusCode).toBe(400);
@@ -220,6 +231,25 @@ describe('auth module', () => {
       expect(victim.statusCode).toBe(401);
     });
 
+    it('SECURITY: a forged <userId>.<garbage> token does not revoke the victim session', async () => {
+      const { user, refresh_token } = await login();
+      const forged = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refresh_token: `${user.id}.${'0'.repeat(64)}` },
+      });
+      expect(forged.statusCode).toBe(401);
+
+      const row = await prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+      expect(row.refresh_token_hash).not.toBeNull();
+      const legit = await app.inject({
+        method: 'POST',
+        url: '/api/v1/auth/refresh',
+        payload: { refresh_token },
+      });
+      expect(legit.statusCode).toBe(200);
+    });
+
     it('rejects garbage tokens with 401', async () => {
       const res = await app.inject({
         method: 'POST',
@@ -311,7 +341,7 @@ describe('auth module', () => {
     }
 
     it('returns 403 FORBIDDEN envelope for the wrong role', async () => {
-      const token = await tokenFor('guard-verifier@example.com', 'verifier');
+      const token = await tokenFor('guard-owner@example.com', 'project_owner');
       const res = await guarded.inject({
         method: 'GET',
         url: '/admin-only',

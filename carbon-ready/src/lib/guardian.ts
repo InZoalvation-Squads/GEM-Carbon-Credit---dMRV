@@ -50,7 +50,10 @@ export function displayHcs(c: VerifiableCredential): { topic_id: string; sequenc
     // HashScan has no /message/{n} route — older stored anchors carried it.
     return { ...c.anchor, explorer_url: c.anchor.explorer_url.replace(/\/message\/\d+$/, ''), real: true };
   }
-  return { topic_id: c.hcs.topic_id, sequence_number: c.hcs.sequence_number, explorer_url: c.hcs.explorer_url, real: false };
+  // The in-payload URL is client-supplied and rendered as an href: only a
+  // HashScan https link is shown, never a javascript:/data: scheme.
+  const explorer_url = /^https:\/\/hashscan\.io\//.test(c.hcs.explorer_url) ? c.hcs.explorer_url : 'https://hashscan.io/';
+  return { topic_id: c.hcs.topic_id, sequence_number: c.hcs.sequence_number, explorer_url, real: false };
 }
 
 export function projectTopicId(projectId: string): string {

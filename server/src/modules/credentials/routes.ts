@@ -26,6 +26,12 @@ import { anchorBestEffort, anchorCredentialOnChain, anchorMintOnChain, mintRealT
 import { approvePddInBackground, guardianEnabled } from '../../lib/guardian-client.js';
 import { appError } from '../../lib/errors.js';
 
+// Client-supplied explorer links are rendered as hrefs to every org member,
+// so only HashScan https URLs are accepted (no javascript:/data: schemes).
+const HashscanUrl = z
+  .string()
+  .regex(/^https:\/\/hashscan\.io\/[\w./-]*$/, 'explorer_url must be a https://hashscan.io/ URL');
+
 // Exactly the SPA VerifiableCredential shape (lib/vc-types.ts) — with the
 // proof REQUIRED: an unsigned VC is a 400 at the edge, not a 422. Unknown keys
 // are stripped, which is safe: the Ed25519 proof covers the whole unsigned
@@ -34,7 +40,7 @@ const VcHcs = z.object({
   topic_id: z.string().min(1),
   sequence_number: z.number().int().nonnegative(),
   consensus_timestamp: z.string().min(1),
-  explorer_url: z.string().min(1),
+  explorer_url: HashscanUrl,
 });
 const VcProof = z.object({
   type: z.literal('Ed25519Signature2020'),
@@ -59,7 +65,7 @@ const VcBody = z.object({
 const TokenHcs = z.object({
   topic_id: z.string().min(1),
   sequence_number: z.number().int().nonnegative(),
-  explorer_url: z.string().min(1),
+  explorer_url: HashscanUrl,
 });
 const TokenBody = z.object({
   id: z.string().min(1),
@@ -67,7 +73,7 @@ const TokenBody = z.object({
   serial_number: z.number().int().positive(),
   project_id: z.string().min(1),
   credential_id: z.string().min(1),
-  amount_tco2e: z.number(),
+  amount_tco2e: z.number().positive(),
   monitoring_period_start: isoDateString,
   monitoring_period_end: isoDateString,
   minted_at: z.iso.datetime(),

@@ -12,7 +12,7 @@ import {
   iotConfigFromEnv,
   listIotDevices,
   resolveDeviceMap,
-  syncIotOnce,
+  syncIotExclusive,
   type IotConfig,
 } from '../../lib/iot.js';
 import { createProject, serializeProject } from '../projects/service.js';
@@ -47,6 +47,18 @@ function requireIotConfig(): IotConfig {
 export async function iotRoutes(app: FastifyInstance): Promise<void> {
   const canWrite = [app.authenticate, app.requireRole('project_owner', 'admin', 'esg_manager')];
 
+  // device_id is a global unique key, so a mapping that already points at
+  // another organization's project must never be overwritten or removed.
+  async function assertDeviceClaimable(deviceId: string, org: string): Promise<void> {
+    const existing = await app.prisma.iotDeviceMap.findUnique({
+      where: { device_id: deviceId },
+      select: { project: { select: { organization_id: true } } },
+    });
+    if (existing && existing.project.organization_id !== org) {
+      throw appError(409, 'CONFLICT', 'Device is mapped to a project outside your organization');
+    }
+  }
+
   // Config visibility — never exposes IOT_DB_URL (it carries the external
   // database's credentials).
   app.get('/status', { preHandler: [app.authenticate] }, async () => {
@@ -68,12 +80,20 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
   // For mapped devices, `synced_days` = distinct record dates already in OUR
   // monitoring store within the device's data range — the page renders it as
   // a coverage badge so "ครบ/ขาด" is visible at a glance.
-  app.get('/devices', { preHandler: [app.authenticate] }, async () => {
+  app.get('/devices', { preHandler: [app.authenticate] }, async (req) => {
     const cfg = requireIotConfig();
     const devices = await listIotDevices(cfg);
     const mapped = await resolveDeviceMap(app.prisma, cfg);
+    // Only reveal (and count coverage for) projects in the caller's org.
+    const ownProjects = new Set(
+      (await app.prisma.project.findMany({
+        where: { id: { in: Object.values(mapped) }, organization_id: req.user.org },
+        select: { id: true },
+      })).map((p) => p.id),
+    );
     const withCoverage = await Promise.all(devices.map(async (d) => {
-      const projectId = mapped[d.device_id] ?? null;
+      const mappedId = mapped[d.device_id];
+      const projectId = mappedId && ownProjects.has(mappedId) ? mappedId : null;
       if (!projectId || d.first_date === null || d.last_date === null) {
         return { ...d, project_id: projectId, synced_days: null };
       }
@@ -87,8 +107,9 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
     return { devices: withCoverage };
   });
 
-  app.get('/mappings', { preHandler: [app.authenticate] }, async () => {
+  app.get('/mappings', { preHandler: [app.authenticate] }, async (req) => {
     const rows = await app.prisma.iotDeviceMap.findMany({
+      where: { project: { organization_id: req.user.org } },
       orderBy: { created_at: 'asc' },
       include: { project: { select: { name: true } } },
     });
@@ -112,6 +133,7 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
       select: { id: true },
     });
     if (!project) throw appError(404, 'NOT_FOUND', 'Project not found');
+    await assertDeviceClaimable(body.device_id, req.user.org);
 
     const row = await app.prisma.iotDeviceMap.upsert({
       where: { device_id: body.device_id },
@@ -123,7 +145,9 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
 
   app.delete('/mappings/:deviceId', { preHandler: canWrite }, async (req) => {
     const { deviceId } = z.object({ deviceId: z.string().min(1) }).parse(req.params);
-    await app.prisma.iotDeviceMap.deleteMany({ where: { device_id: deviceId } });
+    await app.prisma.iotDeviceMap.deleteMany({
+      where: { device_id: deviceId, project: { organization_id: req.user.org } },
+    });
     return { ok: true };
   });
 
@@ -131,6 +155,7 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
   // name/capacity/etc. and map the plant to it in the same breath.
   app.post('/create-project', { preHandler: canWrite }, async (req, reply) => {
     const body = CreateProjectBody.parse(req.body ?? {});
+    await assertDeviceClaimable(body.device_id, req.user.org);
     const project = await createProject(app.prisma, actorFromRequest(req), {
       name: body.name,
       location: body.location,
@@ -149,10 +174,11 @@ export async function iotRoutes(app: FastifyInstance): Promise<void> {
   app.post('/sync', { preHandler: canWrite }, async (req) => {
     const cfg = requireIotConfig();
     const { lookback_hours } = SyncBody.parse(req.body ?? {});
-    const stats = await syncIotOnce(
+    const stats = await syncIotExclusive(
       app.prisma,
       lookback_hours ? { ...cfg, lookbackHours: lookback_hours } : cfg,
     );
+    if (!stats) throw appError(409, 'CONFLICT', 'An IoT sync is already running — try again shortly');
     req.log.info(stats, 'manual iot sync');
     return stats;
   });

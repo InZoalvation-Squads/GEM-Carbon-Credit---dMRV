@@ -52,12 +52,16 @@ export type AuditAction =
   | 'PDD_CREDENTIAL_ANCHORED'
   // Server-only: monitoring records pulled from the external IoT database
   // by the scheduled ingest worker (lib/iot.ts) — no human actor.
-  | 'IOT_SYNCED';
+  | 'IOT_SYNCED'
+  // Server-only: an admin provisioned a user (POST /api/v1/users).
+  | 'USER_PROVISIONED';
 
-/** Verbatim from carbon-ready/src/types/index.ts `EntityType`. */
+/** Verbatim from carbon-ready/src/types/index.ts `EntityType`, plus 'user'. */
 export type EntityType =
   | 'project' | 'monitoring' | 'factor' | 'calculation'
-  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue' | 'rec_roi';
+  | 'evidence' | 'verification' | 'methodology' | 'pdd' | 'token' | 'rec_issue' | 'rec_roi'
+  // Server-only extension for admin user provisioning.
+  | 'user';
 
 /** The authenticated caller, as every mutating service needs it. */
 export interface AuditActor {

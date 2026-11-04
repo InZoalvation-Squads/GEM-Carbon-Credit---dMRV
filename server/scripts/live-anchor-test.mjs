@@ -111,7 +111,7 @@ const vc = signVc({
   issued_at: reg.pdd.validated_at,
   subject: { pdd_id: pdd.id, project_id: project.id, ipfs_cid: reg.pdd.ipfs_cid, ...reg.disclosure },
   package_hash: reg.pdd.content_hash,
-  hcs: { topic_id: '0.0.480100', sequence_number: 1, consensus_timestamp: reg.pdd.validated_at, explorer_url: 'sim' },
+  hcs: { topic_id: '0.0.480100', sequence_number: 1, consensus_timestamp: reg.pdd.validated_at, explorer_url: 'https://hashscan.io/testnet/topic/0.0.480100' },
   vc_type: ['VerifiableCredential', 'PddRegistration'],
 }, issuer);
 
@@ -167,9 +167,12 @@ const mrvVc = signVc({
   schema_id: 'mrv-approval-v1',
   issuer_did: issuer.did,
   issued_at: new Date().toISOString(),
-  subject: { verification_id: ver.id, project_id: project.id, reduction_tco2e: 443 },
+  subject: {
+    verification_id: ver.id, project_id: project.id, reduction_tco2e: 443,
+    monitoring_period_start: '2026-01-01', monitoring_period_end: '2026-06-30',
+  },
   package_hash: approved.hash_value,
-  hcs: { topic_id: '0.0.480100', sequence_number: 2, consensus_timestamp: new Date().toISOString(), explorer_url: 'sim' },
+  hcs: { topic_id: '0.0.480100', sequence_number: 2, consensus_timestamp: new Date().toISOString(), explorer_url: 'https://hashscan.io/testnet/topic/0.0.480100' },
   vc_type: ['VerifiableCredential', 'MrvApproval'],
 }, issuer);
 const mrvAnchored = await call('POST', `/verifications/${ver.id}/anchor`, vvb, mrvVc);
@@ -182,7 +185,7 @@ const minted = await call('POST', `/credentials/${encodeURIComponent(mrvVc.id)}/
   project_id: project.id, credential_id: mrvVc.id, amount_tco2e: 443,
   monitoring_period_start: '2026-01-01', monitoring_period_end: '2026-06-30',
   minted_at: now, minted_by_role: 'admin',
-  hcs: { topic_id: '0.0.480100', sequence_number: 3, explorer_url: 'sim' },
+  hcs: { topic_id: '0.0.480100', sequence_number: 3, explorer_url: 'https://hashscan.io/testnet/topic/0.0.480100' },
 });
 console.log('✅ REAL HTS batch mint:', minted.token.token_id, 'batch #' + minted.token.serial_number);
 console.log('   serial range:', JSON.stringify(minted.token.batch));
