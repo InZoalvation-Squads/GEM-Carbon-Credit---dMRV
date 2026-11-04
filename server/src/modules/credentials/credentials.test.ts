@@ -372,10 +372,23 @@ describe('credentials module', () => {
     it('422s a VC whose subject was tampered after signing', async () => {
       const v = await approvedVerification();
       const vc = approvalVc(v);
-      (vc.subject as Record<string, unknown>).reduction_tco2e = 999_999;
+      (vc.subject as Record<string, unknown>).approval_role = 'admin';
       const res = await post(`/api/v1/verifications/${v.id}/anchor`, verifier.token, vc as unknown as Record<string, unknown>);
       expect(res.statusCode).toBe(422);
       expect(res.json().error).toMatchObject({ code: 'UNPROCESSABLE', message: 'credential signature invalid' });
+    });
+
+    it('SECURITY: 422s a validly signed VC that restates the approved reduction', async () => {
+      const v = await approvedVerification();
+      const { proof: _p, ...unsigned } = approvalVc(v);
+      const vc = signVc({ ...unsigned, subject: { ...unsigned.subject, reduction_tco2e: 999_999 } }, issuer);
+      const res = await post(`/api/v1/verifications/${v.id}/anchor`, verifier.token, vc as unknown as Record<string, unknown>);
+      expect(res.statusCode).toBe(422);
+      expect(res.json().error).toMatchObject({
+        code: 'UNPROCESSABLE',
+        message: 'subject does not match the approved verification',
+      });
+      expect((await prisma.verificationRequest.findUniqueOrThrow({ where: { id: v.id } })).credential_id).toBeNull();
     });
 
     it('400s when the proof is missing (zod — proof is required at the API edge)', async () => {

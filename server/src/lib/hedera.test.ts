@@ -58,4 +58,17 @@ describe('server-side ER calculation (Guardian mint amount)', () => {
     expect(table!.avg.er).toBe(443);
     expect(table!.totals.er).toBe(3098);
   });
+
+  it.each(['Infinity', '1e9', '7.5', '0', -3])(
+    'SECURITY: rejects crediting_years %s instead of looping unbounded',
+    async (crediting_years) => {
+      const { computeYearlyTable } = await import('./pdd-calc.js');
+      const table = computeYearlyTable({
+        project: { location: 'Chom Bueng, Ratchaburi, Thailand', capacity_kwp: 667.2, commission_date: '2025-12-01' },
+        factors: [{ country: 'TH', is_current: true, effective_date: '2025-01-01', factor_kgco2e_per_kwh: 0.4682 }],
+        sectionData: { year1_generation_kwh: 963_915, crediting_years },
+      });
+      expect(table).toBeNull();
+    },
+  );
 });

@@ -40,6 +40,17 @@ function numOrNull(v: unknown): number | null {
   return Number.isNaN(n) ? null : n;
 }
 
+/**
+ * Year counts bound synchronous loops, so only a small whole number is
+ * accepted — "Infinity" or "1e9" from stored section_data would otherwise
+ * stall the event loop. Absent → fallback; anything else invalid → null.
+ */
+const MAX_YEARS = 50;
+function yearsOrNull(v: unknown, fallback: number): number | null {
+  const n = numOrNull(v) ?? fallback;
+  return Number.isInteger(n) && n >= 1 && n <= MAX_YEARS ? n : null;
+}
+
 /** Σ project electricity consumers (kWh/yr): direct kwh_year, else rated_w × hours ÷ 1000. */
 export function computeEcPj(rows: unknown): number {
   if (!Array.isArray(rows)) return 0;
@@ -84,7 +95,8 @@ export interface PddYearlyTable {
 export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const ef = gridFactor(ctx);
   if (ef === null) return null;
-  const years = numOrNull(ctx.sectionData.crediting_years) ?? 7;
+  const years = yearsOrNull(ctx.sectionData.crediting_years, 7);
+  if (years === null) return null;
   const d = (numOrNull(ctx.sectionData.degradation_pct) ?? 0) / 100;
   const gen1 = year1GenerationKwh(ctx);
   const pe = round2((computeEcPj(ctx.sectionData.consumers) * ef) / 1000);

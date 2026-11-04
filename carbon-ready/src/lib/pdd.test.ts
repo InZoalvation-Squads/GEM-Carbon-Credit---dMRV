@@ -251,6 +251,13 @@ describe('computeYearlyTable — reproduces the MCRU reference PDD', () => {
   it('returns null without a grid factor', () => {
     expect(computeYearlyTable({ project: PROJECT, factors: [], sectionData: MCRU_DATA })).toBeNull();
   });
+  it.each(['Infinity', '1e9', '7.5', '0'])(
+    'SECURITY: returns null for crediting_years %s instead of looping unbounded',
+    (crediting_years) => {
+      expect(computeYearlyTable({ project: PROJECT, factors: TGO_FACTORS,
+        sectionData: { ...MCRU_DATA, crediting_years } })).toBeNull();
+    },
+  );
   it('falls back to the capacity model when no year-1 override is given', () => {
     const ctx2 = { project: PROJECT, factors: TGO_FACTORS,
       sectionData: { crediting_years: '7', degradation_pct: 0, performance_ratio: 0.8 } };

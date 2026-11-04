@@ -16,9 +16,10 @@ const AUTH_RATE_LIMIT = { rateLimit: { max: 20, timeWindow: '1 minute' } };
 const RegisterBody = z.object({
   name: z.string().trim().min(1, 'name is required'),
   email: z.email().transform((e) => e.toLowerCase()),
-  // SECURITY: 'admin' is deliberately absent — admins are provisioned via
-  // seed/ops, never through self-service registration.
-  role: z.enum(['project_owner', 'esg_manager', 'verifier']),
+  // SECURITY: only the proponent role is self-service. verifier and
+  // esg_manager gate approval, registration, anchoring and audit reads, so an
+  // admin provisions them (POST /api/v1/users); admins come from seed/ops.
+  role: z.enum(['project_owner']).default('project_owner'),
   password: z.string().min(8, 'password must be at least 8 characters'),
 });
 

@@ -21,9 +21,10 @@ export function Register() {
   const [confirm, setConfirm] = useState('');
   const [error, setError] = useState('');
 
-  // Server mode: admins are provisioned via seed/ops, never self-registered
-  // (the API rejects the role) — mirror that restriction in the form.
-  const roles = ROLES.filter((r) => r !== 'admin' || !serverMode());
+  // Server mode: only project owners self-register (the API rejects other
+  // roles); verifiers/ESG managers are provisioned by an admin, admins via
+  // seed/ops — mirror that restriction in the form.
+  const roles: UserRole[] = serverMode() ? ['project_owner'] : ROLES;
 
   async function submit(e?: React.FormEvent) {
     e?.preventDefault();

@@ -235,6 +235,25 @@ export async function listIotDevices(cfg: IotConfig): Promise<IotDeviceInfo[]> {
  * skipped — a half-day would freeze wrong numbers, since records are
  * insert-once). Existing record dates are never overwritten.
  */
+// One sync at a time per process, shared by the cron and POST /iot/sync: the
+// existing-dates dedupe below is check-then-insert, so overlapping runs could
+// double-insert days, and each run buffers a full lookback window.
+let syncInFlight = false;
+
+/** Run syncIotOnce unless one is already running; null = skipped. */
+export async function syncIotExclusive(
+  prisma: PrismaClient,
+  cfg: IotConfig,
+): Promise<IotSyncStats | null> {
+  if (syncInFlight) return null;
+  syncInFlight = true;
+  try {
+    return await syncIotOnce(prisma, cfg);
+  } finally {
+    syncInFlight = false;
+  }
+}
+
 export async function syncIotOnce(prisma: PrismaClient, cfg: IotConfig): Promise<IotSyncStats> {
   const deviceMap = await resolveDeviceMap(prisma, cfg);
   const devices = Object.keys(deviceMap);

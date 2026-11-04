@@ -168,6 +168,17 @@ export async function anchorVerification(
     if (vc.subject.project_id !== v.project_id) {
       throw appError(422, 'UNPROCESSABLE', "subject.project_id does not match the verification's project");
     }
+    // The certified quantities must be the approved ones — the credential is
+    // the mint's input, so a signer must not restate reduction or period.
+    const reductionTco2e = Number((v.reduction_kgco2e / 1000).toFixed(4));
+    if (
+      vc.subject.reduction_tco2e !== reductionTco2e ||
+      vc.subject.monitoring_period_start !== v.monitoring_period_start ||
+      vc.subject.monitoring_period_end !== v.monitoring_period_end ||
+      ('factors_snapshot' in vc.subject && vc.subject.factors_snapshot !== v.factors_snapshot)
+    ) {
+      throw appError(422, 'UNPROCESSABLE', 'subject does not match the approved verification');
+    }
     requireValidSignature(vc);
 
     const credential = await insertCredential(tx, vc, v.project_id);

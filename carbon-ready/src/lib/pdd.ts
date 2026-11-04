@@ -109,6 +109,17 @@ function numOrNull(v: unknown): number | null {
 }
 
 /**
+ * Year counts bound synchronous loops, so only a small whole number is
+ * accepted — "Infinity" or "1e9" in another user's stored section_data would
+ * otherwise hang the reviewer's tab. Absent → fallback; invalid → null.
+ */
+const MAX_YEARS = 50;
+function yearsOrNull(v: unknown, fallback: number): number | null {
+  const n = numOrNull(v) ?? fallback;
+  return Number.isInteger(n) && n >= 1 && n <= MAX_YEARS ? n : null;
+}
+
+/**
  * Σ kWp of the ตารางที่ 1 installation rows (แบบเดี่ยว), rounded to 3 dp like the
  * site sums. Null when no row carries a capacity.
  */
@@ -210,7 +221,8 @@ export { generationForecast };
 export function computeYearlyTable(ctx: ComputeContext): PddYearlyTable | null {
   const ef = gridFactor(ctx);
   if (ef === null) return null;
-  const years = numOrNull(ctx.sectionData.crediting_years) ?? 7;
+  const years = yearsOrNull(ctx.sectionData.crediting_years, 7);
+  if (years === null) return null;
   const d = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
   const gen1 = year1GenerationKwh(ctx);
   const peExact = (computeEcPj(ctx.sectionData.consumers) * ef) / 1000;
@@ -316,7 +328,8 @@ export function computeFinancialTable(
   const om = numOrNull(ctx.sectionData.om_cost_thb_year)
     ?? Math.round(investment * (FIN_DEFAULTS.omPctOfInvestment / 100));
   const omStart = numOrNull(ctx.sectionData.om_start_year) ?? FIN_DEFAULTS.omStart;
-  const lifetime = numOrNull(ctx.sectionData.lifetime_years) ?? FIN_DEFAULTS.lifetime;
+  const lifetime = yearsOrNull(ctx.sectionData.lifetime_years, FIN_DEFAULTS.lifetime);
+  if (lifetime === null) return null;
   const scrap = numOrNull(ctx.sectionData.scrap_value_thb)
     ?? Math.round(investment * (FIN_DEFAULTS.scrapPct / 100));
   const degradation = numOrNull(ctx.sectionData.degradation_pct) ?? 0;
